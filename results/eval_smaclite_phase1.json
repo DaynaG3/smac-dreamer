@@ -1,0 +1,110 @@
+{
+  "scenario": "2s3z",
+  "logdir": "C:\\Users\\gsimru\\Documents\\smac-dreamer\\logs\\smaclite_phase1\\debug_50k",
+  "checkpoint_path": "C:\\Users\\gsimru\\Documents\\smac-dreamer\\logs\\smaclite_phase1\\debug_50k\\ckpt",
+  "episodes": 10,
+  "seed": 42,
+  "aggregate": {
+    "mean_episode_reward": 4.1254903510212895,
+    "std_episode_reward": 0.5415599721467074,
+    "min_episode_reward": 3.313725635409355,
+    "max_episode_reward": 5.29411780834198,
+    "mean_episode_length": 48.1,
+    "win_rate": 0.0,
+    "mean_invalid_action_count": 147.8,
+    "mean_invalid_action_rate": 0.5796259552240371,
+    "mean_total_action_count": 240.5
+  },
+  "episodes_data": [
+    {
+      "episode": 1,
+      "reward": 3.4313726872205734,
+      "length": 46,
+      "battle_won": false,
+      "invalid_action_count": 149,
+      "invalid_action_rate": 0.647826075553894,
+      "total_action_count": 230
+    },
+    {
+      "episode": 2,
+      "reward": 4.215686410665512,
+      "length": 33,
+      "battle_won": false,
+      "invalid_action_count": 85,
+      "invalid_action_rate": 0.5151515007019043,
+      "total_action_count": 165
+    },
+    {
+      "episode": 3,
+      "reward": 4.000000178813934,
+      "length": 52,
+      "battle_won": false,
+      "invalid_action_count": 164,
+      "invalid_action_rate": 0.6307692527770996,
+      "total_action_count": 260
+    },
+    {
+      "episode": 4,
+      "reward": 5.29411780834198,
+      "length": 35,
+      "battle_won": false,
+      "invalid_action_count": 86,
+      "invalid_action_rate": 0.49142858386039734,
+      "total_action_count": 175
+    },
+    {
+      "episode": 5,
+      "reward": 4.254902169108391,
+      "length": 119,
+      "battle_won": false,
+      "invalid_action_count": 453,
+      "invalid_action_rate": 0.7613445520401001,
+      "total_action_count": 595
+    },
+    {
+      "episode": 6,
+      "reward": 3.313725635409355,
+      "length": 42,
+      "battle_won": false,
+      "invalid_action_count": 113,
+      "invalid_action_rate": 0.538095235824585,
+      "total_action_count": 210
+    },
+    {
+      "episode": 7,
+      "reward": 4.686274662613869,
+      "length": 38,
+      "battle_won": false,
+      "invalid_action_count": 101,
+      "invalid_action_rate": 0.5315789580345154,
+      "total_action_count": 190
+    },
+    {
+      "episode": 8,
+      "reward": 3.960784465074539,
+      "length": 34,
+      "battle_won": false,
+      "invalid_action_count": 92,
+      "invalid_action_rate": 0.5411764979362488,
+      "total_action_count": 170
+    },
+    {
+      "episode": 9,
+      "reward": 3.9215687662363052,
+      "length": 46,
+      "battle_won": false,
+      "invalid_action_count": 138,
+      "invalid_action_rate": 0.6000000238418579,
+      "total_action_count": 230
+    },
+    {
+      "episode": 10,
+      "reward": 4.176470726728439,
+      "length": 36,
+      "battle_won": false,
+      "invalid_action_count": 97,
+      "invalid_action_rate": 0.5388888716697693,
+      "total_action_count": 180
+    }
+  ]
+}
