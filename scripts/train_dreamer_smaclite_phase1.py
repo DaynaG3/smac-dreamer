@@ -88,7 +88,7 @@ def make_env(config, index: int):
 
 
 def make_agent(config, env_factory):
-    from dreamerv3.agent import Agent
+    from smacdreamer.agent import SMACliteAgent
 
     env = env_factory(0)
     obs_space = {k: v for k, v in env.obs_space.items() if not k.startswith("log/")}
@@ -97,7 +97,7 @@ def make_agent(config, env_factory):
 
     cpdir = elements.Path(config.logdir)
     cpdir = cpdir.parent if config.replicas > 1 else cpdir
-    return Agent(
+    return SMACliteAgent(
         obs_space,
         act_space,
         elements.Config(

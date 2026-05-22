@@ -57,14 +57,14 @@ def make_eval_env(scenario: str, max_episode_steps: int, seed: int, config: elem
 
 
 def build_agent(config: elements.Config, env):
-    from dreamerv3.agent import Agent
+    from smacdreamer.agent import SMACliteAgent
 
     obs_space = {k: v for k, v in env.obs_space.items() if not k.startswith("log/")}
     act_space = {k: v for k, v in env.act_space.items() if k != "reset"}
 
     cpdir = elements.Path(config.logdir)
     cpdir = cpdir.parent if config.replicas > 1 else cpdir
-    return Agent(
+    return SMACliteAgent(
         obs_space,
         act_space,
         elements.Config(

@@ -823,6 +823,29 @@ ImportError: cannot import name '_imaging' from 'PIL'
 
 This was a dependency/environment issue, not an adapter issue. The fix was to reinstall Pillow in the active Conda environment.
 
+## Phase 1 Real-Rollout Masking Result
+
+The real-rollout action masking patch was implemented using `SMACliteAgent`, a project-local subclass of DreamerV3's base `Agent`.
+
+The patch masks unavailable actions in `policy()` by applying the SMAClite `avail_actions` observation to each discrete action head before sampling.
+
+Files changed:
+
+- `src/smacdreamer/agent.py`
+- `scripts/train_dreamer_smaclite_phase1.py`
+- `scripts/evaluate.py`
+- `src/smacdreamer/envs/smaclite_dreamer_env.py`
+
+Result:
+
+```text
+Before masking:
+mean_invalid_action_rate ≈ 58%
+
+After real-rollout masking:
+mean_invalid_action_rate ≈ 2–3%
+```
+
 ### Phase 1 Conclusion
 
 Phase 1 is considered complete.

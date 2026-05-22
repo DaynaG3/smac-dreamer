@@ -69,6 +69,7 @@ class SMACliteDreamerEnv(embodied.Env):
             "log/episode_invalid_action_count":   elements.Space(np.float32),
             "log/episode_total_action_count":     elements.Space(np.float32),
             "log/episode_invalid_action_rate":    elements.Space(np.float32),
+            "log/step_invalid_count":             elements.Space(np.float32),
         }
 
     @property
@@ -114,6 +115,7 @@ class SMACliteDreamerEnv(embodied.Env):
             is_first=False,
             is_last=is_last,
             is_terminal=is_terminal,
+            step_invalid=n_invalid,
         )
 
     def close(self):
@@ -142,6 +144,7 @@ class SMACliteDreamerEnv(embodied.Env):
             is_first=True,
             is_last=False,
             is_terminal=False,
+            step_invalid=0,
         )
 
     def _sanitise_actions(
@@ -168,6 +171,7 @@ class SMACliteDreamerEnv(embodied.Env):
         is_first: bool,
         is_last: bool,
         is_terminal: bool,
+        step_invalid: int = 0,
     ) -> dict:
         state = np.concatenate(obs_tuple).astype(np.float32)
         avail_flat = np.concatenate(avail).astype(np.float32)
@@ -178,6 +182,7 @@ class SMACliteDreamerEnv(embodied.Env):
             "is_last":       np.array(is_last, dtype=bool),
             "is_terminal":   np.array(is_terminal, dtype=bool),
             "reward":        np.array(reward, dtype=np.float32),
+            "log/step_invalid_count": np.array(float(step_invalid), dtype=np.float32),
             **self._ep_metrics,
         }
 
