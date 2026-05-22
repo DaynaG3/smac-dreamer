@@ -875,6 +875,75 @@ Conclusion:
 Real-rollout action masking is successful and should remain enabled. The next unresolved issue is imagination-rollout masking inside DreamerV3 training.
 ```
 
+## Phase 1B: Imagination-Rollout Action Masking
+
+### Problem
+
+After Phase 1A real-rollout masking, the policy no longer samples invalid actions during environment
+interaction. However, DreamerV3's actor is trained through imagined rollouts inside `Agent.loss()`.
+The original `policyfn` lambda (`lambda feat: sample(self.pol(..., 1))`) and the policy distribution
+passed to `imag_loss()` (`self.pol(inp, 2)`) had no reference to `avail_actions`. The actor loss
+gradient therefore flowed through imagined invalid actions on every training step.
+
+### Fix
+
+`SMACliteAgent.loss()` overrides `DreamerAgent.loss()` with exactly two targeted changes inside the
+imagination section:
+
+**Change 1 — masked policyfn (used by `dyn.imagine()` and `lastact`):**
+
+```python
+_img_avail = obs['avail_actions'][:, -K:, :].reshape((B * K, -1))  # (B*K, N*A)
+
+def policyfn(feat):
+    pol_raw = self.pol(self.feat2tensor(feat), 1)
+    pol_masked = self._apply_avail_mask(pol_raw, _img_avail)
+    return sample(pol_masked)
+```
+
+**Change 2 — masked policy distribution for `imag_loss()`:**
+
+```python
+_img_avail_broadc = jnp.broadcast_to(
+    _img_avail[:, None, :], (B * K, H + 1, _img_avail.shape[-1]))
+_pol_dist_masked = self._apply_avail_mask(self.pol(inp, 2), _img_avail_broadc)
+# passed as the 4th positional argument to imag_loss (was: self.pol(inp, 2))
+```
+
+All other sections of `loss()` (world model, replay) are identical to the parent.
+
+### Files changed
+
+- `src/smacdreamer/agent.py`: imports extended; `loss()` method added; docstring updated
+
+### Masking strategy
+
+**Start-point constant masks.** For each imagined trajectory, the `avail_actions` at the real
+observation that starts the trajectory (`obs["avail_actions"][:, -K:, :]`) is used as a constant
+mask across all H imagination steps.
+
+**Limitation:** Action availability changes during imagined rollouts — units die, move, change
+range. The constant start-point mask is therefore an approximation. Future improvement: use the
+world-model decoder to predict `avail_actions` at each imagined step and apply the predicted mask
+dynamically.
+
+### Shape invariants
+
+| Variable | Shape |
+|---|---|
+| `obs["avail_actions"]` | `(B, T, 55)` |
+| `_img_avail` | `(B*K, 55)` |
+| policyfn input `feat` (scan step) | `(B*K, feat_dim)` |
+| `inp` for imag_loss | `(B*K, H+1, feat_dim)` |
+| `_img_avail_broadc` | `(B*K, H+1, 55)` |
+
+### Sync warning
+
+`SMACliteAgent.loss()` is a copy of `DreamerAgent.loss()`. If the upstream method changes, the
+override must be updated manually. The two Phase 1B blocks are clearly marked with comments.
+
+---
+
 ### Phase 1 Conclusion
 
 Phase 1 is considered complete.

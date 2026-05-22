@@ -425,6 +425,83 @@ This is an environment/dependency issue, not an SMAClite adapter issue.
 
 ---
 
+## Phase 1B — Imagination-Rollout Action Masking
+
+Phase 1B adds masking to the DreamerV3 imagination path so that the actor is not trained on
+imagined invalid actions. Use the setup block above before running any command.
+
+### Import check
+
+Run this first to confirm the updated agent imports cleanly:
+
+```cmd
+python -c "from smacdreamer.agent import SMACliteAgent; print('SMACliteAgent import OK')"
+```
+
+Expected:
+
+```text
+SMACliteAgent import OK
+```
+
+### 1k training test
+
+```cmd
+python scripts\train_dreamer_smaclite_phase1.py --configs debug --logdir logs\smaclite_phase1\imag_mask_debug_1k --run.steps 1000
+```
+
+### 5k stability run
+
+```cmd
+python scripts\train_dreamer_smaclite_phase1.py --configs debug --logdir logs\smaclite_phase1\imag_mask_debug_5k --run.steps 5000
+```
+
+### 10k run
+
+```cmd
+python scripts\train_dreamer_smaclite_phase1.py --configs debug --logdir logs\smaclite_phase1\imag_mask_debug_10k --run.steps 10000
+```
+
+### Metric verification (1k example)
+
+```cmd
+python -c "import json,math,pathlib; p=pathlib.Path(r'logs\smaclite_phase1\imag_mask_debug_1k\metrics.jsonl'); rows=[json.loads(x) for x in p.read_text().splitlines() if x.strip()]; bad=[]; [bad.append((i,k,v)) for i,row in enumerate(rows) for k,v in row.items() if isinstance(v,(int,float)) and (math.isnan(v) or math.isinf(v))]; keys=set().union(*[r.keys() for r in rows]); print('rows:', len(rows)); print('nan_or_inf_count:', len(bad)); [print(k, 'FOUND' if k in keys else 'MISSING') for k in ['train/loss/policy','train/loss/value','train/ent/action_0','train/ent/action_4','epstats/log/episode_invalid_action_rate/avg']]"
+```
+
+Expected:
+
+```text
+nan_or_inf_count: 0
+train/loss/policy FOUND
+train/loss/value FOUND
+train/ent/action_0 FOUND
+train/ent/action_4 FOUND
+epstats/log/episode_invalid_action_rate/avg FOUND
+```
+
+### Evaluate 10k imagination-masked checkpoint
+
+```cmd
+python scripts\evaluate.py --logdir logs\smaclite_phase1\imag_mask_debug_10k --scenario 2s3z --episodes 10 --output results\eval_smaclite_phase1_imag_mask_10k.json
+```
+
+### Expected results
+
+- No crash, no NaN/Inf across 1k, 5k, and 10k runs
+- `train/ent/action_0` through `action_4` still logged
+- `epstats/log/episode_invalid_action_rate/avg` still present
+- Invalid-action rate stays near 2–3% or lower (masking is now applied in both real and imagined rollouts)
+- `mean_was_prev_invalid` remains near 0
+
+### Limitation
+
+The imagination masking uses start-point constant masks: the `avail_actions` at the real observation
+that starts each imagined trajectory is held constant across all H imagination steps. This is an
+approximation — availability changes as units die, move, and change range. Future improvement:
+predict `avail_actions` with the world-model decoder at each imagined step.
+
+---
+
 ## Phase 2 Warning
 
 Do not start Phase 2 until all of the following are true:
