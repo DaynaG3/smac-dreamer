@@ -165,6 +165,9 @@ def run_episode(env, agent, carry, mode: str = "eval") -> tuple:
 
     ep_reward = 0.0
     ep_length = 0
+    ep_was_prev_valid = 0
+    ep_was_prev_invalid = 0
+    ep_mask_mismatch = 0
     final_obs = obs
 
     while not bool(obs["is_last"]):
@@ -175,6 +178,9 @@ def run_episode(env, agent, carry, mode: str = "eval") -> tuple:
         obs = env.step(act)
         ep_reward += float(obs["reward"])
         ep_length += 1
+        ep_was_prev_valid   += int(obs.get("log/step_invalid_was_prev_valid_count",   np.array(0)))
+        ep_was_prev_invalid += int(obs.get("log/step_invalid_was_prev_invalid_count", np.array(0)))
+        ep_mask_mismatch    += int(obs.get("log/step_avail_mask_mismatch_count",      np.array(0)))
         final_obs = obs
 
         if not bool(obs["is_last"]):
@@ -182,12 +188,15 @@ def run_episode(env, agent, carry, mode: str = "eval") -> tuple:
             carry, acts, _ = agent.policy(carry, agent_obs, mode=mode)
 
     metrics = {
-        "reward":               ep_reward,
-        "length":               ep_length,
-        "battle_won":           bool(final_obs.get("log/battle_won", np.array(False))),
-        "invalid_action_count": int(final_obs.get("log/episode_invalid_action_count", np.array(0))),
-        "invalid_action_rate":  float(final_obs.get("log/episode_invalid_action_rate", np.array(0.0))),
-        "total_action_count":   int(final_obs.get("log/episode_total_action_count", np.array(0))),
+        "reward":                      ep_reward,
+        "length":                      ep_length,
+        "battle_won":                  bool(final_obs.get("log/battle_won", np.array(False))),
+        "invalid_action_count":        int(final_obs.get("log/episode_invalid_action_count", np.array(0))),
+        "invalid_action_rate":         float(final_obs.get("log/episode_invalid_action_rate", np.array(0.0))),
+        "total_action_count":          int(final_obs.get("log/episode_total_action_count", np.array(0))),
+        "invalid_was_prev_valid":      ep_was_prev_valid,
+        "invalid_was_prev_invalid":    ep_was_prev_invalid,
+        "avail_mask_mismatch_slots":   ep_mask_mismatch,
     }
     return carry, metrics
 
@@ -208,33 +217,43 @@ def print_summary(scenario: str, episodes_data: list):
     invalid_counts = [e["invalid_action_count"] for e in episodes_data]
     invalid_rates = [e["invalid_action_rate"] for e in episodes_data]
     total_counts = [e["total_action_count"] for e in episodes_data]
+    prev_valid   = [e["invalid_was_prev_valid"]    for e in episodes_data]
+    prev_invalid = [e["invalid_was_prev_invalid"]  for e in episodes_data]
+    mismatch     = [e["avail_mask_mismatch_slots"] for e in episodes_data]
 
     n = len(episodes_data)
     print()
     print("=" * 60)
     print("Evaluation Summary")
     print("=" * 60)
-    print(f"  scenario                 : {scenario}")
-    print(f"  episodes                 : {n}")
-    print(f"  mean_episode_reward      : {np.mean(rewards):.4f}")
-    print(f"  std_episode_reward       : {np.std(rewards):.4f}")
-    print(f"  min_episode_reward       : {np.min(rewards):.4f}")
-    print(f"  max_episode_reward       : {np.max(rewards):.4f}")
-    print(f"  mean_episode_length      : {np.mean(lengths):.1f}")
-    print(f"  win_rate                 : {np.mean(wins):.3f}")
-    print(f"  mean_invalid_action_count: {np.mean(invalid_counts):.2f}")
-    print(f"  mean_invalid_action_rate : {np.mean(invalid_rates):.4f}")
-    print(f"  mean_total_action_count  : {np.mean(total_counts):.1f}")
+    print(f"  scenario                      : {scenario}")
+    print(f"  episodes                      : {n}")
+    print(f"  mean_episode_reward           : {np.mean(rewards):.4f}")
+    print(f"  std_episode_reward            : {np.std(rewards):.4f}")
+    print(f"  min_episode_reward            : {np.min(rewards):.4f}")
+    print(f"  max_episode_reward            : {np.max(rewards):.4f}")
+    print(f"  mean_episode_length           : {np.mean(lengths):.1f}")
+    print(f"  win_rate                      : {np.mean(wins):.3f}")
+    print(f"  mean_invalid_action_count     : {np.mean(invalid_counts):.2f}")
+    print(f"  mean_invalid_action_rate      : {np.mean(invalid_rates):.4f}")
+    print(f"  mean_total_action_count       : {np.mean(total_counts):.1f}")
+    print()
+    print("  -- Invalid action breakdown (per episode totals) --")
+    print(f"  mean_was_prev_valid           : {np.mean(prev_valid):.2f}  (timing lag)")
+    print(f"  mean_was_prev_invalid         : {np.mean(prev_invalid):.2f}  (masking failure)")
+    print(f"  mean_avail_mask_mismatch_slots: {np.mean(mismatch):.2f}  (slots that changed)")
     print()
 
-    col_w = [7, 8, 7, 12, 15, 14]
+    col_w = [7, 8, 7, 12, 15, 14, 12, 14]
     header = (
         f"{'Episode':>{col_w[0]}} | "
         f"{'Reward':>{col_w[1]}} | "
         f"{'Length':>{col_w[2]}} | "
         f"{'Battle Won':>{col_w[3]}} | "
         f"{'Invalid Count':>{col_w[4]}} | "
-        f"{'Invalid Rate':>{col_w[5]}}"
+        f"{'Invalid Rate':>{col_w[5]}} | "
+        f"{'PrevValid':>{col_w[6]}} | "
+        f"{'PrevInvalid':>{col_w[7]}}"
     )
     print(header)
     print("-" * len(header))
@@ -245,7 +264,9 @@ def print_summary(scenario: str, episodes_data: list):
             f"{e['length']:>{col_w[2]}} | "
             f"{str(e['battle_won']):>{col_w[3]}} | "
             f"{e['invalid_action_count']:>{col_w[4]}} | "
-            f"{e['invalid_action_rate']:>{col_w[5]}.4f}"
+            f"{e['invalid_action_rate']:>{col_w[5]}.4f} | "
+            f"{e['invalid_was_prev_valid']:>{col_w[6]}} | "
+            f"{e['invalid_was_prev_invalid']:>{col_w[7]}}"
         )
     print("=" * 60)
     print()
@@ -262,12 +283,15 @@ def save_results(
 ):
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    rewards = [e["reward"] for e in episodes_data]
-    lengths = [e["length"] for e in episodes_data]
-    wins = [e["battle_won"] for e in episodes_data]
-    invalid_counts = [e["invalid_action_count"] for e in episodes_data]
-    invalid_rates = [e["invalid_action_rate"] for e in episodes_data]
-    total_counts = [e["total_action_count"] for e in episodes_data]
+    rewards       = [e["reward"]                   for e in episodes_data]
+    lengths       = [e["length"]                   for e in episodes_data]
+    wins          = [e["battle_won"]               for e in episodes_data]
+    invalid_counts= [e["invalid_action_count"]     for e in episodes_data]
+    invalid_rates = [e["invalid_action_rate"]      for e in episodes_data]
+    total_counts  = [e["total_action_count"]       for e in episodes_data]
+    prev_valid    = [e["invalid_was_prev_valid"]   for e in episodes_data]
+    prev_invalid  = [e["invalid_was_prev_invalid"] for e in episodes_data]
+    mismatch      = [e["avail_mask_mismatch_slots"]for e in episodes_data]
 
     result = {
         "scenario":        scenario,
@@ -276,25 +300,31 @@ def save_results(
         "episodes":        n_episodes,
         "seed":            seed,
         "aggregate": {
-            "mean_episode_reward":       float(np.mean(rewards)),
-            "std_episode_reward":        float(np.std(rewards)),
-            "min_episode_reward":        float(np.min(rewards)),
-            "max_episode_reward":        float(np.max(rewards)),
-            "mean_episode_length":       float(np.mean(lengths)),
-            "win_rate":                  float(np.mean(wins)),
-            "mean_invalid_action_count": float(np.mean(invalid_counts)),
-            "mean_invalid_action_rate":  float(np.mean(invalid_rates)),
-            "mean_total_action_count":   float(np.mean(total_counts)),
+            "mean_episode_reward":              float(np.mean(rewards)),
+            "std_episode_reward":               float(np.std(rewards)),
+            "min_episode_reward":               float(np.min(rewards)),
+            "max_episode_reward":               float(np.max(rewards)),
+            "mean_episode_length":              float(np.mean(lengths)),
+            "win_rate":                         float(np.mean(wins)),
+            "mean_invalid_action_count":        float(np.mean(invalid_counts)),
+            "mean_invalid_action_rate":         float(np.mean(invalid_rates)),
+            "mean_total_action_count":          float(np.mean(total_counts)),
+            "mean_invalid_was_prev_valid":      float(np.mean(prev_valid)),
+            "mean_invalid_was_prev_invalid":    float(np.mean(prev_invalid)),
+            "mean_avail_mask_mismatch_slots":   float(np.mean(mismatch)),
         },
         "episodes_data": [
             {
-                "episode":              e["episode"],
-                "reward":               float(e["reward"]),
-                "length":               int(e["length"]),
-                "battle_won":           bool(e["battle_won"]),
-                "invalid_action_count": int(e["invalid_action_count"]),
-                "invalid_action_rate":  float(e["invalid_action_rate"]),
-                "total_action_count":   int(e["total_action_count"]),
+                "episode":                   e["episode"],
+                "reward":                    float(e["reward"]),
+                "length":                    int(e["length"]),
+                "battle_won":                bool(e["battle_won"]),
+                "invalid_action_count":      int(e["invalid_action_count"]),
+                "invalid_action_rate":       float(e["invalid_action_rate"]),
+                "total_action_count":        int(e["total_action_count"]),
+                "invalid_was_prev_valid":    int(e["invalid_was_prev_valid"]),
+                "invalid_was_prev_invalid":  int(e["invalid_was_prev_invalid"]),
+                "avail_mask_mismatch_slots": int(e["avail_mask_mismatch_slots"]),
             }
             for e in episodes_data
         ],

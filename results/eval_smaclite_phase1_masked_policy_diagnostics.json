@@ -1,0 +1,143 @@
+{
+  "scenario": "2s3z",
+  "logdir": "C:\\Users\\gsimru\\Documents\\smac-dreamer\\logs\\smaclite_phase1\\masked_test",
+  "checkpoint_path": "C:\\Users\\gsimru\\Documents\\smac-dreamer\\logs\\smaclite_phase1\\masked_test\\ckpt",
+  "episodes": 10,
+  "seed": 42,
+  "aggregate": {
+    "mean_episode_reward": 3.956862895190716,
+    "std_episode_reward": 0.7733946024942208,
+    "min_episode_reward": 2.098039299249649,
+    "max_episode_reward": 4.803921729326248,
+    "mean_episode_length": 43.0,
+    "win_rate": 0.0,
+    "mean_invalid_action_count": 6.1,
+    "mean_invalid_action_rate": 0.02941723745316267,
+    "mean_total_action_count": 215.0,
+    "mean_invalid_was_prev_valid": 6.1,
+    "mean_invalid_was_prev_invalid": 0.0,
+    "mean_avail_mask_mismatch_slots": 101.6
+  },
+  "episodes_data": [
+    {
+      "episode": 1,
+      "reward": 4.156862914562225,
+      "length": 40,
+      "battle_won": false,
+      "invalid_action_count": 6,
+      "invalid_action_rate": 0.029999999329447746,
+      "total_action_count": 200,
+      "invalid_was_prev_valid": 6,
+      "invalid_was_prev_invalid": 0,
+      "avail_mask_mismatch_slots": 91
+    },
+    {
+      "episode": 2,
+      "reward": 4.803921729326248,
+      "length": 40,
+      "battle_won": false,
+      "invalid_action_count": 4,
+      "invalid_action_rate": 0.019999999552965164,
+      "total_action_count": 200,
+      "invalid_was_prev_valid": 4,
+      "invalid_was_prev_invalid": 0,
+      "avail_mask_mismatch_slots": 94
+    },
+    {
+      "episode": 3,
+      "reward": 4.7254903465509415,
+      "length": 49,
+      "battle_won": false,
+      "invalid_action_count": 6,
+      "invalid_action_rate": 0.02448979578912258,
+      "total_action_count": 245,
+      "invalid_was_prev_valid": 6,
+      "invalid_was_prev_invalid": 0,
+      "avail_mask_mismatch_slots": 102
+    },
+    {
+      "episode": 4,
+      "reward": 3.745098203420639,
+      "length": 38,
+      "battle_won": false,
+      "invalid_action_count": 7,
+      "invalid_action_rate": 0.03684210404753685,
+      "total_action_count": 190,
+      "invalid_was_prev_valid": 7,
+      "invalid_was_prev_invalid": 0,
+      "avail_mask_mismatch_slots": 110
+    },
+    {
+      "episode": 5,
+      "reward": 4.196078598499298,
+      "length": 37,
+      "battle_won": false,
+      "invalid_action_count": 7,
+      "invalid_action_rate": 0.037837836891412735,
+      "total_action_count": 185,
+      "invalid_was_prev_valid": 7,
+      "invalid_was_prev_invalid": 0,
+      "avail_mask_mismatch_slots": 91
+    },
+    {
+      "episode": 6,
+      "reward": 4.117647185921669,
+      "length": 69,
+      "battle_won": false,
+      "invalid_action_count": 6,
+      "invalid_action_rate": 0.017391303554177284,
+      "total_action_count": 345,
+      "invalid_was_prev_valid": 6,
+      "invalid_was_prev_invalid": 0,
+      "avail_mask_mismatch_slots": 120
+    },
+    {
+      "episode": 7,
+      "reward": 4.254902139306068,
+      "length": 39,
+      "battle_won": false,
+      "invalid_action_count": 6,
+      "invalid_action_rate": 0.03076923079788685,
+      "total_action_count": 195,
+      "invalid_was_prev_valid": 6,
+      "invalid_was_prev_invalid": 0,
+      "avail_mask_mismatch_slots": 117
+    },
+    {
+      "episode": 8,
+      "reward": 2.098039299249649,
+      "length": 40,
+      "battle_won": false,
+      "invalid_action_count": 7,
+      "invalid_action_rate": 0.03500000014901161,
+      "total_action_count": 200,
+      "invalid_was_prev_valid": 7,
+      "invalid_was_prev_invalid": 0,
+      "avail_mask_mismatch_slots": 109
+    },
+    {
+      "episode": 9,
+      "reward": 3.0784315019845963,
+      "length": 38,
+      "battle_won": false,
+      "invalid_action_count": 7,
+      "invalid_action_rate": 0.03684210404753685,
+      "total_action_count": 190,
+      "invalid_was_prev_valid": 7,
+      "invalid_was_prev_invalid": 0,
+      "avail_mask_mismatch_slots": 90
+    },
+    {
+      "episode": 10,
+      "reward": 4.392157033085823,
+      "length": 40,
+      "battle_won": false,
+      "invalid_action_count": 5,
+      "invalid_action_rate": 0.02500000037252903,
+      "total_action_count": 200,
+      "invalid_was_prev_valid": 5,
+      "invalid_was_prev_invalid": 0,
+      "avail_mask_mismatch_slots": 92
+    }
+  ]
+}

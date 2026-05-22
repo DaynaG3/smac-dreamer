@@ -845,6 +845,35 @@ mean_invalid_action_rate ≈ 58%
 After real-rollout masking:
 mean_invalid_action_rate ≈ 2–3%
 ```
+## Phase 1 Real-Rollout Masking Diagnostic Result
+
+The real-rollout masking fix reduced invalid action rate from approximately 58% to 2–3%.
+
+10-episode evaluation result:
+
+```text
+mean_episode_reward           : 3.9569
+std_episode_reward            : 0.7734
+mean_episode_length           : 43.0
+win_rate                      : 0.000
+mean_invalid_action_count     : 6.10
+mean_invalid_action_rate      : 0.0294
+mean_total_action_count       : 215.0
+mean_was_prev_valid           : 6.10
+mean_was_prev_invalid         : 0.00
+mean_avail_mask_mismatch_slots: 101.60
+
+Interpretation:
+
+- mean_was_prev_invalid = 0.00 confirms that SMACliteAgent.policy() did not sample actions that were invalid under the mask it received.
+- The remaining invalid actions were valid under the previously returned avail_actions mask but invalid when checked by the environment safety net.
+- Therefore, the residual 2–3% invalid-action rate is caused by availability-mask timing/mismatch, not policy masking failure.
+- _sanitise_actions() remains necessary as a hard safety net.
+
+Conclusion:
+
+Real-rollout action masking is successful and should remain enabled. The next unresolved issue is imagination-rollout masking inside DreamerV3 training.
+```
 
 ### Phase 1 Conclusion
 
