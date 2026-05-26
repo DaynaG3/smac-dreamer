@@ -1,0 +1,8 @@
+padding:
+  max_agents: 8
+  max_enemies: 9
+  max_actions: 15
+  max_obs_size: 136
+maps:
+  - name: 2s3z
+    type: builtin

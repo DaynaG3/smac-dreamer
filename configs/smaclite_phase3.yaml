@@ -1,0 +1,51 @@
+smaclite_phase3:
+  task: smaclite_phase3
+  script: train
+  jax:
+    platform: cpu
+    prealloc: false
+  logger:
+    outputs: [jsonl]
+  run:
+    envs: 1
+    steps: 50000
+    log_every: 30
+    save_every: 120
+    train_ratio: 8
+    debug: false
+  env:
+    smaclite:
+      scenario: 2s3z
+      max_episode_steps: 200
+      seed: 0
+      map_manifest: configs/maps/phase3_manifest.yaml
+      map_mode: round_robin
+      map_seed: 42
+      use_padding: true
+  logdir: logs/smaclite_phase3
+
+smaclite_phase3_overfit:
+  task: smaclite_phase3_overfit
+  script: train
+  jax:
+    platform: cpu
+    prealloc: false
+  logger:
+    outputs: [jsonl]
+  run:
+    envs: 1
+    steps: 100000
+    log_every: 30
+    save_every: 120
+    train_ratio: 8
+    debug: false
+  env:
+    smaclite:
+      scenario: 2s3z
+      max_episode_steps: 200
+      seed: 0
+      map_manifest: configs/maps/phase3_overfit_2s3z_manifest.yaml
+      map_mode: fixed
+      map_seed: 42
+      use_padding: true
+  logdir: logs/smaclite_phase3/overfit_2s3z
