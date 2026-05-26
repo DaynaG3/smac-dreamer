@@ -127,6 +127,13 @@ class SMACliteAgent(DreamerAgent):
         # If Agent.loss() is updated upstream, this override must be kept in sync.
         # Search for "# SMAClite Phase 1B" to find the two changed blocks.
         #
+        # Phase 3 note: padded agent heads (all-zero avail, forced to action 0 via the
+        # all-zero safeguard) contribute near-zero actor gradient. The value function may
+        # assign small non-zero values to zero-padded state features, producing tiny value
+        # gradients for padded heads. This is a Phase 3 approximation. If padded-agent
+        # policy entropy diverges during training, add per-agent gradient masking using
+        # agent_mask in imag_loss.
+        #
         # If obs does not contain avail_actions (non-SMAClite use), fall back to
         # the parent implementation unchanged.
         if 'avail_actions' not in obs:

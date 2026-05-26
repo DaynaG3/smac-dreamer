@@ -425,6 +425,23 @@ This is an environment/dependency issue, not an SMAClite adapter issue.
 
 ---
 
+## Action-Masking Metric Definitions
+
+The adapter tracks three categories of invalid action. All are post-mask: the policy has already
+applied `_apply_avail_mask()` before the adapter checks at step time.
+
+| Metric | What it measures |
+|--------|-----------------|
+| `post_mask_invalid_action_rate` | Fraction of actions invalid at step time after policy masking |
+| `timing_lag_invalid_action_rate` | Subset: valid in last obs mask, invalid now (unit state changed between obs and step) |
+| `masking_failure_rate` | Subset: already invalid in last obs mask — indicates `_apply_avail_mask()` failed. **Should be 0.** |
+| `total_action_count` | Total unit-action slots checked per episode |
+
+Old names (`episode_invalid_action_count`, `episode_invalid_action_rate`, `episode_total_action_count`)
+are kept as aliases and still appear in `metrics.jsonl` for backward compatibility.
+
+---
+
 ## Phase 1B — Imagination-Rollout Action Masking
 
 Phase 1B adds masking to the DreamerV3 imagination path so that the actor is not trained on
@@ -502,17 +519,118 @@ predict `avail_actions` with the world-model decoder at each imagined step.
 
 ---
 
-## Phase 2 Warning
+## Phase 2 — Same-Shape Multi-Map Support
 
-Do not start Phase 2 until all of the following are true:
+Phase 2 trains across three maps that share the 2s3z shape profile
+(n_agents=5, n_enemies=5, n_actions=11, obs_size=80).
 
-- smoke test passes
-- 10k debug training passes
-- metric verification passes
-- checkpoint resume test passes
-- evaluation script works
+Map manifest: `configs/maps/phase2_manifest.yaml`
 
-Phase 2 should only introduce same-shape multi-map support.
+Custom maps:
+- `configs/maps/2s3z_v2.json` — RAVINE terrain, closer starts (12/20)
+- `configs/maps/2s3z_v3.json` — CORRIDOR terrain, original starts (9/23)
+
+---
+
+### Setup
+
+```cmd
+cd C:\Users\gsimru\Documents\smac-dreamer
+conda activate smaclite-env
+set PYTHONPATH=%cd%\src;%cd%\external\dreamerv3;%cd%\external\smaclite
+```
+
+---
+
+### Import Check
+
+```cmd
+python -c "from smacdreamer.envs.map_sampler import MapSampler; print('MapSampler import OK')"
+```
+
+---
+
+### Inspect Map Shapes
+
+```cmd
+python scripts\inspect_maps.py --custom configs\maps\2s3z_v2.json configs\maps\2s3z_v3.json
+```
+
+Expected output includes `<-- COMPATIBLE` for `2s3z`, `2s3z_v2`, and `2s3z_v3`.
+
+---
+
+### Phase 2 Smoke Test
+
+```cmd
+python scripts\smoke_test_phase2.py --manifest configs\maps\phase2_manifest.yaml
+```
+
+Expected:
+
+```text
+All Phase 2 smoke tests PASSED.
+```
+
+Tests:
+- Manifest validation
+- One complete episode per map (round-robin order)
+- Obs shapes stable across all maps
+- Round-robin cycling order verified
+- `log/map_id` values correct (0, 1, 2)
+- Shape mismatch correctly rejected with ValueError
+
+---
+
+### Phase 2 Debug Training
+
+#### 500-step debug run
+
+```cmd
+python scripts\train_dreamer_smaclite_phase2.py --configs debug smaclite_phase2 --logdir logs\smaclite_phase2\debug --run.steps 500
+```
+
+#### 5k stability run
+
+```cmd
+python scripts\train_dreamer_smaclite_phase2.py --configs debug smaclite_phase2 --logdir logs\smaclite_phase2\debug_5k --run.steps 5000
+```
+
+---
+
+### Metric Verification (5k run)
+
+```cmd
+python -c "import json,math,pathlib; p=pathlib.Path(r'logs\smaclite_phase2\debug_5k\metrics.jsonl'); rows=[json.loads(x) for x in p.read_text().splitlines() if x.strip()]; bad=[]; [bad.append((i,k,v)) for i,row in enumerate(rows) for k,v in row.items() if isinstance(v,(int,float)) and (math.isnan(v) or math.isinf(v))]; keys=set().union(*[r.keys() for r in rows]); print('rows:', len(rows)); print('nan_or_inf_count:', len(bad)); [print(k, 'FOUND' if k in keys else 'MISSING') for k in ['train/loss/policy','train/loss/value','train/ent/action_0','train/ent/action_4','epstats/log/episode_invalid_action_rate/avg','epstats/log/map_id/avg']]"
+```
+
+---
+
+### Per-Map Evaluation
+
+```cmd
+python scripts\evaluate_phase2.py --manifest configs\maps\phase2_manifest.yaml --logdir logs\smaclite_phase2\debug_5k --episodes 5 --output results\eval_phase2.json
+```
+
+Inspect aggregate results:
+
+```cmd
+python -c "import json,pathlib; d=json.loads(pathlib.Path('results/eval_phase2.json').read_text()); [print(k, json.dumps(v['aggregate'], indent=2)) for k,v in d['maps'].items()]"
+```
+
+---
+
+### Expected Results
+
+- Smoke test passes on all three maps
+- 500-step debug run completes without crash or NaN/Inf
+- 5k run: `train/loss/policy`, `train/ent/action_0..4`, `epstats/log/episode_invalid_action_rate/avg` present
+- Per-map evaluation produces per-map and aggregate JSON
+- Real-rollout and imagination-rollout masking preserved from Phase 1B
+
+---
+
+### Phase 2 Constraints
 
 Do not add:
 

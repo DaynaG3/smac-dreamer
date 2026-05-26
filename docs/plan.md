@@ -1793,4 +1793,75 @@ First complete:
 
 After Phase 1 passes, update this plan with what was learned before proceeding to Phase 2.
 
+---
+
+## 24. Phase 2 — Same-Shape Multi-Map Support
+
+### 24.1 Context
+
+Phase 1 is complete. The adapter works on `2s3z` with real-rollout masking (Phase 1A) and
+imagination-rollout masking (Phase 1B). Entropy comparison confirmed that imagination masking
+is active (action head entropy dropped from ln(11)=2.3979 nats to 0.82–1.38 nats).
+
+Phase 2 adds same-shape multi-map rotation: the agent trains across several maps that share
+identical (n_agents, n_enemies, n_actions, obs_size) so the replay buffer and model weights
+require no changes.
+
+### 24.2 Key Finding: No Compatible Built-in Maps
+
+All 12 SMAClite built-in maps have different shapes from 2s3z. Two custom map variants were
+created:
+
+| Map | Terrain | Ally start | Enemy start |
+|-----|---------|-----------|-------------|
+| `2s3z` | SIMPLE | (9, 16) | (23, 16) |
+| `2s3z_v2` | RAVINE | (12, 16) | (20, 16) |
+| `2s3z_v3` | CORRIDOR | (9, 16) | (23, 16) |
+
+All three: STALKER:2 + ZEALOT:3 each side. n_agents=5, n_enemies=5, n_actions=11, obs_size=80.
+
+### 24.3 Files Created
+
+```text
+configs/maps/2s3z_v2.json                        custom map — RAVINE terrain, closer starts
+configs/maps/2s3z_v3.json                        custom map — CORRIDOR terrain
+configs/maps/phase2_manifest.yaml                manifest listing all 3 maps
+configs/smaclite_phase2.yaml                     Phase 2 training config
+src/smacdreamer/envs/map_sampler.py              MapEntry + MapSampler (fixed/round_robin/seeded_random)
+scripts/inspect_maps.py                          enumerate map shape profiles
+scripts/smoke_test_phase2.py                     Phase 2 smoke test
+scripts/train_dreamer_smaclite_phase2.py         Phase 2 training launcher
+scripts/evaluate_phase2.py                       per-map evaluation
+```
+
+### 24.4 Files Modified
+
+```text
+src/smacdreamer/envs/smaclite_dreamer_env.py    optional map_sampler param; _open_env(); log/map_id
+```
+
+### 24.5 Design Decisions
+
+- Custom maps loaded via `SMACliteEnv(map_file=path)` — no modification to external/smaclite.
+- `MapSampler.peek()` used during `__init__` to configure the initial env without consuming
+  an episode slot. `_reset()` always calls `sampler.next()` — first reset uses map[0].
+- `log/map_id` added as scalar float32 (map index in manifest). Filtered from model inputs
+  by the standard `log/` prefix convention. String map names stay outside Dreamer observations.
+- Shape validation in `_reset()` checks (n_agents, n_enemies, n_actions, obs_size) and
+  reports expected state/avail_actions shapes and action key range in the error message.
+- Phase 1 adapter behaviour is unchanged when `map_sampler=None`.
+
+### 24.6 Masking Preservation
+
+- Real-rollout masking (`SMACliteAgent.policy()`) unchanged.
+- Imagination-rollout masking (`SMACliteAgent.loss()`) unchanged.
+- `_sanitise_actions()` unchanged.
+
+### 24.7 Phase 2 Limitation
+
+The imagination masking uses start-point constant masks (same approximation as Phase 1B).
+Per-map mask distributions differ only in geometry/terrain, not unit composition, so the
+approximation quality is identical across Phase 2 maps.
+
+
 The priority is a correct, inspectable, reproducible training pipeline.

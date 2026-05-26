@@ -108,9 +108,9 @@ def run_smoke_test(scenario: str):
         episode_length += 1
 
     battle_won = bool(final_obs["log/battle_won"])
-    invalid_count = int(final_obs["log/episode_invalid_action_count"])
-    total_count = int(final_obs["log/episode_total_action_count"])
-    invalid_rate = float(final_obs["log/episode_invalid_action_rate"])
+    invalid_count = int(final_obs["log/post_mask_invalid_action_count"])
+    total_count = int(final_obs["log/total_action_count"])
+    invalid_rate = float(final_obs["log/post_mask_invalid_action_rate"])
 
     print(f"\n  episode_return  : {episode_return:.4f}")
     print(f"  episode_length  : {episode_length}")
@@ -137,8 +137,9 @@ def run_smoke_test(scenario: str):
     print("[PASS] Sequential reset and second episode work correctly.")
 
     # ---- Test 5: log/ keys are 0-d scalars ---------------------------
-    for key in ["log/battle_won", "log/episode_invalid_action_count",
-                "log/episode_total_action_count", "log/episode_invalid_action_rate"]:
+    for key in ["log/battle_won", "log/post_mask_invalid_action_count",
+                "log/total_action_count", "log/post_mask_invalid_action_rate",
+                "log/masking_failure_count", "log/timing_lag_invalid_action_count"]:
         val = final_obs[key]
         assert val.ndim == 0, f"'{key}' must be 0-d scalar, got ndim={val.ndim}"
         assert val.dtype == np.float32, f"'{key}' must be float32, got {val.dtype}"
