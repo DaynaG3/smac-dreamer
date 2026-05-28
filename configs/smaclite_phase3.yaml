@@ -49,3 +49,81 @@ smaclite_phase3_overfit:
       map_seed: 42
       use_padding: true
   logdir: logs/smaclite_phase3/overfit_2s3z
+
+smaclite_phase3c:
+  task: smaclite_phase3c
+  script: train
+  jax:
+    platform: cpu
+    prealloc: false
+  logger:
+    outputs: [jsonl]
+  run:
+    envs: 1
+    steps: 200000
+    log_every: 120
+    save_every: 300
+    train_ratio: 8
+    debug: false
+  env:
+    smaclite:
+      scenario: 2s3z
+      max_episode_steps: 200
+      seed: 0
+      map_manifest: configs/maps/phase3_manifest.yaml
+      map_mode: round_robin
+      map_seed: 42
+      use_padding: true
+  logdir: logs/smaclite_phase3c/size1m_200k
+
+smaclite_phase3c_overfit_3s5z:
+  task: smaclite_phase3c_overfit_3s5z
+  script: train
+  jax:
+    platform: cpu
+    prealloc: false
+  logger:
+    outputs: [jsonl]
+  run:
+    envs: 1
+    steps: 200000
+    log_every: 120
+    save_every: 300
+    train_ratio: 8
+    debug: false
+  env:
+    smaclite:
+      scenario: 3s5z
+      max_episode_steps: 200
+      seed: 0
+      map_manifest: configs/maps/phase3_overfit_3s5z_manifest.yaml
+      map_mode: fixed
+      map_seed: 42
+      use_padding: true
+  logdir: logs/smaclite_phase3c/overfit_3s5z
+
+smaclite_phase3c_overfit_3s5z_vs_3s6z:
+  task: smaclite_phase3c_overfit_3s5z_vs_3s6z
+  script: train
+  jax:
+    platform: cpu
+    prealloc: false
+  logger:
+    outputs: [jsonl]
+  run:
+    envs: 1
+    steps: 200000
+    log_every: 120
+    save_every: 300
+    train_ratio: 8
+    debug: false
+  env:
+    smaclite:
+      scenario: 3s5z_vs_3s6z
+      max_episode_steps: 200
+      seed: 0
+      map_manifest: configs/maps/phase3_overfit_3s5z_vs_3s6z_manifest.yaml
+      map_mode: fixed
+      map_seed: 42
+      use_padding: true
+  logdir: logs/smaclite_phase3c/overfit_3s5z_vs_3s6z
