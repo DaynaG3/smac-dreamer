@@ -127,3 +127,29 @@ smaclite_phase3c_overfit_3s5z_vs_3s6z:
       map_seed: 42
       use_padding: true
   logdir: logs/smaclite_phase3c/overfit_3s5z_vs_3s6z
+
+smaclite_phase3d_2s_vs_1sc_original:
+  task: smaclite_phase3d_2s_vs_1sc_original
+  script: train
+  jax:
+    platform: cpu
+    prealloc: false
+  logger:
+    outputs: [jsonl]
+  run:
+    envs: 1
+    steps: 1000000
+    log_every: 60
+    save_every: 300
+    train_ratio: 8
+    debug: false
+  env:
+    smaclite:
+      scenario: 2s_vs_1sc
+      max_episode_steps: 200
+      seed: 0
+      map_manifest: configs/maps/phase3d_overfit_2s_vs_1sc_manifest.yaml
+      map_mode: fixed
+      map_seed: 42
+      use_padding: true
+  logdir: logs/smaclite_phase3d/overfit_2s_vs_1sc_original_1m
