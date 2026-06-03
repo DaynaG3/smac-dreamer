@@ -18,8 +18,12 @@ env/
 # Training logs and checkpoints (large, generated at runtime)
 logs/
 
-# External repositories (cloned separately, have own .git)
-# external/
+# Large result files (trajectories can be MB each)
+results/*.jsonl
+results/trajectories_*.json
+
+# External repositories — tracked as plain directories (no submodules)
+# .git dirs inside external/ must be removed before committing
 
 # JAX / XLA compilation cache
 .jax_cache/
