@@ -58,6 +58,18 @@ def load_configs() -> dict:
         "map_mode": "round_robin",
         "map_seed": 42,
         "use_padding": False,
+        "kill_reward_bonus": 0.0,
+        "step_penalty": 0.0,
+        "reward_shaping": {
+            "enabled": False,
+            "win_bonus": 0.0,
+            "loss_penalty": 0.0,
+            "enemy_kill_bonus": 0.0,
+            "ally_death_penalty": 0.0,
+            "ally_survival_bonus": 0.0,
+            "step_penalty": 0.0,
+            "damage_delta_scale": 0.0,
+        },
     }
 
     for cfg_path in [_SMAC_CONFIGS_P1, _SMAC_CONFIGS_P2, _SMAC_CONFIGS_P3]:
@@ -93,6 +105,13 @@ def make_env(config, index: int):
     map_seed     = smaclite_cfg.get("map_seed", 42)
     use_padding  = bool(smaclite_cfg.get("use_padding", False))
 
+    kill_reward_bonus = float(smaclite_cfg.get("kill_reward_bonus", 0.0))
+    step_penalty      = float(smaclite_cfg.get("step_penalty",      0.0))
+
+    from smacdreamer.envs.reward_shaping import from_dict as _rs_from_dict
+    rs_raw = smaclite_cfg.get("reward_shaping", {})
+    reward_shaping_config = _rs_from_dict(rs_raw)
+
     map_sampler = None
     pad_dims = None
 
@@ -109,6 +128,9 @@ def make_env(config, index: int):
         seed=seed + index,
         map_sampler=map_sampler,
         pad_dims=pad_dims,
+        kill_reward_bonus=kill_reward_bonus,
+        step_penalty=step_penalty,
+        reward_shaping_config=reward_shaping_config,
     )
     return wrap_env(env, config)
 

@@ -32,13 +32,34 @@ class SMACliteDreamerEnv(embodied.Env):
         max_episode_steps: int = 200,
         seed: int = 0,
         map_sampler=None,
-        pad_dims=None,   # Optional[PaddingDims] — enables Phase 3 padding
+        pad_dims=None,                    # Optional[PaddingDims] — enables Phase 3 padding
+        kill_reward_bonus: float = 0.0,   # legacy flat-param shaping (used when v2 disabled)
+        step_penalty: float = 0.0,        # legacy flat-param shaping (used when v2 disabled)
+        reward_shaping_config=None,       # Optional[RewardShapingConfig] — v2 shaping system
     ):
+        from smacdreamer.envs.reward_shaping import RewardShapingConfig as _RSC
         self._scenario = scenario
         self._max_episode_steps = max_episode_steps
         self._seed = seed
         self._map_sampler = map_sampler
         self._pad_dims = pad_dims
+        self._kill_reward_bonus = float(kill_reward_bonus)
+        self._step_penalty = float(step_penalty)
+        self._prev_n_enemies: int = 0
+        self._rs: _RSC = reward_shaping_config if reward_shaping_config is not None else _RSC()
+        self._use_new_shaping: bool = (
+            reward_shaping_config is not None and reward_shaping_config.enabled
+        )
+        self._prev_n_allies: int = 0
+        self._prev_enemy_hp_total: float = 0.0
+        self._ep_original_return: float = 0.0
+        self._ep_shaped_return: float = 0.0
+        self._ep_shaping_bonus: float = 0.0
+        self._ep_enemy_hp_damage: float = 0.0
+        self._first_ally_death_step: int = -1
+        self._ep_attack_actions: int = 0
+        self._ep_move_actions: int = 0
+        self._ep_noop_actions: int = 0
 
         if map_sampler is not None:
             init_entry = map_sampler.peek()
@@ -130,6 +151,41 @@ class SMACliteDreamerEnv(embodied.Env):
             "log/step_timing_lag_invalid_count":       elements.Space(np.float32),
             "log/step_masking_failure_count":          elements.Space(np.float32),
             "log/step_avail_mask_mismatch_count":      elements.Space(np.float32),
+            # --- Legacy flat-param shaping diagnostics (0.0 when v2 is active) ---
+            "log/step_kill_bonus":                     elements.Space(np.float32),
+            "log/step_step_penalty":                   elements.Space(np.float32),
+            # --- V2 shaping components (distinct namespace; 0.0 when v2 disabled) ---
+            "log/step_v2_win_bonus":                   elements.Space(np.float32),
+            "log/step_v2_loss_penalty":                elements.Space(np.float32),
+            "log/step_v2_enemy_kill_bonus":            elements.Space(np.float32),
+            "log/step_v2_ally_death_penalty":          elements.Space(np.float32),
+            "log/step_v2_ally_survival_bonus":         elements.Space(np.float32),
+            "log/step_v2_step_penalty":                elements.Space(np.float32),
+            # --- Combat state (always present) ---
+            "log/enemy_kills_this_step":               elements.Space(np.float32),
+            "log/ally_deaths_this_step":               elements.Space(np.float32),
+            "log/enemies_alive":                       elements.Space(np.float32),
+            "log/allies_alive":                        elements.Space(np.float32),
+            # --- Reward breakdown (always present) ---
+            "log/original_env_reward":                 elements.Space(np.float32),
+            "log/shaped_reward":                       elements.Space(np.float32),
+            "log/reward_shaping_bonus":                elements.Space(np.float32),
+            "log/reward_shaping_enabled":              elements.Space(np.float32),
+            # --- Episode-level return totals ---
+            "log/episode_original_env_return":         elements.Space(np.float32),
+            "log/episode_shaped_return":               elements.Space(np.float32),
+            "log/episode_reward_shaping_bonus":        elements.Space(np.float32),
+            # --- Damage-progress shaping (v2 damage_delta_scale) ---
+            "log/enemy_hp_total":                      elements.Space(np.float32),
+            "log/enemy_hp_damage_this_step":           elements.Space(np.float32),
+            "log/step_v2_damage_progress":             elements.Space(np.float32),
+            "log/episode_enemy_hp_damage":             elements.Space(np.float32),
+            "log/final_enemy_hp_total":                elements.Space(np.float32),
+            # --- Combat behaviour diagnostics ---
+            "log/first_ally_death_step":               elements.Space(np.float32),
+            "log/episode_attack_action_rate":          elements.Space(np.float32),
+            "log/episode_move_action_rate":            elements.Space(np.float32),
+            "log/episode_noop_rate":                   elements.Space(np.float32),
             # --- Step-level metrics (old aliases) ---
             "log/step_invalid_count":                  elements.Space(np.float32),
             "log/step_invalid_was_prev_valid_count":   elements.Space(np.float32),
@@ -197,11 +253,88 @@ class SMACliteDreamerEnv(embodied.Env):
         obs_tuple, reward, terminated, truncated, info = self._env.step(acts)
         self._ep_step += 1
 
+        # --- Reward shaping ---
+        # Dead units are removed from uw_post.agents / uw_post.enemies immediately
+        # by SMACliteEnv.__update_deaths() after each inner step (verified).
+        uw_post = getattr(self._env, 'unwrapped', self._env)
+        cur_n_enemies = len(uw_post.enemies)
+        cur_n_allies  = len(uw_post.agents)
+        kill_delta    = max(0, self._prev_n_enemies - cur_n_enemies)
+        ally_deaths   = max(0, self._prev_n_allies  - cur_n_allies)
+        self._prev_n_enemies = cur_n_enemies
+        self._prev_n_allies  = cur_n_allies
+
+        # Enemy HP tracking (alive enemies only; dead units are already removed).
+        cur_enemy_hp_total = float(sum(u.hp for u in uw_post.enemies.values()))
+        enemy_hp_damage_this_step = max(0.0, self._prev_enemy_hp_total - cur_enemy_hp_total)
+        self._prev_enemy_hp_total = cur_enemy_hp_total
+        self._ep_enemy_hp_damage += enemy_hp_damage_this_step
+
+        # First ally death step.
+        if ally_deaths > 0 and self._first_ally_death_step < 0:
+            self._first_ally_death_step = self._ep_step
+
+        # Action-type breakdown for the real agents this step.
+        for _act_idx in acts:
+            if _act_idx <= 1:
+                self._ep_noop_actions += 1
+            elif _act_idx <= 5:
+                self._ep_move_actions += 1
+            else:
+                self._ep_attack_actions += 1
+
+        # Compute is_last here so terminal_loss covers both env termination AND
+        # our own step-limit truncation (which would otherwise be set after this block).
         if self._ep_step >= self._max_episode_steps:
             truncated = True
-
-        is_last = terminated or truncated
+        is_last     = terminated or truncated
         is_terminal = terminated
+
+        base_reward = np.float32(reward)  # raw normalised SMAClite reward
+
+        if self._use_new_shaping:
+            rs = self._rs
+            # Terminal signals: applied exactly once on the episode's last step.
+            # loss_penalty fires on ANY non-winning episode end, including time-limit truncation.
+            terminal_win  = is_last and     info.get("battle_won", False)
+            terminal_loss = is_last and not info.get("battle_won", False)
+            v2_win_bonus    = rs.win_bonus    if terminal_win  else 0.0
+            v2_loss_penalty = rs.loss_penalty if terminal_loss else 0.0  # negative in config
+
+            v2_enemy_kill    = float(kill_delta)   * rs.enemy_kill_bonus
+            v2_ally_death    = float(ally_deaths)  * rs.ally_death_penalty  # negative in config
+            v2_ally_survival = float(cur_n_allies) * rs.ally_survival_bonus
+            v2_step_penalty  = rs.step_penalty
+            v2_damage_progress = enemy_hp_damage_this_step * rs.damage_delta_scale
+
+            shaping_bonus = (
+                v2_win_bonus + v2_loss_penalty
+                + v2_enemy_kill + v2_ally_death
+                + v2_ally_survival - v2_step_penalty
+                + v2_damage_progress
+            )
+            shaped_reward = base_reward + np.float32(shaping_bonus)
+
+            # Legacy flat-param diagnostics are zero when v2 is active.
+            step_kill_bonus   = 0.0
+            step_step_penalty = 0.0
+        else:
+            # Legacy flat-param shaping: kill_reward_bonus / step_penalty.
+            # Behaviour identical to pre-v2 code.
+            step_kill_bonus   = float(kill_delta) * self._kill_reward_bonus
+            step_step_penalty = self._step_penalty
+            shaping_bonus     = step_kill_bonus - step_step_penalty
+            shaped_reward     = base_reward + np.float32(shaping_bonus)
+
+            v2_win_bonus = v2_loss_penalty = v2_enemy_kill = 0.0
+            v2_ally_death = v2_ally_survival = v2_step_penalty = 0.0
+            v2_damage_progress = 0.0
+
+        # Episode-level return accumulation.
+        self._ep_original_return += float(base_reward)
+        self._ep_shaped_return   += float(shaped_reward)
+        self._ep_shaping_bonus   += float(shaping_bonus)
+
         self._done = is_last
 
         if is_last:
@@ -210,7 +343,7 @@ class SMACliteDreamerEnv(embodied.Env):
         return self._build_obs(
             obs_tuple=obs_tuple,
             avail=avail,
-            reward=np.float32(reward),
+            reward=shaped_reward,
             is_first=False,
             is_last=is_last,
             is_terminal=is_terminal,
@@ -218,6 +351,24 @@ class SMACliteDreamerEnv(embodied.Env):
             step_timing_lag=n_was_prev_valid,
             step_masking_failure=n_was_prev_invalid,
             step_mask_mismatch=n_mask_mismatch,
+            step_kill_bonus=step_kill_bonus,
+            step_step_penalty=step_step_penalty,
+            step_v2_win_bonus=v2_win_bonus,
+            step_v2_loss_penalty=v2_loss_penalty,
+            step_v2_enemy_kill_bonus=v2_enemy_kill,
+            step_v2_ally_death_penalty=v2_ally_death,
+            step_v2_ally_survival_bonus=v2_ally_survival,
+            step_v2_step_penalty=v2_step_penalty,
+            step_v2_damage_progress=v2_damage_progress,
+            enemy_kills_this_step=kill_delta,
+            ally_deaths_this_step=ally_deaths,
+            enemies_alive=cur_n_enemies,
+            allies_alive=cur_n_allies,
+            original_env_reward=float(base_reward),
+            shaped_reward_val=float(shaped_reward),
+            reward_shaping_bonus=float(shaping_bonus),
+            enemy_hp_total=cur_enemy_hp_total,
+            enemy_hp_damage_this_step=enemy_hp_damage_this_step,
         )
 
     def close(self):
@@ -278,7 +429,11 @@ class SMACliteDreamerEnv(embodied.Env):
                 self._current_map_id = self._map_id_map.get(entry.name, 0)
 
         obs_tuple, _ = self._env.reset()
-        avail = getattr(self._env, 'unwrapped', self._env).get_avail_actions()
+        uw = getattr(self._env, 'unwrapped', self._env)
+        avail = uw.get_avail_actions()
+        self._prev_n_enemies = len(uw.enemies)
+        self._prev_n_allies  = len(uw.agents)
+        self._prev_enemy_hp_total = float(sum(u.hp for u in uw.enemies.values()))
 
         self._last_obs_tuple = obs_tuple
         self._last_avail = avail
@@ -288,6 +443,14 @@ class SMACliteDreamerEnv(embodied.Env):
         self._ep_total_count = 0
         self._ep_timing_lag_count = 0
         self._ep_masking_failure_count = 0
+        self._ep_original_return = 0.0
+        self._ep_shaped_return   = 0.0
+        self._ep_shaping_bonus   = 0.0
+        self._ep_enemy_hp_damage = 0.0
+        self._first_ally_death_step = -1
+        self._ep_attack_actions = 0
+        self._ep_move_actions   = 0
+        self._ep_noop_actions   = 0
         self._ep_metrics = self._zero_ep_metrics()
 
         return self._build_obs(
@@ -301,6 +464,8 @@ class SMACliteDreamerEnv(embodied.Env):
             step_timing_lag=0,
             step_masking_failure=0,
             step_mask_mismatch=0,
+            step_kill_bonus=0.0,
+            step_step_penalty=0.0,
         )
 
     def _sanitise_actions(
@@ -356,6 +521,24 @@ class SMACliteDreamerEnv(embodied.Env):
         step_timing_lag: int = 0,
         step_masking_failure: int = 0,
         step_mask_mismatch: int = 0,
+        step_kill_bonus: float = 0.0,
+        step_step_penalty: float = 0.0,
+        step_v2_win_bonus: float = 0.0,
+        step_v2_loss_penalty: float = 0.0,
+        step_v2_enemy_kill_bonus: float = 0.0,
+        step_v2_ally_death_penalty: float = 0.0,
+        step_v2_ally_survival_bonus: float = 0.0,
+        step_v2_step_penalty: float = 0.0,
+        step_v2_damage_progress: float = 0.0,
+        enemy_kills_this_step: int = 0,
+        ally_deaths_this_step: int = 0,
+        enemies_alive: int = 0,
+        allies_alive: int = 0,
+        original_env_reward: float = 0.0,
+        shaped_reward_val: float = 0.0,
+        reward_shaping_bonus: float = 0.0,
+        enemy_hp_total: float = 0.0,
+        enemy_hp_damage_this_step: float = 0.0,
     ) -> dict:
         self._last_avail_returned = avail
 
@@ -393,6 +576,29 @@ class SMACliteDreamerEnv(embodied.Env):
             "log/step_timing_lag_invalid_count":       _f(step_timing_lag),
             "log/step_masking_failure_count":          _f(step_masking_failure),
             "log/step_avail_mask_mismatch_count":      _f(step_mask_mismatch),
+            # Legacy flat-param shaping diagnostics (0.0 when v2 active)
+            "log/step_kill_bonus":                     _f(step_kill_bonus),
+            "log/step_step_penalty":                   _f(step_step_penalty),
+            # V2 shaping components (distinct namespace; 0.0 when v2 disabled)
+            "log/step_v2_win_bonus":                   _f(step_v2_win_bonus),
+            "log/step_v2_loss_penalty":                _f(step_v2_loss_penalty),
+            "log/step_v2_enemy_kill_bonus":            _f(step_v2_enemy_kill_bonus),
+            "log/step_v2_ally_death_penalty":          _f(step_v2_ally_death_penalty),
+            "log/step_v2_ally_survival_bonus":         _f(step_v2_ally_survival_bonus),
+            "log/step_v2_step_penalty":                _f(step_v2_step_penalty),
+            "log/step_v2_damage_progress":             _f(step_v2_damage_progress),
+            # Combat state (always present)
+            "log/enemy_kills_this_step":               _f(enemy_kills_this_step),
+            "log/ally_deaths_this_step":               _f(ally_deaths_this_step),
+            "log/enemies_alive":                       _f(enemies_alive),
+            "log/allies_alive":                        _f(allies_alive),
+            "log/enemy_hp_total":                      _f(enemy_hp_total),
+            "log/enemy_hp_damage_this_step":           _f(enemy_hp_damage_this_step),
+            # Reward breakdown (always present)
+            "log/original_env_reward":                 _f(original_env_reward),
+            "log/shaped_reward":                       _f(shaped_reward_val),
+            "log/reward_shaping_bonus":                _f(reward_shaping_bonus),
+            "log/reward_shaping_enabled":              _f(1.0 if self._use_new_shaping else 0.0),
             # Step-level metrics (old aliases)
             "log/step_invalid_count":                  _f(step_invalid),
             "log/step_invalid_was_prev_valid_count":   _f(step_timing_lag),
@@ -430,6 +636,17 @@ class SMACliteDreamerEnv(embodied.Env):
             "log/episode_invalid_action_count":        _f(),
             "log/episode_total_action_count":          _f(),
             "log/episode_invalid_action_rate":         _f(),
+            # Episode-level return totals
+            "log/episode_original_env_return":         _f(),
+            "log/episode_shaped_return":               _f(),
+            "log/episode_reward_shaping_bonus":        _f(),
+            # Damage-progress diagnostics
+            "log/episode_enemy_hp_damage":             _f(),
+            "log/final_enemy_hp_total":                _f(),
+            "log/first_ally_death_step":               _f(),
+            "log/episode_attack_action_rate":          _f(),
+            "log/episode_move_action_rate":            _f(),
+            "log/episode_noop_rate":                   _f(),
         }
 
     def _compute_ep_metrics(self, info: dict) -> dict:
@@ -455,4 +672,21 @@ class SMACliteDreamerEnv(embodied.Env):
             "log/episode_invalid_action_count":        _f(invalid),
             "log/episode_total_action_count":          _f(total),
             "log/episode_invalid_action_rate":         _f(inv_rate),
+            # Episode-level return totals
+            "log/episode_original_env_return":         _f(self._ep_original_return),
+            "log/episode_shaped_return":               _f(self._ep_shaped_return),
+            "log/episode_reward_shaping_bonus":        _f(self._ep_shaping_bonus),
+            # Damage-progress diagnostics
+            "log/episode_enemy_hp_damage":             _f(self._ep_enemy_hp_damage),
+            "log/final_enemy_hp_total":                _f(self._prev_enemy_hp_total),
+            "log/first_ally_death_step":               _f(self._first_ally_death_step),
+            "log/episode_attack_action_rate":          _f(
+                self._ep_attack_actions / self._ep_total_count if self._ep_total_count > 0 else 0.0
+            ),
+            "log/episode_move_action_rate":            _f(
+                self._ep_move_actions / self._ep_total_count if self._ep_total_count > 0 else 0.0
+            ),
+            "log/episode_noop_rate":                   _f(
+                self._ep_noop_actions / self._ep_total_count if self._ep_total_count > 0 else 0.0
+            ),
         }

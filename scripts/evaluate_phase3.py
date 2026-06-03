@@ -45,6 +45,8 @@ from evaluate import (
     load_checkpoint,
 )
 
+from smacdreamer.envs.reward_shaping import from_dict as _rs_from_dict
+
 
 # ---------------------------------------------------------------------------
 # Episode runner
@@ -55,12 +57,17 @@ def _batch_obs(obs: dict) -> dict:
     return {k: v[None] for k, v in obs.items() if not k.startswith("log/")}
 
 
-def _run_episode_p3(env, agent, carry, mode: str = "eval") -> tuple:
+def _run_episode_p3(
+    env, agent, carry, mode: str = "eval",
+    record: bool = False, ep_idx: int = 0,
+    reward_mode: str = "original",
+) -> tuple:
     """Run one episode; capture Phase 3 metrics from obs.
 
     Reads log/num_real_agents and log/map_id directly from the reset obs dict
     (not via env attribute access), so it works identically with wrapped envs.
-    Returns (carry, metrics_dict).
+    Returns (carry, metrics_dict, trajectory_list).
+    trajectory_list is a list of per-step dicts (empty when record=False).
     """
     reset_act = {k: np.zeros(v.shape, v.dtype) for k, v in env.act_space.items()}
     reset_act["reset"] = np.bool_(True)
@@ -69,42 +76,69 @@ def _run_episode_p3(env, agent, carry, mode: str = "eval") -> tuple:
     num_real_agents = int(float(obs.get("log/num_real_agents", np.array(0.0))))
     map_id = int(float(obs.get("log/map_id", np.array(0.0))))
 
+    # Derive the sorted list of per-agent action keys once.
+    action_keys = sorted(
+        [k for k in env.act_space if k.startswith("action_")],
+        key=lambda k: int(k.split("_")[1]),
+    )
+    max_agents = len(action_keys)
+
     agent_obs = _batch_obs(obs)
     carry, acts, _ = agent.policy(carry, agent_obs, mode=mode)
 
-    ep_reward = 0.0
+    ep_reward_original = 0.0
+    ep_reward_shaped   = 0.0
     ep_length = 0
     ep_mask_mismatch = 0
     final_obs = obs
+    trajectory = []
 
     while not bool(obs["is_last"]):
         act = {k: v[0] for k, v in acts.items()}
         act["reset"] = obs["is_last"]
         obs = env.step(act)
-        ep_reward += float(obs["reward"])
+        ep_reward_original += float(obs.get("log/original_env_reward", obs["reward"]))
+        ep_reward_shaped   += float(obs.get("log/shaped_reward",       obs["reward"]))
         ep_length += 1
         ep_mask_mismatch += int(obs.get("log/step_avail_mask_mismatch_count", np.array(0)))
         final_obs = obs
+
+        if record:
+            trajectory.append({
+                "episode":          ep_idx,
+                "step":             ep_length,
+                "actions":          [int(act[k]) for k in action_keys],
+                "num_real_agents":  num_real_agents,
+                "max_agents":       max_agents,
+                "reward":           float(obs["reward"]),
+            })
+
         if not bool(obs["is_last"]):
             agent_obs = _batch_obs(obs)
             carry, acts, _ = agent.policy(carry, agent_obs, mode=mode)
 
     metrics = {
-        "reward":                    ep_reward,
-        "length":                    ep_length,
-        "num_real_agents":           num_real_agents,
-        "map_id":                    map_id,
-        "battle_won":                bool(final_obs.get("log/battle_won", np.array(False))),
-        "post_mask_invalid_count":   int(final_obs.get("log/post_mask_invalid_action_count", np.array(0))),
-        "post_mask_invalid_rate":    float(final_obs.get("log/post_mask_invalid_action_rate", np.array(0.0))),
-        "timing_lag_count":          int(final_obs.get("log/timing_lag_invalid_action_count", np.array(0))),
-        "timing_lag_rate":           float(final_obs.get("log/timing_lag_invalid_action_rate", np.array(0.0))),
-        "masking_failure_count":     int(final_obs.get("log/masking_failure_count", np.array(0))),
-        "masking_failure_rate":      float(final_obs.get("log/masking_failure_rate", np.array(0.0))),
-        "total_action_count":        int(final_obs.get("log/total_action_count", np.array(0))),
-        "avail_mask_mismatch_slots": ep_mask_mismatch,
+        "reward":                       ep_reward_original if reward_mode == "original" else ep_reward_shaped,
+        "original_env_reward":          ep_reward_original,
+        "shaped_reward":                ep_reward_shaped,
+        "reward_shaping_bonus":         ep_reward_shaped - ep_reward_original,
+        "episode_original_env_return":  float(final_obs.get("log/episode_original_env_return", np.array(0.0))),
+        "episode_shaped_return":        float(final_obs.get("log/episode_shaped_return",        np.array(0.0))),
+        "episode_reward_shaping_bonus": float(final_obs.get("log/episode_reward_shaping_bonus", np.array(0.0))),
+        "length":                       ep_length,
+        "num_real_agents":              num_real_agents,
+        "map_id":                       map_id,
+        "battle_won":                   bool(final_obs.get("log/battle_won", np.array(False))),
+        "post_mask_invalid_count":      int(final_obs.get("log/post_mask_invalid_action_count", np.array(0))),
+        "post_mask_invalid_rate":       float(final_obs.get("log/post_mask_invalid_action_rate", np.array(0.0))),
+        "timing_lag_count":             int(final_obs.get("log/timing_lag_invalid_action_count", np.array(0))),
+        "timing_lag_rate":              float(final_obs.get("log/timing_lag_invalid_action_rate", np.array(0.0))),
+        "masking_failure_count":        int(final_obs.get("log/masking_failure_count", np.array(0))),
+        "masking_failure_rate":         float(final_obs.get("log/masking_failure_rate", np.array(0.0))),
+        "total_action_count":           int(final_obs.get("log/total_action_count", np.array(0))),
+        "avail_mask_mismatch_slots":    ep_mask_mismatch,
     }
-    return carry, metrics
+    return carry, metrics, trajectory
 
 
 # ---------------------------------------------------------------------------
@@ -129,14 +163,21 @@ def make_eval_env_for_map(
     max_episode_steps: int,
     seed: int,
     config: elements.Config,
+    reward_shaping_config=None,
 ):
-    """Create a fixed-scenario eval env for a single map entry, with optional padding."""
+    """Create a fixed-scenario eval env for a single map entry, with optional padding.
+
+    reward_shaping_config should be reconstructed from the training config so the
+    policy receives the same reward stream it was trained under. --reward_mode only
+    affects which value is reported as mean_episode_reward in the output JSON.
+    """
     if entry.type == 'builtin':
         env = SMACliteDreamerEnv(
             scenario=entry.name,
             max_episode_steps=max_episode_steps,
             seed=seed,
             pad_dims=pad_dims,
+            reward_shaping_config=reward_shaping_config,
         )
     else:
         sampler = MapSampler([entry], mode='fixed')
@@ -146,6 +187,7 @@ def make_eval_env_for_map(
             seed=seed,
             map_sampler=sampler,
             pad_dims=pad_dims,
+            reward_shaping_config=reward_shaping_config,
         )
     return wrap_env(env, config)
 
@@ -160,20 +202,32 @@ def aggregate_metrics(all_episodes: list) -> dict:
     totals          = [e["total_action_count"]        for e in all_episodes]
     mismatch        = [e["avail_mask_mismatch_slots"] for e in all_episodes]
     num_real_agents = [e["num_real_agents"]           for e in all_episodes]
+    orig_rewards    = [e["original_env_reward"]          for e in all_episodes]
+    shaped_rewards  = [e["shaped_reward"]                for e in all_episodes]
+    shaping_bonuses = [e["reward_shaping_bonus"]         for e in all_episodes]
+    ep_orig_returns = [e["episode_original_env_return"]  for e in all_episodes]
+    ep_shp_returns  = [e["episode_shaped_return"]        for e in all_episodes]
+    ep_shp_bonuses  = [e["episode_reward_shaping_bonus"] for e in all_episodes]
     return {
-        "episodes":                        len(all_episodes),
-        "mean_episode_reward":             float(np.mean(rewards)),
-        "std_episode_reward":              float(np.std(rewards)),
-        "min_episode_reward":              float(np.min(rewards)),
-        "max_episode_reward":              float(np.max(rewards)),
-        "mean_episode_length":             float(np.mean(lengths)),
-        "win_rate":                        float(np.mean(wins)),
-        "mean_total_action_count":         float(np.mean(totals)),
-        "mean_post_mask_invalid_rate":     float(np.mean(post_inv_r)),
-        "mean_timing_lag_rate":            float(np.mean(lag_r)),
-        "mean_masking_failure_rate":       float(np.mean(fail_r)),
-        "mean_avail_mask_mismatch_slots":  float(np.mean(mismatch)),
-        "mean_num_real_agents":            float(np.mean(num_real_agents)),
+        "episodes":                               len(all_episodes),
+        "mean_episode_reward":                    float(np.mean(rewards)),
+        "std_episode_reward":                     float(np.std(rewards)),
+        "min_episode_reward":                     float(np.min(rewards)),
+        "max_episode_reward":                     float(np.max(rewards)),
+        "mean_episode_length":                    float(np.mean(lengths)),
+        "win_rate":                               float(np.mean(wins)),
+        "mean_total_action_count":                float(np.mean(totals)),
+        "mean_post_mask_invalid_rate":            float(np.mean(post_inv_r)),
+        "mean_timing_lag_rate":                   float(np.mean(lag_r)),
+        "mean_masking_failure_rate":              float(np.mean(fail_r)),
+        "mean_avail_mask_mismatch_slots":         float(np.mean(mismatch)),
+        "mean_num_real_agents":                   float(np.mean(num_real_agents)),
+        "mean_original_env_reward":               float(np.mean(orig_rewards)),
+        "mean_shaped_reward":                     float(np.mean(shaped_rewards)),
+        "mean_reward_shaping_bonus":              float(np.mean(shaping_bonuses)),
+        "mean_episode_original_env_return":       float(np.mean(ep_orig_returns)),
+        "mean_episode_shaped_return":             float(np.mean(ep_shp_returns)),
+        "mean_episode_reward_shaping_bonus":      float(np.mean(ep_shp_bonuses)),
     }
 
 
@@ -204,6 +258,14 @@ def parse_args():
                         help="JSON output path.")
     parser.add_argument("--jsonl_output", default="",
                         help="Optional per-episode JSONL output path.")
+    parser.add_argument("--record_trajectories", action="store_true",
+                        help="Record per-step actions for every episode.")
+    parser.add_argument("--trajectory_output", default="",
+                        help="Path to write per-step trajectory JSONL (requires --record_trajectories).")
+    parser.add_argument("--reward_mode", choices=["original", "shaped"], default="original",
+                        help="Which reward to report as mean_episode_reward: "
+                             "original=log/original_env_reward (default), shaped=obs['reward']. "
+                             "Does NOT change the reward the policy receives.")
     return parser.parse_args()
 
 
@@ -241,6 +303,20 @@ def main():
 
     config = load_training_config(logdir)
 
+    # Reconstruct the reward_shaping config used during training so the eval env
+    # gives the policy the same reward stream it was trained under.
+    eval_reward_shaping_config = None
+    try:
+        smaclite_train_cfg = config.env.get("smaclite", {})
+        rs_raw = smaclite_train_cfg.get("reward_shaping", {})
+        eval_reward_shaping_config = _rs_from_dict(rs_raw)
+        if eval_reward_shaping_config.enabled:
+            print(f"Reward shaping  : enabled (reconstructed from {logdir/'config.yaml'})")
+        else:
+            print(f"Reward shaping  : disabled (none in training config)")
+    except Exception as exc:
+        print(f"Reward shaping  : could not reconstruct ({exc}); using None")
+
     def _init():
         elements.timer.global_timer.enabled = config.logger.timer
 
@@ -253,7 +329,8 @@ def main():
     )
 
     first_env = make_eval_env_for_map(
-        map_entries[0], pad_dims, args.max_episode_steps, args.seed, config)
+        map_entries[0], pad_dims, args.max_episode_steps, args.seed, config,
+        reward_shaping_config=eval_reward_shaping_config)
     agent = build_agent(config, first_env)
 
     try:
@@ -271,20 +348,30 @@ def main():
     if jsonl_path:
         jsonl_path.parent.mkdir(parents=True, exist_ok=True)
 
+    traj_path = pathlib.Path(args.trajectory_output) if args.trajectory_output else None
+    if traj_path:
+        traj_path.parent.mkdir(parents=True, exist_ok=True)
+
     per_map_results = {}
     all_episodes_combined = []
 
     jsonl_file = open(jsonl_path, 'w', encoding='utf-8') if jsonl_path else None
+    traj_file  = open(traj_path,  'w', encoding='utf-8') if traj_path  else None
     try:
         for entry in map_entries:
             print(f"\n--- Map: {entry.name} ---")
             env = make_eval_env_for_map(
-                entry, pad_dims, args.max_episode_steps, args.seed, config)
+                entry, pad_dims, args.max_episode_steps, args.seed, config,
+                reward_shaping_config=eval_reward_shaping_config)
             carry = agent.init_policy(batch_size=1)
 
             map_episodes = []
             for ep_idx in range(args.episodes):
-                carry, metrics = _run_episode_p3(env, agent, carry, mode=mode)
+                carry, metrics, traj = _run_episode_p3(
+                    env, agent, carry, mode=mode,
+                    record=args.record_trajectories, ep_idx=ep_idx + 1,
+                    reward_mode=args.reward_mode,
+                )
                 metrics["episode"] = ep_idx + 1
                 map_episodes.append(metrics)
 
@@ -311,6 +398,11 @@ def main():
                     }
                     jsonl_file.write(json.dumps(line) + '\n')
                     jsonl_file.flush()
+
+                if traj_file is not None:
+                    for step_rec in traj:
+                        traj_file.write(json.dumps({"map": entry.name, **step_rec}) + '\n')
+                    traj_file.flush()
 
             env.close()
             agg = aggregate_metrics(map_episodes)
@@ -348,6 +440,8 @@ def main():
     finally:
         if jsonl_file:
             jsonl_file.close()
+        if traj_file:
+            traj_file.close()
 
     overall_agg = aggregate_metrics(all_episodes_combined)
     print(f"\n{'='*60}")
@@ -390,6 +484,8 @@ def main():
     print(f"Results saved to      : {output_path}")
     if args.jsonl_output:
         print(f"Per-episode JSONL     : {args.jsonl_output}")
+    if args.trajectory_output:
+        print(f"Trajectory JSONL      : {args.trajectory_output}")
 
 
 if __name__ == "__main__":

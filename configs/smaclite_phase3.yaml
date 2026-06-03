@@ -153,3 +153,171 @@ smaclite_phase3d_2s_vs_1sc_original:
       map_seed: 42
       use_padding: true
   logdir: logs/smaclite_phase3d/overfit_2s_vs_1sc_original_1m
+
+smaclite_phase3d_2s_vs_1sc_shaped:
+  task: smaclite_phase3d_2s_vs_1sc_shaped
+  script: train
+  jax:
+    platform: cpu
+    prealloc: false
+  logger:
+    outputs: [jsonl]
+  run:
+    envs: 1
+    steps: 1000000
+    log_every: 60
+    save_every: 300
+    train_ratio: 8
+    debug: false
+  env:
+    smaclite:
+      scenario: 2s_vs_1sc
+      max_episode_steps: 200
+      seed: 0
+      map_manifest: configs/maps/phase3d_overfit_2s_vs_1sc_manifest.yaml
+      map_mode: fixed
+      map_seed: 42
+      use_padding: true
+      kill_reward_bonus: 1.0
+      step_penalty: 0.01
+  logdir: logs/smaclite_phase3d/overfit_2s_vs_1sc_shaped_1m
+
+smaclite_phase3d_2s_vs_1sc_v2:
+  task: smaclite_phase3d_2s_vs_1sc_v2
+  script: train
+  jax:
+    platform: cpu
+    prealloc: false
+  logger:
+    outputs: [jsonl]
+  run:
+    envs: 1
+    steps: 1000000
+    log_every: 60
+    save_every: 300
+    train_ratio: 8
+    debug: false
+  env:
+    smaclite:
+      scenario: 2s_vs_1sc
+      max_episode_steps: 200
+      seed: 0
+      map_manifest: configs/maps/phase3d_overfit_2s_vs_1sc_manifest.yaml
+      map_mode: fixed
+      map_seed: 42
+      use_padding: true
+      reward_shaping:
+        enabled: true
+        win_bonus: 10.0
+        loss_penalty: -10.0
+        enemy_kill_bonus: 5.0
+        ally_death_penalty: -2.0
+        ally_survival_bonus: 0.02
+        step_penalty: 0.003
+        damage_delta_scale: 0.0
+  logdir: logs/smaclite_phase3d/overfit_2s_vs_1sc_v2_1m
+
+smaclite_phase3d_2s_vs_1sc_v3_damage:
+  task: smaclite_phase3d_2s_vs_1sc_v3_damage
+  script: train
+  jax:
+    platform: cpu
+    prealloc: false
+  logger:
+    outputs: [jsonl]
+  run:
+    envs: 1
+    steps: 1000000
+    log_every: 60
+    save_every: 300
+    train_ratio: 8
+    debug: false
+  env:
+    smaclite:
+      scenario: 2s_vs_1sc
+      max_episode_steps: 200
+      seed: 0
+      map_manifest: configs/maps/phase3d_overfit_2s_vs_1sc_manifest.yaml
+      map_mode: fixed
+      map_seed: 42
+      use_padding: true
+      reward_shaping:
+        enabled: true
+        win_bonus: 15.0
+        loss_penalty: -8.0
+        enemy_kill_bonus: 10.0
+        ally_death_penalty: -2.0
+        ally_survival_bonus: 0.003
+        step_penalty: 0.005
+        damage_delta_scale: 0.2
+  logdir: logs/smaclite_phase3d/overfit_2s_vs_1sc_v3_damage_1m
+
+smaclite_phase3d_2s_vs_1sc_v4_commit:
+  task: smaclite_phase3d_2s_vs_1sc_v4_commit
+  script: train
+  jax:
+    platform: cpu
+    prealloc: false
+  logger:
+    outputs: [jsonl]
+  run:
+    envs: 1
+    steps: 1000000
+    log_every: 60
+    save_every: 300
+    train_ratio: 8
+    debug: false
+  env:
+    smaclite:
+      scenario: 2s_vs_1sc
+      max_episode_steps: 200
+      seed: 0
+      map_manifest: configs/maps/phase3d_overfit_2s_vs_1sc_manifest.yaml
+      map_mode: fixed
+      map_seed: 42
+      use_padding: true
+      reward_shaping:
+        enabled: true
+        win_bonus: 20.0
+        loss_penalty: -10.0
+        enemy_kill_bonus: 10.0
+        ally_death_penalty: -1.0
+        ally_survival_bonus: 0.0
+        step_penalty: 0.05
+        damage_delta_scale: 0.3
+  logdir: logs/smaclite_phase3d/overfit_2s_vs_1sc_v4_commit_1m
+
+smaclite_phase3d_2s_vs_1sc_v5_gpu:
+  task: smaclite_phase3d_2s_vs_1sc_v5_gpu
+  script: train
+  jax:
+    platform: gpu
+    prealloc: false
+  logger:
+    outputs: [jsonl]
+  run:
+    envs: 1
+    steps: 5000000
+    log_every: 60
+    save_every: 300
+    train_ratio: 32
+    debug: false
+  env:
+    smaclite:
+      scenario: 2s_vs_1sc
+      max_episode_steps: 200
+      seed: 0
+      map_manifest: configs/maps/phase3d_overfit_2s_vs_1sc_manifest.yaml
+      map_mode: fixed
+      map_seed: 42
+      use_padding: true
+      reward_shaping:
+        enabled: true
+        win_bonus: 25.0
+        loss_penalty: -5.0
+        enemy_kill_bonus: 15.0
+        ally_death_penalty: 0.0
+        ally_survival_bonus: 0.0
+        step_penalty: 0.05
+        damage_delta_scale: 0.5
+  logdir: logs/smaclite_phase3d/overfit_2s_vs_1sc_v5_gpu
