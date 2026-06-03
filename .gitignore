@@ -9,10 +9,10 @@ __pycache__/
 dist/
 build/
 
-# Virtual environments
-.venv/
-venv/
-env/
+# Virtual environments (root-anchored so they don't match external/*/env/)
+/.venv/
+/venv/
+/env/
 .Python
 
 # Training logs and checkpoints (large, generated at runtime)
