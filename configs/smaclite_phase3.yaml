@@ -291,7 +291,7 @@ smaclite_phase3d_2s_vs_1sc_v5_gpu:
   task: smaclite_phase3d_2s_vs_1sc_v5_gpu
   script: train
   jax:
-    platform: gpu
+    platform: cuda
     prealloc: false
   logger:
     outputs: [jsonl]
