@@ -19,7 +19,7 @@ env/
 logs/
 
 # External repositories (cloned separately, have own .git)
-external/
+# external/
 
 # JAX / XLA compilation cache
 .jax_cache/
