@@ -72,7 +72,6 @@ def load_configs() -> dict:
         "project": "smac-dreamer",
         "entity": "",
         "group": "",
-        "tags": [],
         "notes": "",
         "mode": "online",
     }
