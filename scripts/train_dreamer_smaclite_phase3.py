@@ -72,10 +72,39 @@ def load_configs() -> dict:
         },
     }
 
+    configs["defaults"]["wandb"] = {
+        "project": "smac-dreamer",
+        "entity": "",
+        "group": "",
+        "tags": [],
+        "notes": "",
+        "mode": "online",
+    }
+
     for cfg_path in [_SMAC_CONFIGS_P1, _SMAC_CONFIGS_P2, _SMAC_CONFIGS_P3]:
         text = cfg_path.read_text(encoding="utf-8")
         configs.update(yaml.YAML(typ="safe").load(text))
     return configs
+
+
+def _init_wandb(config):
+    if 'wandb' not in config.logger.outputs:
+        return
+    import wandb
+    wb = config.get('wandb', {})
+    parts = str(config.logdir).replace('\\', '/').split('/')
+    run_name = '/'.join(parts[-2:]) if len(parts) >= 2 else parts[-1]
+    wandb.init(
+        project=wb.get('project', 'smac-dreamer') or 'smac-dreamer',
+        entity=wb.get('entity') or None,
+        group=wb.get('group') or None,
+        name=run_name,
+        tags=list(wb.get('tags', [])),
+        notes=wb.get('notes') or None,
+        mode=wb.get('mode', 'online'),
+        config=dict(config.flat),
+        resume='allow',
+    )
 
 
 def _load_pad_dims(map_manifest: str):
@@ -210,6 +239,7 @@ def main(argv=None):
     print("Script:", config.script)
     logdir.mkdir()
     config.save(logdir / "config.yaml")
+    _init_wandb(config)
 
     # Validate padding dims before allocating any JAX memory.
     _validate_padding_at_startup(config)

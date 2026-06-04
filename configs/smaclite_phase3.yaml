@@ -5,7 +5,7 @@ smaclite_phase3:
     platform: cpu
     prealloc: false
   logger:
-    outputs: [jsonl]
+    outputs: [jsonl, wandb]
   run:
     envs: 1
     steps: 50000
@@ -31,7 +31,7 @@ smaclite_phase3_overfit:
     platform: cpu
     prealloc: false
   logger:
-    outputs: [jsonl]
+    outputs: [jsonl, wandb]
   run:
     envs: 1
     steps: 100000
@@ -57,7 +57,7 @@ smaclite_phase3c:
     platform: cpu
     prealloc: false
   logger:
-    outputs: [jsonl]
+    outputs: [jsonl, wandb]
   run:
     envs: 1
     steps: 200000
@@ -83,7 +83,7 @@ smaclite_phase3c_overfit_3s5z:
     platform: cpu
     prealloc: false
   logger:
-    outputs: [jsonl]
+    outputs: [jsonl, wandb]
   run:
     envs: 1
     steps: 200000
@@ -109,7 +109,7 @@ smaclite_phase3c_overfit_3s5z_vs_3s6z:
     platform: cpu
     prealloc: false
   logger:
-    outputs: [jsonl]
+    outputs: [jsonl, wandb]
   run:
     envs: 1
     steps: 200000
@@ -135,7 +135,7 @@ smaclite_phase3d_2s_vs_1sc_original:
     platform: cpu
     prealloc: false
   logger:
-    outputs: [jsonl]
+    outputs: [jsonl, wandb]
   run:
     envs: 1
     steps: 1000000
@@ -161,7 +161,7 @@ smaclite_phase3d_2s_vs_1sc_shaped:
     platform: cpu
     prealloc: false
   logger:
-    outputs: [jsonl]
+    outputs: [jsonl, wandb]
   run:
     envs: 1
     steps: 1000000
@@ -189,7 +189,7 @@ smaclite_phase3d_2s_vs_1sc_v2:
     platform: cpu
     prealloc: false
   logger:
-    outputs: [jsonl]
+    outputs: [jsonl, wandb]
   run:
     envs: 1
     steps: 1000000
@@ -224,7 +224,7 @@ smaclite_phase3d_2s_vs_1sc_v3_damage:
     platform: cpu
     prealloc: false
   logger:
-    outputs: [jsonl]
+    outputs: [jsonl, wandb]
   run:
     envs: 1
     steps: 1000000
@@ -259,7 +259,7 @@ smaclite_phase3d_2s_vs_1sc_v4_commit:
     platform: cpu
     prealloc: false
   logger:
-    outputs: [jsonl]
+    outputs: [jsonl, wandb]
   run:
     envs: 1
     steps: 1000000
@@ -294,7 +294,7 @@ smaclite_phase3d_2s_vs_1sc_v5_gpu:
     platform: cuda
     prealloc: false
   logger:
-    outputs: [jsonl]
+    outputs: [jsonl, wandb]
   run:
     envs: 1
     steps: 5000000
