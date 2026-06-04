@@ -68,10 +68,39 @@ def load_configs() -> dict:
         "seed": 0,
     }
 
+    configs["defaults"]["wandb"] = {
+        "project": "smac-dreamer",
+        "entity": "",
+        "group": "",
+        "tags": [],
+        "notes": "",
+        "mode": "online",
+    }
+
     smac_text = _SMAC_CONFIGS.read_text(encoding="utf-8")
     smac_configs = yaml.YAML(typ="safe").load(smac_text)
     configs.update(smac_configs)
     return configs
+
+
+def _init_wandb(config):
+    if 'wandb' not in config.logger.outputs:
+        return
+    import wandb
+    wb = config.get('wandb', {})
+    parts = str(config.logdir).replace('\\', '/').split('/')
+    run_name = '/'.join(parts[-2:]) if len(parts) >= 2 else parts[-1]
+    wandb.init(
+        project=wb.get('project', 'smac-dreamer') or 'smac-dreamer',
+        entity=wb.get('entity') or None,
+        group=wb.get('group') or None,
+        name=run_name,
+        tags=list(wb.get('tags', [])),
+        notes=wb.get('notes') or None,
+        mode=wb.get('mode', 'online'),
+        config=dict(config.flat),
+        resume='allow',
+    )
 
 
 def make_env(config, index: int):
@@ -134,6 +163,7 @@ def main(argv=None):
     print("Script:", config.script)
     logdir.mkdir()
     config.save(logdir / "config.yaml")
+    _init_wandb(config)
 
     def init():
         elements.timer.global_timer.enabled = config.logger.timer

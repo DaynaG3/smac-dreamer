@@ -5,7 +5,7 @@ smaclite_phase2:
     platform: cpu
     prealloc: false
   logger:
-    outputs: [jsonl]
+    outputs: [jsonl, wandb]
   run:
     envs: 1
     steps: 50000
