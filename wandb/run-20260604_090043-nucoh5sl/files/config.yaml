@@ -1,0 +1,587 @@
+_wandb:
+    value:
+        cli_version: 0.27.1
+        e:
+            2cazu9g6zhp9lyktafbaa3rr5mxs0zgc:
+                args:
+                    - --configs
+                    - smaclite_phase1
+                    - debug
+                    - --logdir
+                    - logs/p1/wandb_smoke
+                    - --run.steps
+                    - "500"
+                    - --wandb.project
+                    - smac-dreamer
+                    - --wandb.group
+                    - phase1-smoke
+                codePath: scripts/train_dreamer_smaclite_phase1.py
+                codePathLocal: scripts/train_dreamer_smaclite_phase1.py
+                cpu_count: 48
+                cpu_count_logical: 96
+                cudaVersion: "12.2"
+                disk:
+                    /:
+                        total: "3779260694528"
+                        used: "1721570697216"
+                email: simru0411@gmail.com
+                executable: /home/jovyan/miniconda3/envs/smac-dreamer/bin/python
+                git:
+                    commit: 0ec2d3f41423491042c64c96d9cdf1af74aaf9af
+                    remote: https://github.com/DaynaG3/smac-dreamer.git
+                gpu: NVIDIA A40
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 10752
+                      memoryTotal: "48305799168"
+                      name: NVIDIA A40
+                      uuid: GPU-88acdcd1-be69-6fe0-1a38-6ddd7632cf2b
+                host: dreamerv3-0
+                memory:
+                    total: "540963282944"
+                os: Linux-5.4.0-121-generic-x86_64-with-glibc2.31
+                program: /home/jovyan/smac-dreamer/scripts/train_dreamer_smaclite_phase1.py
+                python: CPython 3.10.20
+                root: /home/jovyan/smac-dreamer
+                startedAt: "2026-06-04T09:00:43.467965Z"
+                writerId: 2cazu9g6zhp9lyktafbaa3rr5mxs0zgc
+        m: []
+        python_version: 3.10.20
+        t:
+            "1":
+                - 12
+            "2":
+                - 5
+                - 12
+                - 53
+            "3":
+                - 13
+                - 15
+                - 16
+                - 24
+                - 61
+            "4": 3.10.20
+            "5": 0.27.1
+            "12": 0.27.1
+            "13": linux-x86_64
+agent.ac_grads:
+    value: false
+agent.advnorm.impl:
+    value: none
+agent.advnorm.limit:
+    value: 1e-08
+agent.advnorm.rate:
+    value: 0.01
+agent.conhead.act:
+    value: silu
+agent.conhead.layers:
+    value: 1
+agent.conhead.norm:
+    value: rms
+agent.conhead.output:
+    value: binary
+agent.conhead.outscale:
+    value: 1
+agent.conhead.units:
+    value: 8
+agent.conhead.winit:
+    value: trunc_normal_in
+agent.contdisc:
+    value: true
+agent.dec.simple.act:
+    value: silu
+agent.dec.simple.bspace:
+    value: 8
+agent.dec.simple.depth:
+    value: 2
+agent.dec.simple.kernel:
+    value: 5
+agent.dec.simple.layers:
+    value: 1
+agent.dec.simple.mults:
+    value:
+        - 2
+        - 3
+        - 4
+        - 4
+agent.dec.simple.norm:
+    value: rms
+agent.dec.simple.outer:
+    value: false
+agent.dec.simple.outscale:
+    value: 1
+agent.dec.simple.strided:
+    value: false
+agent.dec.simple.units:
+    value: 8
+agent.dec.simple.winit:
+    value: trunc_normal_in
+agent.dec.typ:
+    value: simple
+agent.dyn.rssm.absolute:
+    value: false
+agent.dyn.rssm.act:
+    value: silu
+agent.dyn.rssm.blocks:
+    value: 4
+agent.dyn.rssm.classes:
+    value: 4
+agent.dyn.rssm.deter:
+    value: 8
+agent.dyn.rssm.dynlayers:
+    value: 1
+agent.dyn.rssm.free_nats:
+    value: 1
+agent.dyn.rssm.hidden:
+    value: 3
+agent.dyn.rssm.imglayers:
+    value: 2
+agent.dyn.rssm.norm:
+    value: rms
+agent.dyn.rssm.obslayers:
+    value: 1
+agent.dyn.rssm.outscale:
+    value: 1
+agent.dyn.rssm.stoch:
+    value: 2
+agent.dyn.rssm.unimix:
+    value: 0.01
+agent.dyn.rssm.winit:
+    value: trunc_normal_in
+agent.dyn.typ:
+    value: rssm
+agent.enc.simple.act:
+    value: silu
+agent.enc.simple.depth:
+    value: 2
+agent.enc.simple.kernel:
+    value: 5
+agent.enc.simple.layers:
+    value: 1
+agent.enc.simple.mults:
+    value:
+        - 2
+        - 3
+        - 4
+        - 4
+agent.enc.simple.norm:
+    value: rms
+agent.enc.simple.outer:
+    value: false
+agent.enc.simple.strided:
+    value: false
+agent.enc.simple.symlog:
+    value: true
+agent.enc.simple.units:
+    value: 8
+agent.enc.simple.winit:
+    value: trunc_normal_in
+agent.enc.typ:
+    value: simple
+agent.horizon:
+    value: 333
+agent.imag_last:
+    value: 0
+agent.imag_length:
+    value: 15
+agent.imag_loss.actent:
+    value: 0.0003
+agent.imag_loss.lam:
+    value: 0.95
+agent.imag_loss.slowreg:
+    value: 1
+agent.imag_loss.slowtar:
+    value: false
+agent.loss_scales.con:
+    value: 1
+agent.loss_scales.dyn:
+    value: 1
+agent.loss_scales.policy:
+    value: 1
+agent.loss_scales.rec:
+    value: 1
+agent.loss_scales.rep:
+    value: 0.1
+agent.loss_scales.repval:
+    value: 0.3
+agent.loss_scales.rew:
+    value: 1
+agent.loss_scales.value:
+    value: 1
+agent.opt.agc:
+    value: 0.3
+agent.opt.anneal:
+    value: 0
+agent.opt.beta1:
+    value: 0.9
+agent.opt.beta2:
+    value: 0.999
+agent.opt.eps:
+    value: 1e-20
+agent.opt.lr:
+    value: 4e-05
+agent.opt.momentum:
+    value: true
+agent.opt.schedule:
+    value: const
+agent.opt.warmup:
+    value: 1000
+agent.opt.wd:
+    value: 0
+agent.policy.act:
+    value: silu
+agent.policy.layers:
+    value: 1
+agent.policy.maxstd:
+    value: 1
+agent.policy.minstd:
+    value: 0.1
+agent.policy.norm:
+    value: rms
+agent.policy.outscale:
+    value: 0.01
+agent.policy.unimix:
+    value: 0.01
+agent.policy.units:
+    value: 8
+agent.policy.winit:
+    value: trunc_normal_in
+agent.policy_dist_cont:
+    value: bounded_normal
+agent.policy_dist_disc:
+    value: categorical
+agent.repl_loss.lam:
+    value: 0.95
+agent.repl_loss.slowreg:
+    value: 1
+agent.repl_loss.slowtar:
+    value: false
+agent.report:
+    value: true
+agent.report_gradnorms:
+    value: false
+agent.repval_grad:
+    value: true
+agent.repval_loss:
+    value: true
+agent.retnorm.debias:
+    value: false
+agent.retnorm.impl:
+    value: perc
+agent.retnorm.limit:
+    value: 1
+agent.retnorm.perchi:
+    value: 95
+agent.retnorm.perclo:
+    value: 5
+agent.retnorm.rate:
+    value: 0.01
+agent.reward_grad:
+    value: true
+agent.rewhead.act:
+    value: silu
+agent.rewhead.bins:
+    value: 5
+agent.rewhead.layers:
+    value: 1
+agent.rewhead.norm:
+    value: rms
+agent.rewhead.output:
+    value: symexp_twohot
+agent.rewhead.outscale:
+    value: 0
+agent.rewhead.units:
+    value: 8
+agent.rewhead.winit:
+    value: trunc_normal_in
+agent.slowvalue.every:
+    value: 1
+agent.slowvalue.rate:
+    value: 0.02
+agent.valnorm.impl:
+    value: none
+agent.valnorm.limit:
+    value: 1e-08
+agent.valnorm.rate:
+    value: 0.01
+agent.value.act:
+    value: silu
+agent.value.bins:
+    value: 5
+agent.value.layers:
+    value: 1
+agent.value.norm:
+    value: rms
+agent.value.output:
+    value: symexp_twohot
+agent.value.outscale:
+    value: 0
+agent.value.units:
+    value: 8
+agent.value.winit:
+    value: trunc_normal_in
+batch_length:
+    value: 10
+batch_size:
+    value: 8
+clock_addr:
+    value: ""
+clock_port:
+    value: ""
+consec_report:
+    value: 1
+consec_train:
+    value: 1
+env.atari.actions:
+    value: all
+env.atari.aggregate:
+    value: max
+env.atari.autostart:
+    value: false
+env.atari.clip_reward:
+    value: false
+env.atari.gray:
+    value: true
+env.atari.lives:
+    value: unused
+env.atari.noops:
+    value: 30
+env.atari.pooling:
+    value: 2
+env.atari.repeat:
+    value: 4
+env.atari.resize:
+    value: pillow
+env.atari.size:
+    value:
+        - 96
+        - 96
+env.atari.sticky:
+    value: true
+env.atari100k.actions:
+    value: needed
+env.atari100k.autostart:
+    value: false
+env.atari100k.clip_reward:
+    value: false
+env.atari100k.gray:
+    value: false
+env.atari100k.lives:
+    value: unused
+env.atari100k.noops:
+    value: 30
+env.atari100k.repeat:
+    value: 4
+env.atari100k.resize:
+    value: pillow
+env.atari100k.size:
+    value:
+        - 64
+        - 64
+env.atari100k.sticky:
+    value: false
+env.crafter.logs:
+    value: false
+env.crafter.size:
+    value:
+        - 64
+        - 64
+env.dmc.camera:
+    value: -1
+env.dmc.image:
+    value: true
+env.dmc.proprio:
+    value: true
+env.dmc.repeat:
+    value: 1
+env.dmc.size:
+    value:
+        - 64
+        - 64
+env.dmlab.episodic:
+    value: true
+env.dmlab.repeat:
+    value: 4
+env.dmlab.size:
+    value:
+        - 64
+        - 64
+env.dmlab.use_seed:
+    value: true
+env.loconav.camera:
+    value: -1
+env.loconav.repeat:
+    value: 1
+env.loconav.size:
+    value:
+        - 64
+        - 64
+env.minecraft.break_speed:
+    value: 100
+env.minecraft.length:
+    value: 36000
+env.minecraft.logs:
+    value: false
+env.minecraft.size:
+    value:
+        - 64
+        - 64
+env.procgen.resize:
+    value: pillow
+env.procgen.size:
+    value:
+        - 96
+        - 96
+env.smaclite.max_episode_steps:
+    value: 200
+env.smaclite.scenario:
+    value: 2s3z
+env.smaclite.seed:
+    value: 42
+errfile:
+    value: false
+ipv6:
+    value: false
+jax.compute_dtype:
+    value: bfloat16
+jax.coordinator_address:
+    value: ""
+jax.debug:
+    value: true
+jax.enable_policy:
+    value: true
+jax.expect_devices:
+    value: 0
+jax.jit:
+    value: true
+jax.mock_devices:
+    value: 0
+jax.platform:
+    value: cpu
+jax.policy_devices:
+    value:
+        - 0
+jax.prealloc:
+    value: false
+jax.train_devices:
+    value:
+        - 0
+logdir:
+    value: /home/jovyan/smac-dreamer/logs/p1/wandb_smoke
+logger.filter:
+    value: score|length|fps|ratio|train/loss/|train/rand/
+logger.fps:
+    value: 15
+logger.outputs:
+    value:
+        - jsonl
+        - wandb
+logger.timer:
+    value: true
+logger.user:
+    value: ""
+method:
+    value: name
+random_agent:
+    value: false
+replay.chunksize:
+    value: 1024
+replay.fracs.priority:
+    value: 0
+replay.fracs.recency:
+    value: 0
+replay.fracs.uniform:
+    value: 1
+replay.online:
+    value: true
+replay.prio.exponent:
+    value: 0.8
+replay.prio.initial:
+    value: inf
+replay.prio.maxfrac:
+    value: 0.5
+replay.prio.zero_on_sample:
+    value: true
+replay.priosignal:
+    value: model
+replay.recexp:
+    value: 1
+replay.size:
+    value: 10000
+replay_context:
+    value: 1
+replica:
+    value: 0
+replicas:
+    value: 1
+report_length:
+    value: 5
+run.actor_addr:
+    value: localhost:{auto}
+run.actor_batch:
+    value: -1
+run.actor_threads:
+    value: 1
+run.agent_process:
+    value: false
+run.debug:
+    value: true
+run.duration:
+    value: 0
+run.envs:
+    value: 4
+run.episode_timeout:
+    value: 180
+run.eval_envs:
+    value: 4
+run.eval_eps:
+    value: 1
+run.from_checkpoint:
+    value: ""
+run.log_every:
+    value: 5
+run.logger_addr:
+    value: localhost:{auto}
+run.remote_envs:
+    value: false
+run.remote_replay:
+    value: false
+run.replay_addr:
+    value: localhost:{auto}
+run.report_batches:
+    value: 1
+run.report_every:
+    value: 10
+run.save_every:
+    value: 15
+run.steps:
+    value: 500
+run.train_ratio:
+    value: 8
+run.usage.gc:
+    value: false
+run.usage.gputil:
+    value: false
+run.usage.malloc:
+    value: false
+run.usage.nvsmi:
+    value: true
+run.usage.psutil:
+    value: true
+script:
+    value: train
+seed:
+    value: 0
+task:
+    value: smaclite_2s3z
+wandb.entity:
+    value: ""
+wandb.group:
+    value: phase1-smoke
+wandb.mode:
+    value: online
+wandb.notes:
+    value: ""
+wandb.project:
+    value: smac-dreamer
