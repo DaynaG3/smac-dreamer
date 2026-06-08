@@ -65,7 +65,13 @@ class SMACliteDreamerEnv(embodied.Env):
             init_entry = map_sampler.peek()
             self._env = self._open_env(init_entry)
             self._current_map_name = init_entry.name
-            self._map_id_map = {e.name: i for i, e in enumerate(map_sampler.maps)}
+            # Phase 4: entries carry stable map_id from manifest (all distinct).
+            # Phase 2/3: entries all have map_id=0, so use sequential index.
+            _entry_ids = [e.map_id for e in map_sampler.maps]
+            if len(set(_entry_ids)) == len(_entry_ids):
+                self._map_id_map = {e.name: e.map_id for e in map_sampler.maps}
+            else:
+                self._map_id_map = {e.name: i for i, e in enumerate(map_sampler.maps)}
         else:
             import smaclite  # noqa: registers smaclite/* gymnasium IDs
             self._env = gym.make(f"smaclite/{scenario}-v0")
@@ -200,6 +206,13 @@ class SMACliteDreamerEnv(embodied.Env):
             "log/ignored_padded_agent_action_count":   elements.Space(np.float32),
             "log/agent_mask_sum":                      elements.Space(np.float32),
         }
+        # Phase 4 dataset-coverage metrics (only emitted when a sampler is present).
+        if self._map_sampler is not None:
+            result["log/sampling_cycle"]             = elements.Space(np.float32)
+            result["log/maps_seen_this_cycle"]       = elements.Space(np.float32)
+            result["log/total_unique_maps_seen"]     = elements.Space(np.float32)
+            result["log/dataset_coverage_fraction"]  = elements.Space(np.float32)
+            result["log/total_train_maps"]           = elements.Space(np.float32)
         if self._pad_dims is not None:
             result["agent_mask"]             = elements.Space(np.float32, (A,))
             result["real_agent_action_mask"] = elements.Space(np.float32, (A * C,))
@@ -615,6 +628,13 @@ class SMACliteDreamerEnv(embodied.Env):
             # Episode metrics (carried forward; overwritten at episode end)
             **self._ep_metrics,
         }
+        if self._map_sampler is not None:
+            cm = self._map_sampler.coverage_metrics()
+            result["log/sampling_cycle"]            = _f(cm["sampling_cycle"])
+            result["log/maps_seen_this_cycle"]      = _f(cm["maps_seen_this_cycle"])
+            result["log/total_unique_maps_seen"]    = _f(cm["total_unique_maps_seen"])
+            result["log/dataset_coverage_fraction"] = _f(cm["dataset_coverage_fraction"])
+            result["log/total_train_maps"]          = _f(cm["total_train_maps"])
         if self._pad_dims is not None:
             result["agent_mask"]             = agent_mask
             result["real_agent_action_mask"] = real_agent_action_mask
