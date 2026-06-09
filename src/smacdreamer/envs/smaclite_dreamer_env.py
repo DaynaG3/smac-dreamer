@@ -1,30 +1,147 @@
+"""Gymnasium-compatible centralised-control SMAClite environment.
+
+One R2-Dreamer agent drives all allied SMAClite units (centralised single controller).
+
+Phase 1A migration note
+-----------------------
+This file was migrated from the JAX-DreamerV3 ``embodied.Env`` interface to the PyTorch
+R2-Dreamer ``gymnasium.Env`` interface. The *framework-facing* layer changed:
+
+    embodied.Env                -> gymnasium.Env
+    elements.Space              -> gymnasium.spaces
+    obs_space / act_space props -> observation_space / action_space
+    step(action_dict w/ reset)  -> reset(*, seed, options) + step(action)
+    obs returns reward + log/*  -> step returns (obs, reward, terminated, truncated, info)
+
+The SMAClite-facing behaviour is preserved exactly: flattened ``state``, ``avail_actions``,
+``agent_mask`` / ``real_agent_action_mask`` (Phase 3), reward shaping (legacy + v2),
+original-reward tracking, action sanitisation, noop rescue, timing-lag vs masking-failure
+classification, invalid-action metrics, per-map metadata, map sampling, and padding.
+
+Diagnostic / logging metrics that used to live under ``obs["log/..."]`` now live in the
+``info`` dict returned from ``reset``/``step``, with the ``log/`` prefix renamed to
+``log_`` (Hydra/PyTorch-friendly, and the convention R2-Dreamer's trainer aggregates).
+Logging-only values are **not** model observation fields. See METRIC_NAME_MAP below for
+the old→new mapping.
+
+Observation fields kept in the model observation (fixed-shape within a run):
+    state, avail_actions, agent_mask*, real_agent_action_mask*, is_first, is_last,
+    is_terminal      (* Phase 3 padding only)
+
+``reward`` is returned as the second element of ``step`` (no longer an obs field).
+
+Action interface
+----------------
+The environment accepts the centralised factorised action and converts it to a list of
+per-unit integer actions before calling SMAClite. Accepted action forms (see ``_to_int_actions``):
+    - flat one-hot / logits vector of length A*C  (decoded via FactorisedActionCodec)
+    - sequence of A (or n_real_agents) integer action indices
+    - legacy dict {"action_0":..., ... , optional "reset"} for backward-compat callers
+Only actions for real agents are sent to SMAClite; padded-agent slots are dropped.
+Environment-side sanitisation remains the final safety net (not the primary mask).
+
+Invalid-action metric categories (unchanged definitions)
+--------------------------------------------------------
+post_mask_invalid  — action invalid at step time even after policy masking. Split into:
+  timing_lag       — valid in the last obs mask given to the policy, invalid now (unit
+                     state changed between observation and step).
+  masking_failure  — already invalid in the last obs mask (policy should have suppressed
+                     it). Should be 0 with correct policy-side masking.
+"""
+
 import pathlib
 
 import numpy as np
 import gymnasium as gym
+from gymnasium import spaces
 
-import embodied
-import elements
+from smacdreamer.envs.action_codec import FactorisedActionCodec, NOOP_ACTION
 
 
-class SMACliteDreamerEnv(embodied.Env):
-    """Centralised-control adapter: one DreamerV3 agent drives all allied SMAClite units.
+# Old obs "log/..." key  ->  new info "log_..." key. Definitions and aggregation level are
+# unchanged; only the framework location (obs -> info) and the prefix (log/ -> log_) change.
+METRIC_NAME_MAP = {
+    "log/battle_won":                          "log_battle_won",
+    "log/post_mask_invalid_action_count":      "log_post_mask_invalid_action_count",
+    "log/post_mask_invalid_action_rate":       "log_post_mask_invalid_action_rate",
+    "log/total_action_count":                  "log_total_action_count",
+    "log/timing_lag_invalid_action_count":     "log_timing_lag_invalid_action_count",
+    "log/timing_lag_invalid_action_rate":      "log_timing_lag_invalid_action_rate",
+    "log/masking_failure_count":               "log_masking_failure_count",
+    "log/masking_failure_rate":                "log_masking_failure_rate",
+    "log/episode_invalid_action_count":        "log_episode_invalid_action_count",
+    "log/episode_total_action_count":          "log_episode_total_action_count",
+    "log/episode_invalid_action_rate":         "log_episode_invalid_action_rate",
+    "log/step_post_mask_invalid_count":        "log_step_post_mask_invalid_count",
+    "log/step_timing_lag_invalid_count":       "log_step_timing_lag_invalid_count",
+    "log/step_masking_failure_count":          "log_step_masking_failure_count",
+    "log/step_avail_mask_mismatch_count":      "log_step_avail_mask_mismatch_count",
+    "log/step_kill_bonus":                     "log_step_kill_bonus",
+    "log/step_step_penalty":                   "log_step_step_penalty",
+    "log/step_v2_win_bonus":                   "log_step_v2_win_bonus",
+    "log/step_v2_loss_penalty":                "log_step_v2_loss_penalty",
+    "log/step_v2_enemy_kill_bonus":            "log_step_v2_enemy_kill_bonus",
+    "log/step_v2_ally_death_penalty":          "log_step_v2_ally_death_penalty",
+    "log/step_v2_ally_survival_bonus":         "log_step_v2_ally_survival_bonus",
+    "log/step_v2_step_penalty":                "log_step_v2_step_penalty",
+    "log/step_v2_damage_progress":             "log_step_v2_damage_progress",
+    "log/enemy_kills_this_step":               "log_enemy_kills_this_step",
+    "log/ally_deaths_this_step":               "log_ally_deaths_this_step",
+    "log/enemies_alive":                       "log_enemies_alive",
+    "log/allies_alive":                        "log_allies_alive",
+    "log/original_env_reward":                 "log_original_env_reward",
+    "log/shaped_reward":                       "log_shaped_reward",
+    "log/reward_shaping_bonus":                "log_reward_shaping_bonus",
+    "log/reward_shaping_enabled":              "log_reward_shaping_enabled",
+    "log/episode_original_env_return":         "log_episode_original_env_return",
+    "log/episode_shaped_return":               "log_episode_shaped_return",
+    "log/episode_reward_shaping_bonus":        "log_episode_reward_shaping_bonus",
+    "log/enemy_hp_total":                      "log_enemy_hp_total",
+    "log/enemy_hp_damage_this_step":           "log_enemy_hp_damage_this_step",
+    "log/episode_enemy_hp_damage":             "log_episode_enemy_hp_damage",
+    "log/final_enemy_hp_total":                "log_final_enemy_hp_total",
+    "log/first_ally_death_step":               "log_first_ally_death_step",
+    "log/episode_attack_action_rate":          "log_episode_attack_action_rate",
+    "log/episode_move_action_rate":            "log_episode_move_action_rate",
+    "log/episode_noop_rate":                   "log_episode_noop_rate",
+    "log/step_invalid_count":                  "log_step_invalid_count",
+    "log/step_invalid_was_prev_valid_count":   "log_step_invalid_was_prev_valid_count",
+    "log/step_invalid_was_prev_invalid_count": "log_step_invalid_was_prev_invalid_count",
+    "log/map_id":                              "log_map_id",
+    "log/num_real_agents":                     "log_num_real_agents",
+    "log/num_real_enemies":                    "log_num_real_enemies",
+    "log/padded_agent_count":                  "log_padded_agent_count",
+    "log/extra_real_agent_action_slot_count":  "log_extra_real_agent_action_slot_count",
+    "log/padded_agent_action_slot_count":      "log_padded_agent_action_slot_count",
+    "log/ignored_padded_agent_action_count":   "log_ignored_padded_agent_action_count",
+    "log/agent_mask_sum":                      "log_agent_mask_sum",
+    "log/sampling_cycle":                      "log_sampling_cycle",
+    "log/maps_seen_this_cycle":                "log_maps_seen_this_cycle",
+    "log/total_unique_maps_seen":              "log_total_unique_maps_seen",
+    "log/dataset_coverage_fraction":           "log_dataset_coverage_fraction",
+    "log/total_train_maps":                    "log_total_train_maps",
+}
+
+
+class SMACliteDreamerEnv(gym.Env):
+    """Centralised-control adapter: one R2-Dreamer agent drives all allied SMAClite units.
 
     Phase 1: single fixed scenario.
     Phase 2: pass a MapSampler to rotate across same-shape maps each episode.
     Phase 3: pass pad_dims to enable variable-size map padding.
 
-    Invalid-action metric categories
-    ---------------------------------
-    post_mask_invalid  — action was invalid at step time even after the policy applied
-                         _apply_avail_mask(). Subdivided into:
-      timing_lag       — action was valid in the last obs mask given to the policy,
-                         but invalid in the current step-time mask because unit state
-                         changed between observation generation and this step.
-      masking_failure  — action was already invalid in the last obs mask. Indicates
-                         a failure of _apply_avail_mask() to suppress the logit.
-                         Should be exactly 0 with -1e9 suppression.
+    Gymnasium API
+    -------------
+    reset(*, seed=None, options=None) -> (observation, info)
+    step(action)                      -> (observation, reward, terminated, truncated, info)
+
+        terminated  = natural battle termination (is_terminal)
+        truncated   = time-limit / wrapper truncation
+        is_last     = terminated or truncated
+        is_terminal = terminated
     """
+
+    metadata = {"render_modes": []}
 
     def __init__(
         self,
@@ -37,6 +154,7 @@ class SMACliteDreamerEnv(embodied.Env):
         step_penalty: float = 0.0,        # legacy flat-param shaping (used when v2 disabled)
         reward_shaping_config=None,       # Optional[RewardShapingConfig] — v2 shaping system
     ):
+        super().__init__()
         from smacdreamer.envs.reward_shaping import RewardShapingConfig as _RSC
         self._scenario = scenario
         self._max_episode_steps = max_episode_steps
@@ -101,10 +219,10 @@ class SMACliteDreamerEnv(embodied.Env):
 
         self._last_obs_tuple = obs_tuple
         self._last_avail = avail
-        self._done = False
+        self._done = True   # require an explicit reset() before stepping (Gym semantics)
         self._last_avail_returned: list = avail
 
-        # Per-episode accumulators (reset on each _reset() call).
+        # Per-episode accumulators (reset on each reset() call).
         self._ep_step = 0
         self._ep_invalid_count = 0        # total post-mask invalids
         self._ep_total_count = 0          # total unit-action slots checked
@@ -117,122 +235,180 @@ class SMACliteDreamerEnv(embodied.Env):
         self._ep_metrics = self._zero_ep_metrics()
         self._current_map_id: int = self._map_id_map.get(self._current_map_name, 0)
 
+        # Factorised action codec. Dimensions are the padded dims under Phase 3, otherwise
+        # the real map dims. A = agent slots, C = actions per agent.
+        A = self._pad_dims.max_agents if self._pad_dims else self.n_agents
+        C = self._pad_dims.max_actions if self._pad_dims else self.n_actions
+        self.codec = FactorisedActionCodec(num_agents=A, num_actions=C)
+
+        # ---- Gymnasium spaces -------------------------------------------------
+        self.observation_space = self._build_observation_space()
+        # One categorical action per agent slot. R2-Dreamer's MultiOneHotAction wrapper
+        # converts this MultiDiscrete into a flat one-hot Box tagged multi_discrete=True.
+        self.action_space = self.codec.action_space()
+
     # ------------------------------------------------------------------
-    # embodied.Env interface
+    # Gymnasium spaces
     # ------------------------------------------------------------------
 
-    @property
-    def obs_space(self) -> dict:
+    def _obs_dims(self):
+        """Return (A, C, O) for the current observation layout (padded or real)."""
         if self._pad_dims is not None:
-            A = self._pad_dims.max_agents
-            C = self._pad_dims.max_actions
-            O = self._pad_dims.max_obs_size
-        else:
-            A = self.n_agents
-            C = self.n_actions
-            O = self.obs_size
+            return (self._pad_dims.max_agents, self._pad_dims.max_actions, self._pad_dims.max_obs_size)
+        return (self.n_agents, self.n_actions, self.obs_size)
 
-        result = {
-            "state":         elements.Space(np.float32, (A * O,)),
-            "avail_actions": elements.Space(np.float32, (A * C,)),
-            "is_first":      elements.Space(bool),
-            "is_last":       elements.Space(bool),
-            "is_terminal":   elements.Space(bool),
-            "reward":        elements.Space(np.float32),
-            # --- Episode-level metrics (new canonical names) ---
-            "log/battle_won":                          elements.Space(np.float32),
-            "log/post_mask_invalid_action_count":      elements.Space(np.float32),
-            "log/post_mask_invalid_action_rate":       elements.Space(np.float32),
-            "log/total_action_count":                  elements.Space(np.float32),
-            "log/timing_lag_invalid_action_count":     elements.Space(np.float32),
-            "log/timing_lag_invalid_action_rate":      elements.Space(np.float32),
-            "log/masking_failure_count":               elements.Space(np.float32),
-            "log/masking_failure_rate":                elements.Space(np.float32),
-            # --- Episode-level metrics (old aliases) ---
-            "log/episode_invalid_action_count":        elements.Space(np.float32),
-            "log/episode_total_action_count":          elements.Space(np.float32),
-            "log/episode_invalid_action_rate":         elements.Space(np.float32),
-            # --- Step-level metrics (new canonical names) ---
-            "log/step_post_mask_invalid_count":        elements.Space(np.float32),
-            "log/step_timing_lag_invalid_count":       elements.Space(np.float32),
-            "log/step_masking_failure_count":          elements.Space(np.float32),
-            "log/step_avail_mask_mismatch_count":      elements.Space(np.float32),
-            # --- Legacy flat-param shaping diagnostics (0.0 when v2 is active) ---
-            "log/step_kill_bonus":                     elements.Space(np.float32),
-            "log/step_step_penalty":                   elements.Space(np.float32),
-            # --- V2 shaping components (distinct namespace; 0.0 when v2 disabled) ---
-            "log/step_v2_win_bonus":                   elements.Space(np.float32),
-            "log/step_v2_loss_penalty":                elements.Space(np.float32),
-            "log/step_v2_enemy_kill_bonus":            elements.Space(np.float32),
-            "log/step_v2_ally_death_penalty":          elements.Space(np.float32),
-            "log/step_v2_ally_survival_bonus":         elements.Space(np.float32),
-            "log/step_v2_step_penalty":                elements.Space(np.float32),
-            # --- Combat state (always present) ---
-            "log/enemy_kills_this_step":               elements.Space(np.float32),
-            "log/ally_deaths_this_step":               elements.Space(np.float32),
-            "log/enemies_alive":                       elements.Space(np.float32),
-            "log/allies_alive":                        elements.Space(np.float32),
-            # --- Reward breakdown (always present) ---
-            "log/original_env_reward":                 elements.Space(np.float32),
-            "log/shaped_reward":                       elements.Space(np.float32),
-            "log/reward_shaping_bonus":                elements.Space(np.float32),
-            "log/reward_shaping_enabled":              elements.Space(np.float32),
-            # --- Episode-level return totals ---
-            "log/episode_original_env_return":         elements.Space(np.float32),
-            "log/episode_shaped_return":               elements.Space(np.float32),
-            "log/episode_reward_shaping_bonus":        elements.Space(np.float32),
-            # --- Damage-progress shaping (v2 damage_delta_scale) ---
-            "log/enemy_hp_total":                      elements.Space(np.float32),
-            "log/enemy_hp_damage_this_step":           elements.Space(np.float32),
-            "log/step_v2_damage_progress":             elements.Space(np.float32),
-            "log/episode_enemy_hp_damage":             elements.Space(np.float32),
-            "log/final_enemy_hp_total":                elements.Space(np.float32),
-            # --- Combat behaviour diagnostics ---
-            "log/first_ally_death_step":               elements.Space(np.float32),
-            "log/episode_attack_action_rate":          elements.Space(np.float32),
-            "log/episode_move_action_rate":            elements.Space(np.float32),
-            "log/episode_noop_rate":                   elements.Space(np.float32),
-            # --- Step-level metrics (old aliases) ---
-            "log/step_invalid_count":                  elements.Space(np.float32),
-            "log/step_invalid_was_prev_valid_count":   elements.Space(np.float32),
-            "log/step_invalid_was_prev_invalid_count": elements.Space(np.float32),
-            # --- Map and padding metrics ---
-            "log/map_id":                              elements.Space(np.float32),
-            "log/num_real_agents":                     elements.Space(np.float32),
-            "log/num_real_enemies":                    elements.Space(np.float32),
-            "log/padded_agent_count":                  elements.Space(np.float32),
-            "log/extra_real_agent_action_slot_count":  elements.Space(np.float32),
-            "log/padded_agent_action_slot_count":      elements.Space(np.float32),
-            "log/ignored_padded_agent_action_count":   elements.Space(np.float32),
-            "log/agent_mask_sum":                      elements.Space(np.float32),
+    def _build_observation_space(self) -> spaces.Dict:
+        """Model observation space. Logging-only values are NOT included (they go in info).
+
+        Fixed-shape within a run. ``agent_mask`` / ``real_agent_action_mask`` are present
+        only under Phase 3 padding, matching the previous behaviour.
+        """
+        A, C, O = self._obs_dims()
+        d = {
+            "state":         spaces.Box(-np.inf, np.inf, shape=(A * O,), dtype=np.float32),
+            "avail_actions": spaces.Box(0.0, 1.0, shape=(A * C,), dtype=np.float32),
+            "is_first":      spaces.Box(0, 1, shape=(), dtype=bool),
+            "is_last":       spaces.Box(0, 1, shape=(), dtype=bool),
+            "is_terminal":   spaces.Box(0, 1, shape=(), dtype=bool),
         }
-        # Phase 4 dataset-coverage metrics (only emitted when a sampler is present).
-        if self._map_sampler is not None:
-            result["log/sampling_cycle"]             = elements.Space(np.float32)
-            result["log/maps_seen_this_cycle"]       = elements.Space(np.float32)
-            result["log/total_unique_maps_seen"]     = elements.Space(np.float32)
-            result["log/dataset_coverage_fraction"]  = elements.Space(np.float32)
-            result["log/total_train_maps"]           = elements.Space(np.float32)
         if self._pad_dims is not None:
-            result["agent_mask"]             = elements.Space(np.float32, (A,))
-            result["real_agent_action_mask"] = elements.Space(np.float32, (A * C,))
-        return result
+            d["agent_mask"]             = spaces.Box(0.0, 1.0, shape=(A,), dtype=np.float32)
+            d["real_agent_action_mask"] = spaces.Box(0.0, 1.0, shape=(A * C,), dtype=np.float32)
+        return spaces.Dict(d)
 
-    @property
-    def act_space(self) -> dict:
-        n_acts   = self._pad_dims.max_actions if self._pad_dims else self.n_actions
-        n_agents = self._pad_dims.max_agents  if self._pad_dims else self.n_agents
-        space = {"reset": elements.Space(bool)}
-        for i in range(n_agents):
-            space[f"action_{i}"] = elements.Space(np.int32, (), 0, n_acts)
-        return space
+    # ------------------------------------------------------------------
+    # Action conversion
+    # ------------------------------------------------------------------
 
-    def step(self, action: dict) -> dict:
-        if action["reset"] or self._done:
-            return self._reset()
+    def _to_int_actions(self, action) -> list:
+        """Convert any accepted action representation into a list of per-agent ints.
 
-        # Only extract actions for real agents; padded agent action keys are ignored.
-        acts = [int(action[f"action_{i}"]) for i in range(self.n_agents)]
+        Accepted forms:
+          * flat one-hot / logits vector length A*C (decoded by the codec; argmax/group)
+          * sequence of A or n_agents integer action indices
+          * legacy dict {"action_i": int, optional "reset"}
+        Only the first ``n_agents`` (real) actions are returned; padded slots are dropped.
+        """
+        # Legacy dict form (backward-compat with old callers / smoke tests).
+        if isinstance(action, dict):
+            return [int(action[f"action_{i}"]) for i in range(self.n_agents)]
+
+        arr = np.asarray(action)
+        # Flat factorised one-hot / logits of length A*C -> decode to ints.
+        if arr.ndim >= 1 and arr.size == self.codec.flat_dim and self.codec.flat_dim != self.codec.num_agents:
+            # decode with validate=False so logits (not strictly one-hot) are also accepted;
+            # argmax per group recovers the chosen action. Real-agent slice only.
+            return self.codec.decode(arr, num_real_agents=self.n_agents, validate=False)
+        # A vector of per-agent integer indices.
+        flat = arr.reshape(-1)
+        if flat.shape[0] in (self.n_agents, self.codec.num_agents):
+            return [int(x) for x in flat[: self.n_agents]]
+        raise ValueError(
+            f"Unrecognised action of shape {arr.shape}; expected flat one-hot of length "
+            f"{self.codec.flat_dim}, or {self.n_agents}/{self.codec.num_agents} integer actions."
+        )
+
+    # ------------------------------------------------------------------
+    # Gymnasium interface
+    # ------------------------------------------------------------------
+
+    def reset(self, *, seed=None, options=None):
+        """Standard Gymnasium reset. Returns (observation, info)."""
+        super().reset(seed=seed)
+        if seed is not None:
+            self._seed = seed
+
+        if self._map_sampler is not None:
+            entry = self._map_sampler.next()
+            if entry.name != self._current_map_name:
+                self._env.close()
+                self._env = self._open_env(entry)
+                uw = getattr(self._env, 'unwrapped', self._env)
+                new_shape = (uw.n_agents, uw.n_enemies, uw.n_actions, uw.obs_size)
+
+                if self._pad_dims is not None:
+                    # Phase 3: verify new map fits within padding dims.
+                    if (uw.n_agents > self._pad_dims.max_agents or
+                            uw.n_actions > self._pad_dims.max_actions or
+                            uw.obs_size > self._pad_dims.max_obs_size):
+                        raise ValueError(
+                            f"Map '{entry.name}' shape {new_shape} exceeds padding dims "
+                            f"(max_agents={self._pad_dims.max_agents}, "
+                            f"max_actions={self._pad_dims.max_actions}, "
+                            f"max_obs_size={self._pad_dims.max_obs_size}). "
+                            "Update the 'padding' block in the Phase 3 manifest."
+                        )
+                    # Update real dims; padded dims stay fixed via _pad_dims.
+                    self.n_agents = uw.n_agents
+                    self.n_enemies = uw.n_enemies
+                    self.n_actions = uw.n_actions
+                    self.obs_size = uw.obs_size
+                else:
+                    # Phase 1/2: shape must match exactly.
+                    if new_shape != self._shape_key:
+                        raise ValueError(
+                            f"Map '{entry.name}' shape {new_shape} != "
+                            f"expected {self._shape_key}. "
+                            "All Phase 2 maps must share the same "
+                            "n_agents/n_enemies/n_actions/obs_size. "
+                            f"Expected state shape {(self.n_agents * self.obs_size,)}, "
+                            f"avail_actions shape {(self.n_agents * self.n_actions,)}, "
+                            f"action keys action_0..action_{self.n_agents - 1}."
+                        )
+                self._current_map_name = entry.name
+                self._current_map_id = self._map_id_map.get(entry.name, 0)
+            obs_tuple, _ = self._env.reset()
+        else:
+            obs_tuple, _ = self._env.reset(seed=self._seed)
+
+        uw = getattr(self._env, 'unwrapped', self._env)
+        avail = uw.get_avail_actions()
+        self._prev_n_enemies = len(uw.enemies)
+        self._prev_n_allies  = len(uw.agents)
+        self._prev_enemy_hp_total = float(sum(u.hp for u in uw.enemies.values()))
+
+        self._last_obs_tuple = obs_tuple
+        self._last_avail = avail
+        self._done = False
+        self._ep_step = 0
+        self._ep_invalid_count = 0
+        self._ep_total_count = 0
+        self._ep_timing_lag_count = 0
+        self._ep_masking_failure_count = 0
+        self._ep_original_return = 0.0
+        self._ep_shaped_return   = 0.0
+        self._ep_shaping_bonus   = 0.0
+        self._ep_enemy_hp_damage = 0.0
+        self._first_ally_death_step = -1
+        self._ep_attack_actions = 0
+        self._ep_move_actions   = 0
+        self._ep_noop_actions   = 0
+        self._ep_metrics = self._zero_ep_metrics()
+
+        obs, info = self._build_obs(
+            obs_tuple=obs_tuple,
+            avail=avail,
+            is_first=True,
+            is_last=False,
+            is_terminal=False,
+            step_invalid=0,
+            step_timing_lag=0,
+            step_masking_failure=0,
+            step_mask_mismatch=0,
+            step_kill_bonus=0.0,
+            step_step_penalty=0.0,
+        )
+        return obs, info
+
+    def step(self, action):
+        """Standard Gymnasium step. Returns (observation, reward, terminated, truncated, info)."""
+        if self._done:
+            raise RuntimeError(
+                "step() called on a finished or unreset environment. Call reset() first."
+            )
+
+        # Only extract actions for real agents; padded agent action slots are ignored.
+        acts = self._to_int_actions(action)
 
         avail = getattr(self._env, 'unwrapped', self._env).get_avail_actions()
         acts, n_invalid, n_was_prev_valid, n_was_prev_invalid = (
@@ -296,12 +472,12 @@ class SMACliteDreamerEnv(embodied.Env):
             else:
                 self._ep_attack_actions += 1
 
-        # Compute is_last here so terminal_loss covers both env termination AND
-        # our own step-limit truncation (which would otherwise be set after this block).
+        # Enforce our own step-limit truncation. terminated reflects natural battle
+        # termination; truncated reflects time-limit / wrapper truncation.
         if self._ep_step >= self._max_episode_steps:
             truncated = True
-        is_last     = terminated or truncated
-        is_terminal = terminated
+        is_last     = bool(terminated or truncated)
+        is_terminal = bool(terminated)
 
         base_reward = np.float32(reward)  # raw normalised SMAClite reward
 
@@ -353,10 +529,9 @@ class SMACliteDreamerEnv(embodied.Env):
         if is_last:
             self._ep_metrics = self._compute_ep_metrics(info)
 
-        return self._build_obs(
+        obs, out_info = self._build_obs(
             obs_tuple=obs_tuple,
             avail=avail,
-            reward=shaped_reward,
             is_first=False,
             is_last=is_last,
             is_terminal=is_terminal,
@@ -383,6 +558,10 @@ class SMACliteDreamerEnv(embodied.Env):
             enemy_hp_total=cur_enemy_hp_total,
             enemy_hp_damage_this_step=enemy_hp_damage_this_step,
         )
+        # Surface battle_won at the top level of info too (SMAClite convention preserved).
+        if "battle_won" in info:
+            out_info["battle_won"] = info["battle_won"]
+        return obs, np.float32(shaped_reward), is_terminal, truncated, out_info
 
     def close(self):
         self._env.close()
@@ -400,87 +579,6 @@ class SMACliteDreamerEnv(embodied.Env):
         from smaclite.env.smaclite import SMACliteEnv as _SMACliteEnv
         return _SMACliteEnv(map_file=str(abs_path))
 
-    def _reset(self) -> dict:
-        if self._map_sampler is not None:
-            entry = self._map_sampler.next()
-            if entry.name != self._current_map_name:
-                self._env.close()
-                self._env = self._open_env(entry)
-                uw = getattr(self._env, 'unwrapped', self._env)
-                new_shape = (uw.n_agents, uw.n_enemies, uw.n_actions, uw.obs_size)
-
-                if self._pad_dims is not None:
-                    # Phase 3: verify new map fits within padding dims.
-                    if (uw.n_agents > self._pad_dims.max_agents or
-                            uw.n_actions > self._pad_dims.max_actions or
-                            uw.obs_size > self._pad_dims.max_obs_size):
-                        raise ValueError(
-                            f"Map '{entry.name}' shape {new_shape} exceeds padding dims "
-                            f"(max_agents={self._pad_dims.max_agents}, "
-                            f"max_actions={self._pad_dims.max_actions}, "
-                            f"max_obs_size={self._pad_dims.max_obs_size}). "
-                            "Update the 'padding' block in the Phase 3 manifest."
-                        )
-                    # Update real dims; padded dims stay fixed via _pad_dims.
-                    self.n_agents = uw.n_agents
-                    self.n_enemies = uw.n_enemies
-                    self.n_actions = uw.n_actions
-                    self.obs_size = uw.obs_size
-                else:
-                    # Phase 1/2: shape must match exactly.
-                    if new_shape != self._shape_key:
-                        raise ValueError(
-                            f"Map '{entry.name}' shape {new_shape} != "
-                            f"expected {self._shape_key}. "
-                            "All Phase 2 maps must share the same "
-                            "n_agents/n_enemies/n_actions/obs_size. "
-                            f"Expected state shape {(self.n_agents * self.obs_size,)}, "
-                            f"avail_actions shape {(self.n_agents * self.n_actions,)}, "
-                            f"action keys action_0..action_{self.n_agents - 1}."
-                        )
-                self._current_map_name = entry.name
-                self._current_map_id = self._map_id_map.get(entry.name, 0)
-
-        obs_tuple, _ = self._env.reset()
-        uw = getattr(self._env, 'unwrapped', self._env)
-        avail = uw.get_avail_actions()
-        self._prev_n_enemies = len(uw.enemies)
-        self._prev_n_allies  = len(uw.agents)
-        self._prev_enemy_hp_total = float(sum(u.hp for u in uw.enemies.values()))
-
-        self._last_obs_tuple = obs_tuple
-        self._last_avail = avail
-        self._done = False
-        self._ep_step = 0
-        self._ep_invalid_count = 0
-        self._ep_total_count = 0
-        self._ep_timing_lag_count = 0
-        self._ep_masking_failure_count = 0
-        self._ep_original_return = 0.0
-        self._ep_shaped_return   = 0.0
-        self._ep_shaping_bonus   = 0.0
-        self._ep_enemy_hp_damage = 0.0
-        self._first_ally_death_step = -1
-        self._ep_attack_actions = 0
-        self._ep_move_actions   = 0
-        self._ep_noop_actions   = 0
-        self._ep_metrics = self._zero_ep_metrics()
-
-        return self._build_obs(
-            obs_tuple=obs_tuple,
-            avail=avail,
-            reward=0.0,
-            is_first=True,
-            is_last=False,
-            is_terminal=False,
-            step_invalid=0,
-            step_timing_lag=0,
-            step_masking_failure=0,
-            step_mask_mismatch=0,
-            step_kill_bonus=0.0,
-            step_step_penalty=0.0,
-        )
-
     def _sanitise_actions(
         self, acts: list, avail: list
     ) -> tuple[list, int, int, int]:
@@ -492,13 +590,13 @@ class SMACliteDreamerEnv(embodied.Env):
         -----------------
         valid            — action is valid in the current step-time mask; passed through.
         post_mask_invalid — action is invalid at step time despite the policy having
-                            applied _apply_avail_mask(). Split into:
+                            applied policy-side masking. Split into:
           timing_lag     — action was valid in the last obs mask returned to the policy
                            but invalid now because unit state changed between obs
                            generation and this step. Expected source of all invalids.
           masking_failure — action was already invalid in the last obs mask. Indicates
-                            that _apply_avail_mask() failed to suppress it. Should be
-                            exactly 0 with -1e9 logit suppression.
+                            that policy-side masking failed to suppress it. Should be
+                            exactly 0 with correct masking.
         """
         n_invalid = 0
         n_timing_lag = 0
@@ -519,14 +617,13 @@ class SMACliteDreamerEnv(embodied.Env):
                 else:
                     n_masking_failure += 1
                 valid_indices = [j for j, v in enumerate(mask) if v]
-                sanitised.append(valid_indices[0] if valid_indices else 0)
+                sanitised.append(valid_indices[0] if valid_indices else NOOP_ACTION)
         return sanitised, n_invalid, n_timing_lag, n_masking_failure
 
     def _build_obs(
         self,
         obs_tuple,
         avail,
-        reward: np.float32,
         is_first: bool,
         is_last: bool,
         is_terminal: bool,
@@ -552,7 +649,12 @@ class SMACliteDreamerEnv(embodied.Env):
         reward_shaping_bonus: float = 0.0,
         enemy_hp_total: float = 0.0,
         enemy_hp_damage_this_step: float = 0.0,
-    ) -> dict:
+    ) -> tuple[dict, dict]:
+        """Build the (observation, info) pair.
+
+        observation: model-relevant fixed-shape fields only.
+        info: all diagnostic / logging metrics, keyed with the ``log_`` prefix.
+        """
         self._last_avail_returned = avail
 
         if self._pad_dims is not None:
@@ -576,97 +678,99 @@ class SMACliteDreamerEnv(embodied.Env):
             n_padded = extra_real_slots = padded_agent_slots = ignored_pad_actions = 0
             agent_mask_sum = float(self.n_agents)
 
-        _f = lambda x: np.array(float(x), dtype=np.float32)
-        result = {
+        obs = {
             "state":         state,
             "avail_actions": avail_flat,
             "is_first":      np.array(is_first, dtype=bool),
             "is_last":       np.array(is_last, dtype=bool),
             "is_terminal":   np.array(is_terminal, dtype=bool),
-            "reward":        np.array(reward, dtype=np.float32),
+        }
+        if self._pad_dims is not None:
+            obs["agent_mask"]             = agent_mask
+            obs["real_agent_action_mask"] = real_agent_action_mask
+
+        _f = lambda x: np.array(float(x), dtype=np.float32)
+        info = {
             # Step-level metrics (new canonical names)
-            "log/step_post_mask_invalid_count":        _f(step_invalid),
-            "log/step_timing_lag_invalid_count":       _f(step_timing_lag),
-            "log/step_masking_failure_count":          _f(step_masking_failure),
-            "log/step_avail_mask_mismatch_count":      _f(step_mask_mismatch),
+            "log_step_post_mask_invalid_count":        _f(step_invalid),
+            "log_step_timing_lag_invalid_count":       _f(step_timing_lag),
+            "log_step_masking_failure_count":          _f(step_masking_failure),
+            "log_step_avail_mask_mismatch_count":      _f(step_mask_mismatch),
             # Legacy flat-param shaping diagnostics (0.0 when v2 active)
-            "log/step_kill_bonus":                     _f(step_kill_bonus),
-            "log/step_step_penalty":                   _f(step_step_penalty),
+            "log_step_kill_bonus":                     _f(step_kill_bonus),
+            "log_step_step_penalty":                   _f(step_step_penalty),
             # V2 shaping components (distinct namespace; 0.0 when v2 disabled)
-            "log/step_v2_win_bonus":                   _f(step_v2_win_bonus),
-            "log/step_v2_loss_penalty":                _f(step_v2_loss_penalty),
-            "log/step_v2_enemy_kill_bonus":            _f(step_v2_enemy_kill_bonus),
-            "log/step_v2_ally_death_penalty":          _f(step_v2_ally_death_penalty),
-            "log/step_v2_ally_survival_bonus":         _f(step_v2_ally_survival_bonus),
-            "log/step_v2_step_penalty":                _f(step_v2_step_penalty),
-            "log/step_v2_damage_progress":             _f(step_v2_damage_progress),
+            "log_step_v2_win_bonus":                   _f(step_v2_win_bonus),
+            "log_step_v2_loss_penalty":                _f(step_v2_loss_penalty),
+            "log_step_v2_enemy_kill_bonus":            _f(step_v2_enemy_kill_bonus),
+            "log_step_v2_ally_death_penalty":          _f(step_v2_ally_death_penalty),
+            "log_step_v2_ally_survival_bonus":         _f(step_v2_ally_survival_bonus),
+            "log_step_v2_step_penalty":                _f(step_v2_step_penalty),
+            "log_step_v2_damage_progress":             _f(step_v2_damage_progress),
             # Combat state (always present)
-            "log/enemy_kills_this_step":               _f(enemy_kills_this_step),
-            "log/ally_deaths_this_step":               _f(ally_deaths_this_step),
-            "log/enemies_alive":                       _f(enemies_alive),
-            "log/allies_alive":                        _f(allies_alive),
-            "log/enemy_hp_total":                      _f(enemy_hp_total),
-            "log/enemy_hp_damage_this_step":           _f(enemy_hp_damage_this_step),
+            "log_enemy_kills_this_step":               _f(enemy_kills_this_step),
+            "log_ally_deaths_this_step":               _f(ally_deaths_this_step),
+            "log_enemies_alive":                       _f(enemies_alive),
+            "log_allies_alive":                        _f(allies_alive),
+            "log_enemy_hp_total":                      _f(enemy_hp_total),
+            "log_enemy_hp_damage_this_step":           _f(enemy_hp_damage_this_step),
             # Reward breakdown (always present)
-            "log/original_env_reward":                 _f(original_env_reward),
-            "log/shaped_reward":                       _f(shaped_reward_val),
-            "log/reward_shaping_bonus":                _f(reward_shaping_bonus),
-            "log/reward_shaping_enabled":              _f(1.0 if self._use_new_shaping else 0.0),
+            "log_original_env_reward":                 _f(original_env_reward),
+            "log_shaped_reward":                       _f(shaped_reward_val),
+            "log_reward_shaping_bonus":                _f(reward_shaping_bonus),
+            "log_reward_shaping_enabled":              _f(1.0 if self._use_new_shaping else 0.0),
             # Step-level metrics (old aliases)
-            "log/step_invalid_count":                  _f(step_invalid),
-            "log/step_invalid_was_prev_valid_count":   _f(step_timing_lag),
-            "log/step_invalid_was_prev_invalid_count": _f(step_masking_failure),
+            "log_step_invalid_count":                  _f(step_invalid),
+            "log_step_invalid_was_prev_valid_count":   _f(step_timing_lag),
+            "log_step_invalid_was_prev_invalid_count": _f(step_masking_failure),
             # Map and padding metrics
-            "log/map_id":                              _f(self._current_map_id),
-            "log/num_real_agents":                     _f(self.n_agents),
-            "log/num_real_enemies":                    _f(self.n_enemies),
-            "log/padded_agent_count":                  _f(n_padded),
-            "log/extra_real_agent_action_slot_count":  _f(extra_real_slots),
-            "log/padded_agent_action_slot_count":      _f(padded_agent_slots),
-            "log/ignored_padded_agent_action_count":   _f(ignored_pad_actions),
-            "log/agent_mask_sum":                      _f(agent_mask_sum),
+            "log_map_id":                              _f(self._current_map_id),
+            "log_num_real_agents":                     _f(self.n_agents),
+            "log_num_real_enemies":                    _f(self.n_enemies),
+            "log_padded_agent_count":                  _f(n_padded),
+            "log_extra_real_agent_action_slot_count":  _f(extra_real_slots),
+            "log_padded_agent_action_slot_count":      _f(padded_agent_slots),
+            "log_ignored_padded_agent_action_count":   _f(ignored_pad_actions),
+            "log_agent_mask_sum":                      _f(agent_mask_sum),
             # Episode metrics (carried forward; overwritten at episode end)
             **self._ep_metrics,
         }
         if self._map_sampler is not None:
             cm = self._map_sampler.coverage_metrics()
-            result["log/sampling_cycle"]            = _f(cm["sampling_cycle"])
-            result["log/maps_seen_this_cycle"]      = _f(cm["maps_seen_this_cycle"])
-            result["log/total_unique_maps_seen"]    = _f(cm["total_unique_maps_seen"])
-            result["log/dataset_coverage_fraction"] = _f(cm["dataset_coverage_fraction"])
-            result["log/total_train_maps"]          = _f(cm["total_train_maps"])
-        if self._pad_dims is not None:
-            result["agent_mask"]             = agent_mask
-            result["real_agent_action_mask"] = real_agent_action_mask
-        return result
+            info["log_sampling_cycle"]            = _f(cm["sampling_cycle"])
+            info["log_maps_seen_this_cycle"]      = _f(cm["maps_seen_this_cycle"])
+            info["log_total_unique_maps_seen"]    = _f(cm["total_unique_maps_seen"])
+            info["log_dataset_coverage_fraction"] = _f(cm["dataset_coverage_fraction"])
+            info["log_total_train_maps"]          = _f(cm["total_train_maps"])
+        return obs, info
 
     def _zero_ep_metrics(self) -> dict:
         _f = lambda: np.array(0.0, dtype=np.float32)
         return {
             # New canonical names
-            "log/battle_won":                          _f(),
-            "log/post_mask_invalid_action_count":      _f(),
-            "log/post_mask_invalid_action_rate":       _f(),
-            "log/total_action_count":                  _f(),
-            "log/timing_lag_invalid_action_count":     _f(),
-            "log/timing_lag_invalid_action_rate":      _f(),
-            "log/masking_failure_count":               _f(),
-            "log/masking_failure_rate":                _f(),
+            "log_battle_won":                          _f(),
+            "log_post_mask_invalid_action_count":      _f(),
+            "log_post_mask_invalid_action_rate":       _f(),
+            "log_total_action_count":                  _f(),
+            "log_timing_lag_invalid_action_count":     _f(),
+            "log_timing_lag_invalid_action_rate":      _f(),
+            "log_masking_failure_count":               _f(),
+            "log_masking_failure_rate":                _f(),
             # Old aliases
-            "log/episode_invalid_action_count":        _f(),
-            "log/episode_total_action_count":          _f(),
-            "log/episode_invalid_action_rate":         _f(),
+            "log_episode_invalid_action_count":        _f(),
+            "log_episode_total_action_count":          _f(),
+            "log_episode_invalid_action_rate":         _f(),
             # Episode-level return totals
-            "log/episode_original_env_return":         _f(),
-            "log/episode_shaped_return":               _f(),
-            "log/episode_reward_shaping_bonus":        _f(),
+            "log_episode_original_env_return":         _f(),
+            "log_episode_shaped_return":               _f(),
+            "log_episode_reward_shaping_bonus":        _f(),
             # Damage-progress diagnostics
-            "log/episode_enemy_hp_damage":             _f(),
-            "log/final_enemy_hp_total":                _f(),
-            "log/first_ally_death_step":               _f(),
-            "log/episode_attack_action_rate":          _f(),
-            "log/episode_move_action_rate":            _f(),
-            "log/episode_noop_rate":                   _f(),
+            "log_episode_enemy_hp_damage":             _f(),
+            "log_final_enemy_hp_total":                _f(),
+            "log_first_ally_death_step":               _f(),
+            "log_episode_attack_action_rate":          _f(),
+            "log_episode_move_action_rate":            _f(),
+            "log_episode_noop_rate":                   _f(),
         }
 
     def _compute_ep_metrics(self, info: dict) -> dict:
@@ -680,33 +784,33 @@ class SMACliteDreamerEnv(embodied.Env):
         _f = lambda x: np.array(float(x), dtype=np.float32)
         return {
             # New canonical names
-            "log/battle_won":                          _f(info.get("battle_won", False)),
-            "log/post_mask_invalid_action_count":      _f(invalid),
-            "log/post_mask_invalid_action_rate":       _f(inv_rate),
-            "log/total_action_count":                  _f(total),
-            "log/timing_lag_invalid_action_count":     _f(lag),
-            "log/timing_lag_invalid_action_rate":      _f(lag_rate),
-            "log/masking_failure_count":               _f(failure),
-            "log/masking_failure_rate":                _f(fail_rate),
+            "log_battle_won":                          _f(info.get("battle_won", False)),
+            "log_post_mask_invalid_action_count":      _f(invalid),
+            "log_post_mask_invalid_action_rate":       _f(inv_rate),
+            "log_total_action_count":                  _f(total),
+            "log_timing_lag_invalid_action_count":     _f(lag),
+            "log_timing_lag_invalid_action_rate":      _f(lag_rate),
+            "log_masking_failure_count":               _f(failure),
+            "log_masking_failure_rate":                _f(fail_rate),
             # Old aliases
-            "log/episode_invalid_action_count":        _f(invalid),
-            "log/episode_total_action_count":          _f(total),
-            "log/episode_invalid_action_rate":         _f(inv_rate),
+            "log_episode_invalid_action_count":        _f(invalid),
+            "log_episode_total_action_count":          _f(total),
+            "log_episode_invalid_action_rate":         _f(inv_rate),
             # Episode-level return totals
-            "log/episode_original_env_return":         _f(self._ep_original_return),
-            "log/episode_shaped_return":               _f(self._ep_shaped_return),
-            "log/episode_reward_shaping_bonus":        _f(self._ep_shaping_bonus),
+            "log_episode_original_env_return":         _f(self._ep_original_return),
+            "log_episode_shaped_return":               _f(self._ep_shaped_return),
+            "log_episode_reward_shaping_bonus":        _f(self._ep_shaping_bonus),
             # Damage-progress diagnostics
-            "log/episode_enemy_hp_damage":             _f(self._ep_enemy_hp_damage),
-            "log/final_enemy_hp_total":                _f(self._prev_enemy_hp_total),
-            "log/first_ally_death_step":               _f(self._first_ally_death_step),
-            "log/episode_attack_action_rate":          _f(
+            "log_episode_enemy_hp_damage":             _f(self._ep_enemy_hp_damage),
+            "log_final_enemy_hp_total":                _f(self._prev_enemy_hp_total),
+            "log_first_ally_death_step":               _f(self._first_ally_death_step),
+            "log_episode_attack_action_rate":          _f(
                 self._ep_attack_actions / self._ep_total_count if self._ep_total_count > 0 else 0.0
             ),
-            "log/episode_move_action_rate":            _f(
+            "log_episode_move_action_rate":            _f(
                 self._ep_move_actions / self._ep_total_count if self._ep_total_count > 0 else 0.0
             ),
-            "log/episode_noop_rate":                   _f(
+            "log_episode_noop_rate":                   _f(
                 self._ep_noop_actions / self._ep_total_count if self._ep_total_count > 0 else 0.0
             ),
         }
