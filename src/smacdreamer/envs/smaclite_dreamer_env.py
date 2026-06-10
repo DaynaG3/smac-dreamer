@@ -153,9 +153,20 @@ class SMACliteDreamerEnv(gym.Env):
         kill_reward_bonus: float = 0.0,   # legacy flat-param shaping (used when v2 disabled)
         step_penalty: float = 0.0,        # legacy flat-param shaping (used when v2 disabled)
         reward_shaping_config=None,       # Optional[RewardShapingConfig] — v2 shaping system
+        reward_fn=None,                   # Optional[callable(RewardContext)->(reward,terms)]
+        gamma: float = 0.997,             # shaping discount; MUST equal the agent's discount
     ):
         super().__init__()
         from smacdreamer.envs.reward_shaping import RewardShapingConfig as _RSC
+        # Optional swappable reward callable (from reward_registry.resolve). When set, it
+        # OVERRIDES the legacy/v2 shaping branch. When None, behaviour is unchanged.
+        self._reward_fn = reward_fn
+        self._gamma = float(gamma)
+        # Initial totals captured at reset, used to normalise potentials to [0,1] fractions.
+        self._init_enemy_hp_total: float = 0.0
+        self._init_n_allies: int = 0
+        self._prev_enemy_hp_frac: float = 1.0
+        self._prev_ally_alive_frac: float = 1.0
         self._scenario = scenario
         self._max_episode_steps = max_episode_steps
         self._seed = seed
@@ -233,6 +244,7 @@ class SMACliteDreamerEnv(gym.Env):
         self._lifetime_total = 0
 
         self._ep_metrics = self._zero_ep_metrics()
+        self._ep_reward_terms: dict = {}
         self._current_map_id: int = self._map_id_map.get(self._current_map_name, 0)
 
         # Factorised action codec. Dimensions are the padded dims under Phase 3, otherwise
@@ -367,6 +379,12 @@ class SMACliteDreamerEnv(gym.Env):
         self._prev_n_allies  = len(uw.agents)
         self._prev_enemy_hp_total = float(sum(u.hp for u in uw.enemies.values()))
 
+        # Capture initial totals for potential-based reward normalisation (fractions in [0,1]).
+        self._init_enemy_hp_total = self._prev_enemy_hp_total
+        self._init_n_allies = self._prev_n_allies
+        self._prev_enemy_hp_frac = 1.0
+        self._prev_ally_alive_frac = 1.0
+
         self._last_obs_tuple = obs_tuple
         self._last_avail = avail
         self._done = False
@@ -383,6 +401,7 @@ class SMACliteDreamerEnv(gym.Env):
         self._ep_attack_actions = 0
         self._ep_move_actions   = 0
         self._ep_noop_actions   = 0
+        self._ep_reward_terms: dict = {}     # running per-term sums for the episode
         self._ep_metrics = self._zero_ep_metrics()
 
         obs, info = self._build_obs(
@@ -519,6 +538,50 @@ class SMACliteDreamerEnv(gym.Env):
             v2_ally_death = v2_ally_survival = v2_step_penalty = 0.0
             v2_damage_progress = 0.0
 
+        # --- Swappable reward callable (overrides the v2/legacy result when set) ---
+        # Computes potentials from normalised fractions of the initial totals. The callable
+        # returns (reward, terms); terms are logged per-step + per-episode as log_reward_*.
+        cur_enemy_hp_frac = (
+            cur_enemy_hp_total / self._init_enemy_hp_total
+            if self._init_enemy_hp_total > 0 else 0.0
+        )
+        cur_ally_alive_frac = (
+            cur_n_allies / self._init_n_allies if self._init_n_allies > 0 else 0.0
+        )
+        if self._reward_fn is not None:
+            from smacdreamer.envs.reward_registry import RewardContext
+            ctx = RewardContext(
+                base_reward=float(base_reward),
+                kill_delta=int(kill_delta),
+                ally_deaths=int(ally_deaths),
+                enemy_hp_damage=float(enemy_hp_damage_this_step),
+                enemy_hp_frac=float(cur_enemy_hp_frac),
+                prev_enemy_hp_frac=float(self._prev_enemy_hp_frac),
+                ally_alive_frac=float(cur_ally_alive_frac),
+                prev_ally_alive_frac=float(self._prev_ally_alive_frac),
+                allies_alive=int(cur_n_allies),
+                enemies_alive=int(cur_n_enemies),
+                is_last=bool(is_last),
+                battle_won=bool(info.get("battle_won", False)),
+                step_idx=int(self._ep_step),
+                max_episode_steps=int(self._max_episode_steps),
+                gamma=self._gamma,
+            )
+            reward_val, reward_terms = self._reward_fn(ctx)
+            shaped_reward = np.float32(reward_val)
+            shaping_bonus = float(reward_val) - float(base_reward)
+        else:
+            # No swappable reward: synthesise the term breakdown from the v2/legacy result
+            # so the log_reward_* keys are always present and consistent.
+            reward_terms = {
+                "original": float(base_reward),
+                "shaping_total": float(shaping_bonus),
+            }
+
+        # Advance potential bookkeeping for the next step.
+        self._prev_enemy_hp_frac = float(cur_enemy_hp_frac)
+        self._prev_ally_alive_frac = float(cur_ally_alive_frac)
+
         # Episode-level return accumulation.
         self._ep_original_return += float(base_reward)
         self._ep_shaped_return   += float(shaped_reward)
@@ -557,6 +620,7 @@ class SMACliteDreamerEnv(gym.Env):
             reward_shaping_bonus=float(shaping_bonus),
             enemy_hp_total=cur_enemy_hp_total,
             enemy_hp_damage_this_step=enemy_hp_damage_this_step,
+            reward_terms=reward_terms,
         )
         # Surface battle_won at the top level of info too (SMAClite convention preserved).
         if "battle_won" in info:
@@ -649,6 +713,7 @@ class SMACliteDreamerEnv(gym.Env):
         reward_shaping_bonus: float = 0.0,
         enemy_hp_total: float = 0.0,
         enemy_hp_damage_this_step: float = 0.0,
+        reward_terms: dict = None,
     ) -> tuple[dict, dict]:
         """Build the (observation, info) pair.
 
@@ -735,6 +800,24 @@ class SMACliteDreamerEnv(gym.Env):
             # Episode metrics (carried forward; overwritten at episode end)
             **self._ep_metrics,
         }
+
+        # --- Per-term reward breakdown (log_reward_term_*) ---
+        # Per-step contribution of each reward term + the running per-episode sum, plus the
+        # unshaped original and the shaping total. These are log_* so the encoder excludes
+        # them and the trainer aggregates them. Keys are stable across maps/steps (the union
+        # of canonical term names) so ParallelEnv can stack them across workers.
+        canonical_terms = ("win", "hp", "ally", "positioning", "kill", "death",
+                           "survival", "step_penalty", "damage")
+        rt = reward_terms or {}
+        # Accumulate episode sums.
+        for k, v in rt.items():
+            self._ep_reward_terms[k] = self._ep_reward_terms.get(k, 0.0) + float(v)
+        for name in canonical_terms:
+            info[f"log_reward_term_{name}"] = _f(rt.get(name, 0.0))
+            info[f"log_reward_term_{name}_ep_sum"] = _f(self._ep_reward_terms.get(name, 0.0))
+        info["log_reward_original"]      = _f(rt.get("original", original_env_reward))
+        info["log_reward_shaping_total"] = _f(rt.get("shaping_total", reward_shaping_bonus))
+
         if self._map_sampler is not None:
             cm = self._map_sampler.coverage_metrics()
             info["log_sampling_cycle"]            = _f(cm["sampling_cycle"])

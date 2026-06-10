@@ -310,6 +310,21 @@ class MapSampler:
     # ------------------------------------------------------------------
 
     @classmethod
+    def from_entries(
+        cls,
+        entries: List[MapEntry],
+        mode: str = 'shuffled_round_robin',
+        seed: int = 0,
+    ) -> 'MapSampler':
+        """Build a sampler directly from a list of MapEntry (no manifest file).
+
+        Used by the multimap factory after folder discovery: each worker reconstructs its
+        own sampler from the discovered entries + a worker-offset seed. Thin convenience
+        over ``MapSampler(maps=entries, mode=mode, seed=seed)``.
+        """
+        return cls(maps=list(entries), mode=mode, seed=seed)
+
+    @classmethod
     def from_manifest(
         cls,
         manifest_path: str,

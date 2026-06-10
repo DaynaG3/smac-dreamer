@@ -10,6 +10,17 @@ SMACliteDreamerEnv uses the modern Gymnasium 5-tuple API:
 
 This adapter bridges the gap.
 
+log_* metric forwarding
+-----------------------
+SMACliteDreamerEnv returns all diagnostic metrics (``log_map_id``, the invalid-action
+counters, reward breakdown, …) in the Gymnasium ``info`` dict. R2-Dreamer's ParallelEnv
+*discards* ``info`` on step (``o, r, d, _ = p()``), so those keys would never reach the
+TensorDict the trainer reads/aggregates. To keep the invalid-action signal (and map id)
+flowing — without editing external/r2dreamer — this adapter merges every ``log_``-prefixed
+``info`` key into the returned ``obs`` dict, which ParallelEnv *does* propagate. The encoder
+(networks.MultiEncoder) already excludes any ``log_`` key, so these never become model
+inputs; they are picked up only by OnlineTrainer's ``log_``-prefixed aggregation.
+
 Action space: SMACliteDreamerEnv exposes MultiDiscrete([C]*A). Dreamer.__init__
 detects the action space type via hasattr checks:
     hasattr(space, "n")              -> OneHotDist (single Discrete)
@@ -45,11 +56,25 @@ class SMACliteR2DreamerAdapter(gym.Wrapper):
         space.multi_discrete = True
         self.action_space = space
 
+    @staticmethod
+    def _merge_log_keys(obs, info):
+        """Copy every log_* key from info into obs so ParallelEnv propagates them.
+
+        ParallelEnv drops info but keeps obs; the encoder excludes log_* keys, so these
+        reach the trainer's log_ aggregation without ever becoming model inputs.
+        """
+        merged = dict(obs)
+        for k, v in info.items():
+            if k.startswith("log_"):
+                merged[k] = np.asarray(v, dtype=np.float32)
+        return merged
+
     def reset(self, **kwargs):
-        obs, _info = self.env.reset(**kwargs)
-        return obs                                          # ParallelEnv expects bare obs dict
+        obs, info = self.env.reset(**kwargs)
+        return self._merge_log_keys(obs, info)              # ParallelEnv expects bare obs dict
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
         done = bool(terminated or truncated)
+        obs = self._merge_log_keys(obs, info)
         return obs, float(reward), done, info               # 4-tuple expected by ParallelEnv

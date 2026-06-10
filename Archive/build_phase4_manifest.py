@@ -31,185 +31,19 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-for p in [ROOT / "src", ROOT / "external" / "dreamerv3", ROOT / "external" / "smaclite"]:
+for p in [ROOT / "src", ROOT / "external" / "smaclite"]:
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
 import ruamel.yaml as yaml
 
-
-# ---------------------------------------------------------------------------
-# Known unit types
-# ---------------------------------------------------------------------------
-
-KNOWN_UNIT_TYPES = {
-    "ZERGLING", "BANELING", "SPINE_CRAWLER",
-    "MARINE", "MEDIVAC", "MARAUDER",
-    "ZEALOT", "STALKER", "COLOSSUS",
-}
-
-
-# ---------------------------------------------------------------------------
-# Validation
-# ---------------------------------------------------------------------------
-
-def _sha256_file(path: pathlib.Path) -> str:
-    h = hashlib.sha256(path.read_bytes()).hexdigest()
-    return h
-
-
-def _extract_unit_types_from_groups(groups: list) -> set:
-    types = set()
-    for g in groups:
-        for unit_name in g.get("units", {}).keys():
-            types.add(unit_name.upper())
-    return types
-
-
-def validate_map(
-    path: pathlib.Path,
-    map_dir: pathlib.Path,
-    family_from_parent: bool,
-    limits: dict,
-    on_exceed: str,
-) -> dict:
-    """Validate a single map JSON file.
-
-    Returns a result dict with keys:
-      ok          — bool
-      reason      — exclusion/error reason (empty string if ok)
-      map_info    — dict of shape metadata (present only if ok=True)
-      file_hash   — sha256 hex string (always present)
-      path        — pathlib.Path (always present)
-      rel_path    — str relative to project root (always present)
-    """
-    rel_path = str(path.relative_to(ROOT)).replace("\\", "/")
-    try:
-        file_hash = _sha256_file(path)
-    except OSError as e:
-        return {"ok": False, "reason": f"file read error: {e}", "path": path,
-                "rel_path": rel_path, "file_hash": ""}
-
-    # 1. Parse JSON
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as e:
-        return {"ok": False, "reason": f"JSON parse error: {e}", "path": path,
-                "rel_path": rel_path, "file_hash": file_hash}
-
-    # 2. Allied and enemy counts
-    n_ally = raw.get("num_allied_units", 0)
-    n_enemy = raw.get("num_enemy_units", 0)
-    if n_ally < 1:
-        return {"ok": False, "reason": f"num_allied_units={n_ally} < 1",
-                "path": path, "rel_path": rel_path, "file_hash": file_hash}
-    if n_enemy < 1:
-        return {"ok": False, "reason": f"num_enemy_units={n_enemy} < 1",
-                "path": path, "rel_path": rel_path, "file_hash": file_hash}
-
-    # 3. Unit type check
-    groups = raw.get("groups", [])
-    unit_types = _extract_unit_types_from_groups(groups)
-    custom_types = unit_types - KNOWN_UNIT_TYPES
-    if custom_types:
-        return {"ok": False,
-                "reason": f"unknown/custom unit types: {sorted(custom_types)}",
-                "path": path, "rel_path": rel_path, "file_hash": file_hash}
-
-    # 4. Custom unit path check (if present, reject)
-    if raw.get("custom_unit_path"):
-        return {"ok": False, "reason": "custom_unit_path is set (custom units not allowed)",
-                "path": path, "rel_path": rel_path, "file_hash": file_hash}
-
-    # 5. Instantiate env and probe shapes
-    try:
-        from smaclite.env.smaclite import SMACliteEnv as _SMACliteEnv
-
-        env = _SMACliteEnv(map_file=str(path))
-
-        # Attributes are populated in __init__ before reset.
-        n_agents  = env.n_agents
-        n_enemies = env.n_enemies
-        n_actions = env.n_actions
-        obs_size  = env.obs_size
-
-        obs_tuple, _ = env.reset()
-        avail = env.get_avail_actions()
-
-        # 6. Validate avail_actions consistency
-        avail_lens = [len(a) for a in avail]
-        if len(set(avail_lens)) != 1 or avail_lens[0] != n_actions:
-            env.close()
-            return {"ok": False,
-                    "reason": f"non-uniform avail_actions: {set(avail_lens)}",
-                    "path": path, "rel_path": rel_path, "file_hash": file_hash}
-
-        # 7. One valid step
-        step_acts = []
-        for agent_avail in avail:
-            valid = [i for i, v in enumerate(agent_avail) if v]
-            step_acts.append(valid[0] if valid else 0)
-        env.step(step_acts)
-
-        env.close()
-    except Exception as e:
-        return {"ok": False, "reason": f"env load/step failed: {e}",
-                "path": path, "rel_path": rel_path, "file_hash": file_hash}
-
-    # 8. Safety limits
-    limit_violations = []
-    dim_map = {"max_agents": n_agents, "max_enemies": n_enemies,
-               "max_actions": n_actions, "max_obs_size": obs_size}
-    for lk, actual in dim_map.items():
-        lv = limits.get(lk)
-        if lv is not None and actual > lv:
-            limit_violations.append(f"{lk}: actual={actual} > limit={lv}")
-
-    if limit_violations:
-        reason = "exceeds limits: " + "; ".join(limit_violations)
-        if on_exceed == "error":
-            raise SystemExit(f"ERROR: {rel_path} {reason}")
-        return {"ok": False, "reason": reason,
-                "path": path, "rel_path": rel_path, "file_hash": file_hash,
-                "limit_exceeded": True,
-                "dimensions": {"n_agents": n_agents, "n_enemies": n_enemies,
-                               "n_actions": n_actions, "obs_size": obs_size}}
-
-    # 9. Family
-    if family_from_parent:
-        # First directory component below map_dir
-        try:
-            rel_to_mapdir = path.relative_to(map_dir)
-            parts = rel_to_mapdir.parts
-            family = parts[0] if len(parts) > 1 else "uncategorised"
-        except ValueError:
-            family = "uncategorised"
-    else:
-        family = raw.get("category", raw.get("family", "uncategorised"))
-
-    map_name = raw.get("name", path.stem)
-
-    return {
-        "ok": True,
-        "reason": "",
-        "path": path,
-        "rel_path": rel_path,
-        "file_hash": file_hash,
-        "map_info": {
-            "name": map_name,
-            "stem": path.stem,
-            "family": family,
-            "n_agents": n_agents,
-            "n_enemies": n_enemies,
-            "n_actions": n_actions,
-            "obs_size": obs_size,
-            "ally_has_shields": raw.get("ally_has_shields", False),
-            "enemy_has_shields": raw.get("enemy_has_shields", False),
-            "terrain_preset": raw.get("terrain_preset", ""),
-            "num_unit_types": raw.get("num_unit_types", 0),
-            "unit_types": sorted(unit_types),
-        },
-    }
+# Shared scan/probe core — single source of truth (no duplicated scan logic).
+# validate_map / sha256_file return the same result-dict contract this builder relies on.
+from smacdreamer.envs.map_discovery import (
+    KNOWN_UNIT_TYPES,          # noqa: F401 (kept for backward import compatibility)
+    validate_map,
+    sha256_file as _sha256_file,
+)
 
 
 # ---------------------------------------------------------------------------

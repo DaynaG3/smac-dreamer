@@ -10,6 +10,17 @@ Does NOT modify any file inside external/r2dreamer.
 import pathlib
 import sys
 
+import numpy as np
+
+
+def _worker_seed(base_seed: int, idx: int) -> int:
+    """Robust per-worker seed: hash (base_seed, idx) via SeedSequence.
+
+    Avoids correlating adjacent RNG streams (base+idx). Validated by the §0 spike to give
+    de-correlated per-worker map sequences.
+    """
+    return int(np.random.SeedSequence([int(base_seed), int(idx)]).generate_state(1, dtype=np.uint32)[0])
+
 
 def _ensure_paths():
     """Add r2dreamer and smaclite to sys.path in the calling process.
@@ -87,3 +98,112 @@ def make_smaclite_envs(
     obs_space = train_envs.observation_space
     act_space = train_envs.action_space
     return train_envs, eval_envs, obs_space, act_space
+
+
+# ---------------------------------------------------------------------------
+# Multimap factory
+# ---------------------------------------------------------------------------
+
+def make_smaclite_multimap_env(
+    entries, pad_dims, sampling_mode, base_seed, worker_idx,
+    reward_name, reward_params, gamma, max_episode_steps,
+):
+    """Construct one R2-Dreamer-compatible multimap SMAClite env (worker-side).
+
+    Reconstructs the MapSampler + resolved reward callable inside the worker from picklable
+    primitives (entries, mode, names/params) — never pickles a live sampler or callable.
+    All workers share the SAME pad_dims so every map presents the identical padded shape.
+    """
+    _ensure_paths()
+    from smacdreamer.envs.smaclite_dreamer_env import SMACliteDreamerEnv
+    from smacdreamer.envs.r2dreamer_adapter import SMACliteR2DreamerAdapter
+    from smacdreamer.envs.map_sampler import MapSampler
+    from smacdreamer.envs.reward_registry import resolve
+
+    sampler = MapSampler.from_entries(
+        entries, mode=sampling_mode, seed=_worker_seed(base_seed, worker_idx),
+    )
+    reward_fn = resolve(reward_name, reward_params)
+    env = SMACliteDreamerEnv(
+        scenario=entries[0].name,                 # placeholder; sampler drives map selection
+        max_episode_steps=max_episode_steps,
+        seed=_worker_seed(base_seed, worker_idx),
+        map_sampler=sampler,
+        pad_dims=pad_dims,
+        reward_fn=reward_fn,
+        gamma=gamma,
+    )
+    return SMACliteR2DreamerAdapter(env)
+
+
+def make_smaclite_multimap_envs(
+    maps_folder,
+    split_spec,                 # SplitSpec | dict
+    env_num,
+    eval_episode_num,
+    device,
+    sampling_mode="shuffled_round_robin",
+    reward_name="dense_v3",
+    reward_params=None,
+    gamma=0.997,
+    max_episode_steps=200,
+    seed=0,
+    padding_override=None,
+):
+    """Create multimap train + held-out eval ParallelEnv pools.
+
+    Discovery runs ONCE in this (parent) process: scan folder -> split -> TRAIN-max padding
+    (or override) -> all-map safety-net. Train workers sample the TRAIN split with the
+    configured reward; eval workers sample the held-out TEST split with the SAME pad_dims and
+    the ORIGINAL (unshaped) reward so eval reports the true generalisation metric.
+
+    Returns
+    -------
+    (train_envs, eval_envs, obs_space, act_space, discovery_info)
+        discovery_info: dict with train/test entry names, pad_dims, counts — for logging.
+    """
+    _ensure_paths()
+    from envs.parallel import ParallelEnv
+    from smacdreamer.envs.map_discovery import discover, SplitSpec
+
+    if isinstance(split_spec, dict):
+        split_spec = SplitSpec(**split_spec)
+
+    train_entries, test_entries, pad_dims = discover(
+        maps_folder, split_spec, padding_override=padding_override, verbose=True,
+    )
+
+    reward_params = reward_params or {}
+
+    def train_ctor(idx):
+        return lambda: make_smaclite_multimap_env(
+            train_entries, pad_dims, sampling_mode, seed, idx,
+            reward_name, reward_params, gamma, max_episode_steps,
+        )
+
+    # Eval pool: held-out TEST maps, SAME padding, ORIGINAL reward (smaclite_default).
+    def eval_ctor(idx):
+        return lambda: make_smaclite_multimap_env(
+            test_entries, pad_dims, sampling_mode, seed + 10_000, idx,
+            "smaclite_default", {}, gamma, max_episode_steps,
+        )
+
+    train_envs = ParallelEnv(train_ctor, env_num, device)
+    eval_envs = (
+        ParallelEnv(eval_ctor, eval_episode_num, device)
+        if eval_episode_num > 0 and test_entries
+        else None
+    )
+    obs_space = train_envs.observation_space
+    act_space = train_envs.action_space
+    discovery_info = {
+        "train_maps": [e.name for e in train_entries],
+        "test_maps": [e.name for e in test_entries],
+        "n_train": len(train_entries),
+        "n_test": len(test_entries),
+        "padding": {
+            "max_agents": pad_dims.max_agents, "max_enemies": pad_dims.max_enemies,
+            "max_actions": pad_dims.max_actions, "max_obs_size": pad_dims.max_obs_size,
+        },
+    }
+    return train_envs, eval_envs, obs_space, act_space, discovery_info
