@@ -181,7 +181,33 @@ class Logger:
         scalars = list(self._scalars.items())
         if fps:
             scalars.append(("fps/fps", self._compute_fps(step)))
-        print(f"[{step}]", " / ".join(f"{k} {v:.1f}" for k, v in scalars))
+
+        # Group metrics by the prefix before the first "/", then print each
+        # group on its own line, wrapping at 4 items per row so even the
+        # dense "train" group stays readable.
+        groups = {}
+        for k, v in scalars:
+            if "/" in k:
+                prefix, rest = k.split("/", 1)
+            else:
+                prefix, rest = "other", k
+            groups.setdefault(prefix, []).append((rest, v))
+
+        # ASCII only: wandb wraps stdout with a cp1252 console shim on Windows
+        # that cannot encode Unicode box-drawing characters (raises
+        # UnicodeEncodeError mid-write, which would block downstream logging).
+        BAR = "-" * 56
+        print(f"\n{BAR}")
+        print(f"  step {step:,}")
+        for prefix in sorted(groups):
+            items = groups[prefix]
+            PER_ROW = 4
+            for i in range(0, len(items), PER_ROW):
+                row = items[i : i + PER_ROW]
+                tag = f"{prefix:<9}|" if i == 0 else f"{'':9} "
+                pairs = "   ".join(f"{k} {v:.4g}" for k, v in row)
+                print(f"  {tag} {pairs}")
+        print(BAR)
         with (self._logdir / self._filename).open("a") as f:
             f.write(json.dumps({"step": step, **dict(scalars)}) + "\n")
         for name, value in scalars:

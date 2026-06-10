@@ -112,10 +112,12 @@ def test_action_onehot_decodes_to_ints(fixed_env, monkeypatch):
         return real_step(acts)
 
     monkeypatch.setattr(env._env, "step", spy_step)
-    # Build a known action (all noop=0 is always valid) and check SMAClite receives ints.
-    flat = env.codec.encode([0] * env.n_agents, num_real_agents=env.n_agents)
+    # Use stop (action 1) — always valid for alive units after reset.
+    # Action 0 is no-op, which SMAClite only marks valid for dead units; the
+    # sanitiser would replace it, making 0 a poor choice for a pass-through test.
+    flat = env.codec.encode([1] * env.n_agents, num_real_agents=env.n_agents)
     env.step(flat)
-    assert captured["acts"] == [0] * env.n_agents
+    assert captured["acts"] == [1] * env.n_agents
     assert all(isinstance(a, int) for a in captured["acts"])
 
 
