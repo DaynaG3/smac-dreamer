@@ -169,8 +169,11 @@ def make_smaclite_multimap_envs(
     if isinstance(split_spec, dict):
         split_spec = SplitSpec(**split_spec)
 
+    # isolate_probe: probe each map in a recycled subprocess so discovery of a large
+    # folder (e.g. 500 maps) does not accumulate SMAClite native memory past the pod cap.
     train_entries, test_entries, pad_dims = discover(
         maps_folder, split_spec, padding_override=padding_override, verbose=True,
+        isolate_probe=True,
     )
 
     reward_params = reward_params or {}

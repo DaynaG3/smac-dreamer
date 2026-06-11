@@ -10,7 +10,7 @@
 maps_folder: configs/maps/easy500 # folder of *.json maps to scan (provide this folder)
 split:
   mode: ratio                           # "ratio" | "explicit"
-  train_ratio: 0.8                      # ratio mode: fraction to TRAIN; rest is held-out TEST
+  train_ratio: 0.9                      # ratio mode: fraction to TRAIN; rest is held-out TEST
   seed: 0
   # For mode: explicit, instead set:
   # train: [mapA, mapB, ...]

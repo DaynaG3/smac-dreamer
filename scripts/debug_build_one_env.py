@@ -39,6 +39,7 @@ def main():
     pad_override = OmegaConf.to_container(cfg.padding, resolve=True) if cfg.get("padding") else None
     train_entries, test_entries, pad_dims = discover(
         str(cfg.maps_folder), SplitSpec(**split), padding_override=pad_override, verbose=True,
+        isolate_probe=True,   # subprocess-isolated probe, same as the training factory
     )
     print(f">> train maps: {len(train_entries)}  test maps: {len(test_entries)}")
     print(f">> pad_dims: {pad_dims}")

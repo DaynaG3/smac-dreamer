@@ -176,11 +176,21 @@ def scan_folder(
     family_from_parent: bool = True,
     root: pathlib.Path = _ROOT,
     verbose: bool = False,
+    isolate_probe: bool = False,
+    probe_workers: int = 4,
+    probe_maxtasks: int = 10,
 ) -> tuple[list, list, list]:
     """Scan a folder of *.json maps. Returns (included, excluded, invalid) result dicts.
 
     included entries each carry map_info + file_hash; deduped by filename and by content
     hash, sorted by rel_path for stable map_id assignment by callers.
+
+    ``isolate_probe`` runs each map's env probe in a recycled spawn-Pool worker so that
+    native memory SMAClite does not release on ``env.close()`` is reclaimed per worker
+    rather than accumulating in this process. Required for large folders (e.g. 500 maps)
+    under a tight pod memory cap; ``probe_workers`` parallelism and ``probe_maxtasks``
+    (worker recycle interval) bound the transient footprint. Default off keeps the
+    original single-process behaviour for tests / small folders.
     """
     map_dir = pathlib.Path(folder)
     if not map_dir.is_absolute():
@@ -199,10 +209,23 @@ def scan_folder(
         seen_names.setdefault(p.stem, p)
     unique_paths = [seen_names[s] for s in sorted(seen_names)]
 
+    # Obtain a validate_map result per path, either in-process or via a recycled
+    # subprocess pool (memory-isolated). Order matches unique_paths in both cases.
+    if isolate_probe:
+        import multiprocessing as _mp
+
+        ctx = _mp.get_context("spawn")
+        args = [(p, map_dir, family_from_parent, root) for p in unique_paths]
+        with ctx.Pool(processes=max(1, probe_workers),
+                      maxtasksperchild=max(1, probe_maxtasks)) as pool:
+            results = list(pool.imap(_probe_worker, args, chunksize=1))
+    else:
+        results = [validate_map(p, map_dir, family_from_parent, root=root)
+                   for p in unique_paths]
+
     included, excluded, invalid = [], [], []
     seen_hashes: dict = {}
-    for path in unique_paths:
-        r = validate_map(path, map_dir, family_from_parent, root=root)
+    for path, r in zip(unique_paths, results):
         if not r["ok"]:
             (excluded if r.get("limit_exceeded") else invalid).append(
                 {"path": r["rel_path"], "reason": r["reason"]})
@@ -221,6 +244,25 @@ def scan_folder(
     for mid, r in enumerate(included):
         r["map_id"] = mid
     return included, excluded, invalid
+
+
+def _probe_worker(args):
+    """Module-level wrapper so a spawn Pool can pickle the probe call.
+
+    Runs ``validate_map`` for one map inside a throwaway pool worker; the worker is
+    recycled (``maxtasksperchild``) so any native memory SMAClite fails to release on
+    ``env.close()`` is reclaimed by the OS instead of accumulating in the parent.
+    """
+    # Defensive, cross-platform path setup: spawn Pool children normally inherit the
+    # parent's sys.path, but ensure smaclite/r2dreamer/src resolve even if they don't
+    # (and avoid the backslash-separator bug in the factory's _ensure_paths on Linux).
+    import sys
+    for sub in ("src", "external/smaclite", "external/r2dreamer"):
+        p = str(_ROOT / sub)
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    path, map_dir, family_from_parent, root = args
+    return validate_map(path, map_dir, family_from_parent, root=root)
 
 
 def _to_entry(r: dict) -> MapEntry:
@@ -320,6 +362,9 @@ def discover(
     recursive: bool = True,
     family_from_parent: bool = True,
     verbose: bool = True,
+    isolate_probe: bool = False,
+    probe_workers: int = 4,
+    probe_maxtasks: int = 10,
 ) -> tuple[list, list, PaddingDims]:
     """Top-level entry: scan folder -> split -> train-max padding -> safety-net.
 
@@ -327,9 +372,14 @@ def discover(
       train_entries / test_entries : list[MapEntry] for the MapSampler.
       pad_dims                     : PaddingDims the model is built against (TRAIN-max
                                      or config override), validated against ALL maps.
+
+    ``isolate_probe`` (+ ``probe_workers`` / ``probe_maxtasks``) probes each map in a
+    recycled subprocess so a large folder does not blow the process memory cap; see
+    ``scan_folder``.
     """
     included, excluded, invalid = scan_folder(
-        folder, recursive=recursive, family_from_parent=family_from_parent, verbose=verbose)
+        folder, recursive=recursive, family_from_parent=family_from_parent, verbose=verbose,
+        isolate_probe=isolate_probe, probe_workers=probe_workers, probe_maxtasks=probe_maxtasks)
     if not included:
         raise ValueError(f"no valid maps in {folder} (excluded={len(excluded)}, invalid={len(invalid)})")
 
