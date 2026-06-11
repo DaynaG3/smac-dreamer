@@ -54,6 +54,24 @@ from train_r2dreamer_smaclite_debug import make_config as _make_debug_config  # 
 torch.set_float32_matmul_precision("high")
 
 
+def _propagate_device(node, device: str) -> None:
+    """Recursively set every `device`/`storage_device` field in an OmegaConf tree.
+
+    The reused debug config builder writes device="cpu" into nested buffer/encoder/
+    head blocks that the multimap script must override for a GPU run. Walks dicts and
+    lists in place so the whole config agrees on one device.
+    """
+    if OmegaConf.is_dict(node):
+        for key in list(node.keys()):
+            if key in ("device", "storage_device"):
+                node[key] = device
+            else:
+                _propagate_device(node[key], device)
+    elif OmegaConf.is_list(node):
+        for item in node:
+            _propagate_device(item, device)
+
+
 def _reward_hash(name: str, resolved: dict) -> str:
     """Stable 8-char hash over the FULLY-resolved reward (name + resolved params).
 
@@ -82,9 +100,12 @@ def main():
         units=int(cfg.units), deter=int(cfg.deter), imag_horizon=int(cfg.imag_horizon),
     )
     config = _make_debug_config(debug_args)
-    config.device = str(cfg.device)
-    config.model.device = str(cfg.device)
-    config.model.rssm.device = str(cfg.device)
+    # The debug builder hard-codes device="cpu" in MANY nested places (buffer,
+    # storage, encoder, decoder, and every head), not just the three top-level
+    # fields. On CPU that is invisible; on GPU the model is .to(device)'d but
+    # some submodules read their own `device` field at forward time, so every
+    # field must agree or you get a CUDA/CPU mismatch. Propagate to all of them.
+    _propagate_device(config, str(cfg.device))
     # Wire periodic held-out eval.
     eval_every = int(cfg.eval.get("every", 0))
     episodes_per_map = int(cfg.eval.get("episodes_per_map", 0))
