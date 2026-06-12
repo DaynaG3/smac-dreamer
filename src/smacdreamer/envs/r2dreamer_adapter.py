@@ -41,20 +41,48 @@ import numpy as np
 import gymnasium as gym
 
 
+class FactorisedMultiOneHotSpace(gym.spaces.Space):
+    """Action space for factorised multi-one-hot actions, WITHOUT materialising a
+    ``(C,)*A`` array.
+
+    Dreamer reads only ``.shape`` (=``(C,)*A`` → ``act_dim = sum(shape)`` and the actor's
+    per-agent groups) and ``.multi_discrete``. A real ``gym.spaces.Box(shape=(C,)*A)``
+    allocates ``low``/``high`` arrays of ``C ** A`` elements — for padded multimap dims
+    (e.g. 10 agents × 16 actions → 16**10 ≈ 1.1e12 floats ≈ 4 TB) that OOMs the process at
+    construction. The base ``gym.spaces.Space`` stores ``shape`` as a plain tuple, so this
+    space costs nothing. ``sample()`` returns a flat one-hot ``(A*C,)`` (one random action
+    per agent group), matching what SMACliteDreamerEnv.step()/the codec consume.
+    """
+
+    def __init__(self, num_agents: int, num_actions: int, dtype=np.float32):
+        self.num_agents = int(num_agents)
+        self.num_actions = int(num_actions)
+        super().__init__(shape=(self.num_actions,) * self.num_agents, dtype=dtype)
+        self.multi_discrete = True
+
+    def sample(self, mask=None):
+        flat = np.zeros(self.num_agents * self.num_actions, dtype=self.dtype)
+        picks = self.np_random.integers(self.num_actions, size=self.num_agents)
+        flat[np.arange(self.num_agents) * self.num_actions + picks] = 1.0
+        return flat
+
+    def contains(self, x) -> bool:
+        x = np.asarray(x)
+        return x.shape == (self.num_agents * self.num_actions,)
+
+
 class SMACliteR2DreamerAdapter(gym.Wrapper):
     """Adapts SMACliteDreamerEnv to the old-style 4-tuple API that R2-Dreamer expects."""
 
     def __init__(self, env):
         super().__init__(env)
-        # MultiDiscrete([C]*A) -> Box(0,1, shape=(C,...,C), multi_discrete=True)
+        # MultiDiscrete([C]*A) -> factorised multi-one-hot space (shape=(C,)*A,
+        # multi_discrete=True). NOT a gym Box: a Box of shape (C,)*A would allocate C**A
+        # elements and OOM under padding (see FactorisedMultiOneHotSpace).
         nvec = env.action_space.nvec                        # numpy array [C, C, ..., C]
-        space = gym.spaces.Box(
-            low=0.0, high=1.0,
-            shape=tuple(int(c) for c in nvec),
-            dtype=np.float32,
+        self.action_space = FactorisedMultiOneHotSpace(
+            num_agents=len(nvec), num_actions=int(nvec[0]),
         )
-        space.multi_discrete = True
-        self.action_space = space
 
     @staticmethod
     def _merge_log_keys(obs, info):
