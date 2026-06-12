@@ -42,6 +42,9 @@ from dreamer import Dreamer
 from smacdreamer.envs.map_discovery import discover, SplitSpec
 from smacdreamer.r2dreamer_factory import make_smaclite_multimap_env
 from train_r2dreamer_smaclite_debug import make_config as _make_debug_config
+# Reuse the recursive device propagation so a GPU eval sets EVERY device field (buffer,
+# encoder, all heads), not just the three top-level ones — same fix as the training script.
+from train_r2dreamer_smaclite_multimap import _propagate_device
 
 
 def wilson_interval(successes: int, n: int, z: float = 1.96) -> tuple:
@@ -116,6 +119,7 @@ def main():
         SplitSpec(**OmegaConf.to_container(cfg.split, resolve=True)),
         padding_override=OmegaConf.to_container(cfg.padding, resolve=True) if cfg.get("padding") else None,
         verbose=True,
+        isolate_probe=True,   # subprocess-isolated probe so 500-map discovery doesn't OOM
     )
     if not test_entries:
         sys.exit("No held-out test maps to evaluate.")
@@ -133,9 +137,7 @@ def main():
         steps=1, batch_size=int(cfg.batch_size), batch_length=int(cfg.batch_length),
         units=int(cfg.units), deter=int(cfg.deter), imag_horizon=int(cfg.imag_horizon),
     ))
-    config.device = device
-    config.model.device = device
-    config.model.rssm.device = device
+    _propagate_device(config, device)   # set EVERY device field (buffer/encoder/heads)
 
     agent = Dreamer(config.model, obs_space, act_space).to(device)
     ckpt = torch.load(args.checkpoint, map_location=device)
