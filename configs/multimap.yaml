@@ -57,7 +57,7 @@ eval:
 
 # ---- Logging --------------------------------------------------------------
 wandb:
-  project: null                        # set to enable W&B; null -> TensorBoard/JSONL only
-  run_name: null                       # auto: <folder>-<reward>-<resolved-params-hash>
+  project: smac-r2dreamer              # set to enable W&B; null -> TensorBoard/JSONL only
+  run_name: easy500_windows_1m         # auto: <folder>-<reward>-<resolved-params-hash>
 logdir: logs/r2dreamer/multimap
 checkpoint_every_minutes: 10.0
