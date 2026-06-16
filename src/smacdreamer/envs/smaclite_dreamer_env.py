@@ -58,6 +58,16 @@ from gymnasium import spaces
 from smacdreamer.envs.action_codec import FactorisedActionCodec, NOOP_ACTION
 
 
+def _unit_ehp(unit) -> float:
+    """Effective HP of a unit: current HP plus current shield (0 when the unit has no shield).
+
+    Used for the allied/enemy effective-HP fractions consumed by the ally_ehp_v4 reward and
+    the EHP diagnostics logged for every reward. Shields count toward survivability, so a
+    shield-only hit must register as EHP loss.
+    """
+    return float(unit.hp) + float(getattr(unit, "shield", 0.0))
+
+
 # Old obs "log/..." key  ->  new info "log_..." key. Definitions and aggregation level are
 # unchanged; only the framework location (obs -> info) and the prefix (log/ -> log_) change.
 METRIC_NAME_MAP = {
@@ -167,6 +177,17 @@ class SMACliteDreamerEnv(gym.Env):
         self._init_n_allies: int = 0
         self._prev_enemy_hp_frac: float = 1.0
         self._prev_ally_alive_frac: float = 1.0
+        # Effective-HP (HP+shields) tracking for the ally_ehp_v4 ablation + EHP diagnostics.
+        self._init_ally_ehp_total: float = 0.0
+        self._init_enemy_ehp_total: float = 0.0
+        self._prev_ally_ehp_frac: float = 1.0
+        self._prev_enemy_ehp_frac: float = 1.0
+        self._cur_ally_ehp_frac: float = 1.0
+        self._cur_enemy_ehp_frac: float = 1.0
+        # Per-episode shaping-component sums (read at episode end for log_episode_* keys).
+        self._ep_ally_ehp_shaping: float = 0.0
+        self._ep_terminal_anchor: float = 0.0
+        self._ep_timeout_penalty: float = 0.0
         self._scenario = scenario
         self._max_episode_steps = max_episode_steps
         self._seed = seed
@@ -369,7 +390,11 @@ class SMACliteDreamerEnv(gym.Env):
                         )
                 self._current_map_name = entry.name
                 self._current_map_id = self._map_id_map.get(entry.name, 0)
-            obs_tuple, _ = self._env.reset()
+            # Propagate an EXPLICITLY-provided seed to the underlying SMAClite env so
+            # evaluation is deterministic per (map, seed). During training reset() is called
+            # with seed=None, so this stays an unseeded reset (SMAClite RNG keeps advancing for
+            # episode diversity) — identical to the previous behaviour.
+            obs_tuple, _ = self._env.reset(seed=seed)
         else:
             obs_tuple, _ = self._env.reset(seed=self._seed)
 
@@ -384,6 +409,17 @@ class SMACliteDreamerEnv(gym.Env):
         self._init_n_allies = self._prev_n_allies
         self._prev_enemy_hp_frac = 1.0
         self._prev_ally_alive_frac = 1.0
+
+        # Effective-HP (HP+shields) totals captured immediately after reset from all units.
+        self._init_ally_ehp_total = float(sum(_unit_ehp(u) for u in uw.agents.values()))
+        self._init_enemy_ehp_total = float(sum(_unit_ehp(u) for u in uw.enemies.values()))
+        self._prev_ally_ehp_frac = 1.0
+        self._prev_enemy_ehp_frac = 1.0
+        self._cur_ally_ehp_frac = 1.0
+        self._cur_enemy_ehp_frac = 1.0
+        self._ep_ally_ehp_shaping = 0.0
+        self._ep_terminal_anchor = 0.0
+        self._ep_timeout_penalty = 0.0
 
         self._last_obs_tuple = obs_tuple
         self._last_avail = avail
@@ -478,6 +514,16 @@ class SMACliteDreamerEnv(gym.Env):
         self._prev_enemy_hp_total = cur_enemy_hp_total
         self._ep_enemy_hp_damage += enemy_hp_damage_this_step
 
+        # Effective-HP (HP+shields) fractions, clamped to [0,1] (guards numerical noise /
+        # healing; units cannot exceed their initial EHP here). Computed for EVERY reward so
+        # the EHP diagnostics are available regardless of which reward is active.
+        cur_ally_ehp_total = float(sum(_unit_ehp(u) for u in uw_post.agents.values()))
+        cur_enemy_ehp_total = float(sum(_unit_ehp(u) for u in uw_post.enemies.values()))
+        ally_ehp_frac = min(1.0, max(0.0, cur_ally_ehp_total / max(self._init_ally_ehp_total, 1e-8)))
+        enemy_ehp_frac = min(1.0, max(0.0, cur_enemy_ehp_total / max(self._init_enemy_ehp_total, 1e-8)))
+        self._cur_ally_ehp_frac = ally_ehp_frac
+        self._cur_enemy_ehp_frac = enemy_ehp_frac
+
         # First ally death step.
         if ally_deaths > 0 and self._first_ally_death_step < 0:
             self._first_ally_death_step = self._ep_step
@@ -566,6 +612,14 @@ class SMACliteDreamerEnv(gym.Env):
                 step_idx=int(self._ep_step),
                 max_episode_steps=int(self._max_episode_steps),
                 gamma=self._gamma,
+                ally_ehp_frac=float(ally_ehp_frac),
+                prev_ally_ehp_frac=float(self._prev_ally_ehp_frac),
+                enemy_ehp_frac=float(enemy_ehp_frac),
+                prev_enemy_ehp_frac=float(self._prev_enemy_ehp_frac),
+                # terminated = true battle end; truncated = timeout WITHOUT a natural terminal
+                # (mutually exclusive, so terminal vs timeout anchors each fire at most once).
+                terminated=bool(is_terminal),
+                truncated=bool(truncated and not is_terminal),
             )
             reward_val, reward_terms = self._reward_fn(ctx)
             shaped_reward = np.float32(reward_val)
@@ -578,9 +632,19 @@ class SMACliteDreamerEnv(gym.Env):
                 "shaping_total": float(shaping_bonus),
             }
 
+        # Accumulate per-episode shaping components (for log_episode_* keys), read at the
+        # episode end in _compute_ep_metrics (which runs BEFORE _build_obs's term accumulation,
+        # so we track these here rather than from self._ep_reward_terms). Keys are absent for
+        # rewards that do not emit them (smaclite_default/dense_v3) -> contribute 0.
+        self._ep_ally_ehp_shaping += float(reward_terms.get("ally_ehp", 0.0))
+        self._ep_terminal_anchor += float(reward_terms.get("terminal", 0.0))
+        self._ep_timeout_penalty += float(reward_terms.get("timeout", 0.0))
+
         # Advance potential bookkeeping for the next step.
         self._prev_enemy_hp_frac = float(cur_enemy_hp_frac)
         self._prev_ally_alive_frac = float(cur_ally_alive_frac)
+        self._prev_ally_ehp_frac = float(ally_ehp_frac)
+        self._prev_enemy_ehp_frac = float(enemy_ehp_frac)
 
         # Episode-level return accumulation.
         self._ep_original_return += float(base_reward)
@@ -847,6 +911,17 @@ class SMACliteDreamerEnv(gym.Env):
             "log_episode_original_env_return":         _f(),
             "log_episode_shaped_return":               _f(),
             "log_episode_reward_shaping_bonus":        _f(),
+            # Effective-HP shaping breakdown + diagnostics (ally_ehp_v4 ablation; present for
+            # every reward so the schema is stable across runs and held-out eval).
+            "log_episode_total_shaping":               _f(),
+            "log_episode_ally_ehp_shaping":            _f(),
+            "log_episode_terminal_anchor":             _f(),
+            "log_episode_timeout_penalty":             _f(),
+            "log_final_ally_ehp_frac":                 _f(),
+            "log_final_enemy_ehp_frac":                _f(),
+            "log_episode_ally_ehp_lost":               _f(),
+            "log_episode_enemy_ehp_lost":              _f(),
+            "log_shaping_to_original_ratio":           _f(),
             # Damage-progress diagnostics
             "log_episode_enemy_hp_damage":             _f(),
             "log_final_enemy_hp_total":                _f(),
@@ -883,6 +958,18 @@ class SMACliteDreamerEnv(gym.Env):
             "log_episode_original_env_return":         _f(self._ep_original_return),
             "log_episode_shaped_return":               _f(self._ep_shaped_return),
             "log_episode_reward_shaping_bonus":        _f(self._ep_shaping_bonus),
+            # Effective-HP shaping breakdown + diagnostics (ally_ehp_v4 ablation).
+            "log_episode_total_shaping":               _f(self._ep_shaping_bonus),
+            "log_episode_ally_ehp_shaping":            _f(self._ep_ally_ehp_shaping),
+            "log_episode_terminal_anchor":             _f(self._ep_terminal_anchor),
+            "log_episode_timeout_penalty":             _f(self._ep_timeout_penalty),
+            "log_final_ally_ehp_frac":                 _f(self._cur_ally_ehp_frac),
+            "log_final_enemy_ehp_frac":                _f(self._cur_enemy_ehp_frac),
+            "log_episode_ally_ehp_lost":               _f(1.0 - self._cur_ally_ehp_frac),
+            "log_episode_enemy_ehp_lost":              _f(1.0 - self._cur_enemy_ehp_frac),
+            "log_shaping_to_original_ratio":           _f(
+                self._ep_shaping_bonus / max(abs(self._ep_original_return), 1e-8)
+            ),
             # Damage-progress diagnostics
             "log_episode_enemy_hp_damage":             _f(self._ep_enemy_hp_damage),
             "log_final_enemy_hp_total":                _f(self._prev_enemy_hp_total),

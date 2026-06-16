@@ -64,6 +64,20 @@ class RewardContext:
     step_idx: int = 0
     max_episode_steps: int = 200
 
+    # Effective-HP fractions (HP + shields), current/init, clamped to [0, 1]. Used by the
+    # ally_ehp_v4 ablation; default to full health so existing rewards are unaffected.
+    ally_ehp_frac: float = 1.0
+    prev_ally_ehp_frac: float = 1.0
+    enemy_ehp_frac: float = 1.0
+    prev_enemy_ehp_frac: float = 1.0
+
+    # Termination vs truncation kept SEPARATE — do NOT use is_last as a substitute for
+    # distinguishing a true battle end from a time-limit truncation. The env passes a
+    # timeout-only `truncated` (False whenever `terminated` is True) so the two are mutually
+    # exclusive and terminal/timeout anchors each fire at most once.
+    terminated: bool = False
+    truncated: bool = False
+
     # Discount — shaping γ MUST equal the agent's discount for raw-space telescoping.
     gamma: float = 0.997
 
@@ -219,6 +233,84 @@ def _make_dense_v3(params: dict):
             "ally": float(ally_term),
             "win": float(win_term + loss_term),   # combined terminal signal
             "positioning": float(positioning_term),
+            "shaping_total": float(shaping),
+        }
+        return reward, terms
+    return fn
+
+
+@register("ally_ehp_v4")
+@_with_defaults({
+    "w_ally_ehp": 0.5,    # weight on the allied effective-HP (HP+shields) preservation potential
+    "w_enemy_ehp": 0.0,   # optional enemy-EHP destruction potential (base reward already covers it)
+    "w_ally_alive": 0.0,  # optional discrete ally-survival potential (off by default)
+    "w_win": 0.0,         # terminal win anchor (added once on a true battle win)
+    "w_loss": 0.0,        # terminal loss anchor magnitude (subtracted once on a true battle loss)
+    "w_timeout": 0.0,     # explicit timeout penalty magnitude (subtracted once on truncation)
+})
+def _make_ally_ehp_v4(params: dict):
+    """Allied effective-HP (HP + shields) preservation ablation.
+
+    Adds the one signal SMAClite's reward_only_positive base reward never provides: continuous
+    credit for keeping allied EFFECTIVE HP (HP + shields). Pure potential-based shaping on the
+    allied EHP fraction, plus explicitly-configured terminal/timeout anchors — nothing else
+    (no positioning / distance / attack / no-op / focus-fire / action-frequency bonuses). Built
+    so it can be A/B'd against smaclite_default and dense_v3 on the ORIGINAL return.
+
+    Allied potential is the SHIFTED form Φ(s) = ehp_frac − 1 ∈ [−1, 0]. A TRUE terminal
+    transition uses Φ(s') = 0 so a terminal allied loss is not double-counted by both the
+    potential and the terminal anchor. A TRUNCATION (time limit) does NOT zero the potential —
+    R2-Dreamer may bootstrap from truncated transitions; express any timeout cost via w_timeout.
+    ``terminated`` and ``truncated`` come from ctx and are mutually exclusive (the env passes a
+    timeout-only truncated flag), so win/loss/timeout anchors each apply at most once.
+
+    Weights are FIXED for the whole run (no annealing) so replay transitions keep a consistent
+    reward target. With the defaults only the allied-EHP potential is active.
+    """
+    d = _make_ally_ehp_v4.defaults
+    p = {**d, **params}
+
+    def fn(ctx: RewardContext):
+        gamma = ctx.gamma
+
+        # --- Allied effective-HP preservation (shifted potential) -------------------------
+        phi_prev = ctx.prev_ally_ehp_frac - 1.0
+        phi_next_raw = ctx.ally_ehp_frac - 1.0
+        phi_next = 0.0 if ctx.terminated else phi_next_raw
+        ally_ehp_term = p["w_ally_ehp"] * (gamma * phi_next - phi_prev)
+
+        # --- Optional enemy-EHP destruction (off by default) ------------------------------
+        enemy_ehp_term = 0.0
+        if p["w_enemy_ehp"] != 0.0:
+            enemy_phi_prev = 1.0 - ctx.prev_enemy_ehp_frac
+            enemy_phi_next_raw = 1.0 - ctx.enemy_ehp_frac
+            enemy_phi_next = 0.0 if ctx.terminated else enemy_phi_next_raw
+            enemy_ehp_term = p["w_enemy_ehp"] * (gamma * enemy_phi_next - enemy_phi_prev)
+
+        # --- Optional discrete ally-survival potential (off by default) --------------------
+        ally_alive_term = 0.0
+        if p["w_ally_alive"] != 0.0:
+            alive_phi_prev = ctx.prev_ally_alive_frac - 1.0
+            alive_phi_next = 0.0 if ctx.terminated else (ctx.ally_alive_frac - 1.0)
+            ally_alive_term = p["w_ally_alive"] * (gamma * alive_phi_next - alive_phi_prev)
+
+        # --- Explicit terminal / timeout anchors (mutually exclusive; once each) -----------
+        terminal_anchor = 0.0
+        if ctx.terminated:
+            terminal_anchor = p["w_win"] if ctx.battle_won else -p["w_loss"]
+        timeout_penalty = 0.0
+        if ctx.truncated:
+            timeout_penalty = -p["w_timeout"]
+
+        shaping = ally_ehp_term + enemy_ehp_term + ally_alive_term + terminal_anchor + timeout_penalty
+        reward = float(ctx.base_reward) + float(shaping)
+        terms = {
+            "original": float(ctx.base_reward),
+            "ally_ehp": float(ally_ehp_term),
+            "enemy_ehp": float(enemy_ehp_term),
+            "ally_alive": float(ally_alive_term),
+            "terminal": float(terminal_anchor),
+            "timeout": float(timeout_penalty),
             "shaping_total": float(shaping),
         }
         return reward, terms

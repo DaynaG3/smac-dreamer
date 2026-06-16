@@ -51,7 +51,8 @@ imag_horizon: 15
 # ---- Evaluation on held-out maps ------------------------------------------
 eval:
   every: 20000
-  episodes_per_map: 8
+  episodes_per_map: 8         # in-training periodic monitor (parallel-worker pass)
+  fixed_seeds: [0, 1, 2]      # standalone evaluate_multimap.py: every held-out map × each seed
 
 # ---- Logging --------------------------------------------------------------
 wandb:

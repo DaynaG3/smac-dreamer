@@ -41,77 +41,42 @@ import tools
 from dreamer import Dreamer
 from smacdreamer.envs.map_discovery import discover, SplitSpec
 from smacdreamer.r2dreamer_factory import make_smaclite_multimap_env
+from smacdreamer.evaluation import evaluate_heldout, DEFAULT_FIXED_SEEDS
 from train_r2dreamer_smaclite_debug import make_config as _make_debug_config
 # Reuse the recursive device propagation so a GPU eval sets EVERY device field (buffer,
 # encoder, all heads), not just the three top-level ones — same fix as the training script.
 from train_r2dreamer_smaclite_multimap import _propagate_device
 
 
-def wilson_interval(successes: int, n: int, z: float = 1.96) -> tuple:
-    """Wilson score interval for a binomial proportion. Returns (low, high)."""
-    if n == 0:
-        return (0.0, 0.0)
-    p = successes / n
-    denom = 1 + z * z / n
-    centre = (p + z * z / (2 * n)) / denom
-    half = (z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))) / denom
-    return (max(0.0, centre - half), min(1.0, centre + half))
-
-
-def _mean_ci(values: list, z: float = 1.96) -> tuple:
-    """Mean +/- normal CI across samples (each map's win rate is one sample)."""
-    n = len(values)
-    if n == 0:
-        return (0.0, 0.0, 0.0)
-    mean = sum(values) / n
-    if n == 1:
-        return (mean, mean, mean)
-    var = sum((v - mean) ** 2 for v in values) / (n - 1)
-    se = math.sqrt(var / n)
-    return (mean, max(0.0, mean - z * se), min(1.0, mean + z * se))
-
-
-@torch.no_grad()
-def _run_map(agent, env, n_episodes, device):
-    """Run n_episodes on a single-env pool; return (wins, returns_original list)."""
-    wins = 0
-    returns_original = []
-    for _ in range(n_episodes):
-        obs = env.reset()
-        state = agent.get_initial_state(1)
-        act = state["prev_action"].clone()
-        done = False
-        ep_orig = 0.0
-        won = False
-        while not done:
-            from tensordict import TensorDict
-            td = TensorDict(
-                {k: torch.as_tensor(v).unsqueeze(0).to(device) for k, v in obs.items()},
-                batch_size=(1,),
-            )
-            td["action"] = act
-            act, state = agent.act(td, state, eval=True)
-            a = act.detach().cpu().numpy().reshape(-1)
-            obs, reward, done, info = env.step(a)
-            ep_orig += float(info.get("log_reward_original", reward))
-            won = bool(info.get("battle_won", False))
-        wins += int(won)
-        returns_original.append(ep_orig)
-    return wins, returns_original
+def _resolve_seeds(args, cfg) -> list:
+    """Fixed eval seeds: --seeds CLI > cfg.eval.fixed_seeds > DEFAULT_FIXED_SEEDS."""
+    if args.seeds:
+        return [int(s) for s in str(args.seeds).split(",") if s.strip() != ""]
+    cfg_seeds = cfg.eval.get("fixed_seeds") if cfg.get("eval") else None
+    if cfg_seeds:
+        return [int(s) for s in OmegaConf.to_container(cfg_seeds, resolve=True)]
+    return list(DEFAULT_FIXED_SEEDS)
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Held-out multimap evaluation")
+    ap = argparse.ArgumentParser(description="Held-out multimap evaluation (map × fixed seeds)")
     ap.add_argument("--config", default="configs/multimap.yaml")
     ap.add_argument("--checkpoint", required=True, help="path to latest.pt")
-    ap.add_argument("--episodes-per-map", type=int, default=None)
+    ap.add_argument("--seeds", default=None,
+                    help="comma-separated fixed eval seeds (overrides cfg.eval.fixed_seeds)")
+    ap.add_argument("--episodes-per-map", type=int, default=None,
+                    help="DEPRECATED/ignored: eval is now map × fixed seeds, not a worker count")
     ap.add_argument("--output", default=None, help="JSON report path")
     args = ap.parse_args()
+
+    if args.episodes_per_map is not None:
+        print("[warn] --episodes-per-map is deprecated and ignored; eval iterates map × fixed "
+              "seeds. Use --seeds or cfg.eval.fixed_seeds.")
 
     cfg_path = (ROOT / args.config) if not pathlib.Path(args.config).is_absolute() else pathlib.Path(args.config)
     cfg = OmegaConf.load(str(cfg_path))
     device = str(cfg.device)
-    n_eps = int(args.episodes_per_map if args.episodes_per_map is not None else cfg.eval.episodes_per_map)
+    seeds = _resolve_seeds(args, cfg)
 
     # Re-run discovery deterministically (same split seed) to get the SAME held-out test set.
     train_entries, test_entries, pad_dims = discover(
@@ -145,66 +110,46 @@ def main():
     agent.eval()
     print(f"Loaded checkpoint: {args.checkpoint}")
 
-    # ---- Evaluate each held-out test map --------------------------------------
-    per_map = {}
-    per_family_winrates = defaultdict(list)
-    print(f"\nEvaluating {len(test_entries)} held-out maps × {n_eps} episodes ...")
+    # Leak guard: held-out test maps must never overlap the training split.
     for entry in test_entries:
         assert entry.name not in train_names, f"LEAK: train map '{entry.name}' in eval set!"
-        env = make_smaclite_multimap_env(
-            [entry], pad_dims, "fixed", 0, 0, "smaclite_default", {},
-            float(cfg.gamma), int(cfg.max_episode_steps),
-        )
-        wins, returns = _run_map(agent, env, n_eps, device)
-        try:
-            env.close()
-        except Exception:
-            pass
-        wr = wins / n_eps if n_eps else 0.0
-        lo, hi = wilson_interval(wins, n_eps)
-        per_map[entry.name] = {
-            "family": entry.family, "n_episodes": n_eps, "wins": wins,
-            "win_rate": wr, "win_rate_ci95": [lo, hi],
-            "mean_original_return": (sum(returns) / len(returns)) if returns else 0.0,
-        }
-        per_family_winrates[entry.family].append(wr)
-        print(f"  {entry.name:<32} win_rate={wr:.2f} (95% CI [{lo:.2f},{hi:.2f}]) "
-              f"orig_return={per_map[entry.name]['mean_original_return']:.3f}")
 
-    # ---- Headline: ACROSS-MAP CI (each map = one sample) ----------------------
-    map_winrates = [m["win_rate"] for m in per_map.values()]
-    headline_mean, headline_lo, headline_hi = _mean_ci(map_winrates)
+    # ---- Dedicated map × seed evaluation (ORIGINAL return; macro/micro) --------
+    print(f"\nEvaluating {len(test_entries)} held-out maps × {len(seeds)} seeds "
+          f"({len(test_entries) * len(seeds)} episodes) seeds={seeds} ...")
+    eval_report = evaluate_heldout(
+        agent, test_entries, pad_dims,
+        seeds=seeds, device=device, gamma=float(cfg.gamma),
+        max_episode_steps=int(cfg.max_episode_steps), progress=True,
+    )
 
-    per_family = {
-        fam: {"n_maps": len(wrs), "mean_win_rate": sum(wrs) / len(wrs)}
+    # Per-family macro win rate (each map = one sample within its family).
+    per_family_winrates = defaultdict(list)
+    for m in eval_report["per_map"].values():
+        per_family_winrates[m["family"]].append(m["win_rate"])
+    eval_report["per_family"] = {
+        fam: {"n_maps": len(wrs), "macro_win_rate": sum(wrs) / len(wrs)}
         for fam, wrs in per_family_winrates.items()
     }
-
-    report = {
-        "checkpoint": str(args.checkpoint),
-        "maps_folder": str(cfg.maps_folder),
-        "split": OmegaConf.to_container(cfg.split, resolve=True),
-        "n_test_maps": len(test_entries),
-        "episodes_per_map": n_eps,
-        "headline_held_out_win_rate": {
-            "mean_across_maps": headline_mean,
-            "ci95_across_maps": [headline_lo, headline_hi],
-            "n_maps": len(map_winrates),
-            "note": "Across-map CI (each map = one sample) is the headline; between-map "
-                    "variance dominates with a small test set.",
-        },
-        "per_family": per_family,
-        "per_map": per_map,
-    }
+    eval_report["checkpoint"] = str(args.checkpoint)
+    eval_report["maps_folder"] = str(cfg.maps_folder)
+    eval_report["split"] = OmegaConf.to_container(cfg.split, resolve=True)
 
     out = pathlib.Path(args.output) if args.output else (
         ROOT / "results" / f"multimap_eval_{pathlib.Path(str(cfg.maps_folder)).name}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    out.write_text(json.dumps(eval_report, indent=2), encoding="utf-8")
 
+    macro, micro = eval_report["macro"], eval_report["micro"]
+    mlo, mhi = macro["win_rate_ci95"]
     print(f"\n{'='*64}")
-    print(f"HEADLINE held-out win rate (across {len(map_winrates)} maps): "
-          f"{headline_mean:.3f}  95% CI [{headline_lo:.3f}, {headline_hi:.3f}]")
+    print(f"PRIMARY (selection): MACRO held-out win rate "
+          f"{macro['win_rate']:.3f}  95% CI [{mlo:.3f}, {mhi:.3f}]  "
+          f"(over {eval_report['n_maps']} maps × {len(seeds)} seeds)")
+    print(f"  macro original_return={macro['original_return']:.3f}  "
+          f"timeout_rate={macro['timeout_rate']:.2f}  "
+          f"ally_ehp={macro['final_ally_ehp_frac']:.2f}  enemy_ehp={macro['final_enemy_ehp_frac']:.2f}")
+    print(f"  micro win_rate={micro['win_rate']:.3f}  original_return={micro['original_return']:.3f}")
     print(f"Report written: {out}")
     print(f"{'='*64}")
 
