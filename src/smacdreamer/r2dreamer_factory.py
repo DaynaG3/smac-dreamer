@@ -106,13 +106,17 @@ def make_smaclite_envs(
 
 def make_smaclite_multimap_env(
     entries, pad_dims, sampling_mode, base_seed, worker_idx,
-    reward_name, reward_params, gamma, max_episode_steps,
+    reward_name, reward_params, gamma, max_episode_steps, obs_mode="flat",
 ):
     """Construct one R2-Dreamer-compatible multimap SMAClite env (worker-side).
 
     Reconstructs the MapSampler + resolved reward callable inside the worker from picklable
     primitives (entries, mode, names/params) — never pickles a live sampler or callable.
     All workers share the SAME pad_dims so every map presents the identical padded shape.
+
+    ``obs_mode``: "flat" (legacy right-padded) or "structured" (canonical per-entity layout).
+    Default "flat" so existing callers (eval, training) are unchanged until masking consumes
+    the structured masks.
     """
     _ensure_paths()
     from smacdreamer.envs.smaclite_dreamer_env import SMACliteDreamerEnv
@@ -132,6 +136,7 @@ def make_smaclite_multimap_env(
         pad_dims=pad_dims,
         reward_fn=reward_fn,
         gamma=gamma,
+        obs_mode=obs_mode,
     )
     return SMACliteR2DreamerAdapter(env)
 

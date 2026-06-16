@@ -165,6 +165,7 @@ class SMACliteDreamerEnv(gym.Env):
         reward_shaping_config=None,       # Optional[RewardShapingConfig] — v2 shaping system
         reward_fn=None,                   # Optional[callable(RewardContext)->(reward,terms)]
         gamma: float = 0.997,             # shaping discount; MUST equal the agent's discount
+        obs_mode: str = "flat",           # "flat" (legacy right-padded) | "structured" (P0.3)
     ):
         super().__init__()
         from smacdreamer.envs.reward_shaping import RewardShapingConfig as _RSC
@@ -172,6 +173,10 @@ class SMACliteDreamerEnv(gym.Env):
         # OVERRIDES the legacy/v2 shaping branch. When None, behaviour is unchanged.
         self._reward_fn = reward_fn
         self._gamma = float(gamma)
+        # Observation representation. "flat" = the legacy whole-vector right-padding;
+        # "structured" = the canonical per-entity layout (smacdreamer.envs.structured_obs).
+        self._obs_mode = str(obs_mode)
+        self._local_to_global = np.zeros(0, dtype=np.int64)  # map-local -> global type ids
         # Initial totals captured at reset, used to normalise potentials to [0,1] fractions.
         self._init_enemy_hp_total: float = 0.0
         self._init_n_allies: int = 0
@@ -234,6 +239,7 @@ class SMACliteDreamerEnv(gym.Env):
         self.n_enemies: int = uw.n_enemies
         self.n_actions: int = uw.n_actions
         self.obs_size: int = uw.obs_size
+        self._refresh_type_vocab(uw)   # structured-mode map-local -> global type map
 
         # Phase 1/2 shape key for exact-match validation on map switch.
         # Phase 3 uses fit-within-pad-dims check instead.
@@ -284,6 +290,22 @@ class SMACliteDreamerEnv(gym.Env):
     # Gymnasium spaces
     # ------------------------------------------------------------------
 
+    def _refresh_type_vocab(self, uw) -> None:
+        """Recompute the map-local -> global unit-type map (structured mode only)."""
+        if self._obs_mode != "structured":
+            return
+        from smacdreamer.envs.structured_obs import build_local_to_global
+        type_ids = getattr(getattr(uw, "map_info", None), "unit_type_ids", None)
+        self._local_to_global = build_local_to_global(type_ids)
+
+    def _structured_pad_dims(self):
+        """PaddingDims for structured obs — the configured caps, or real dims when unpadded."""
+        if self._pad_dims is not None:
+            return self._pad_dims
+        from smacdreamer.envs.padding import PaddingDims
+        return PaddingDims(max_agents=self.n_agents, max_enemies=self.n_enemies,
+                           max_actions=self.n_actions, max_obs_size=self.obs_size)
+
     def _obs_dims(self):
         """Return (A, C, O) for the current observation layout (padded or real)."""
         if self._pad_dims is not None:
@@ -296,6 +318,9 @@ class SMACliteDreamerEnv(gym.Env):
         Fixed-shape within a run. ``agent_mask`` / ``real_agent_action_mask`` are present
         only under Phase 3 padding, matching the previous behaviour.
         """
+        if self._obs_mode == "structured":
+            from smacdreamer.envs import structured_obs as _so
+            return _so.observation_space(self._structured_pad_dims())
         A, C, O = self._obs_dims()
         d = {
             "state":         spaces.Box(-np.inf, np.inf, shape=(A * O,), dtype=np.float32),
@@ -399,6 +424,7 @@ class SMACliteDreamerEnv(gym.Env):
             obs_tuple, _ = self._env.reset(seed=self._seed)
 
         uw = getattr(self._env, 'unwrapped', self._env)
+        self._refresh_type_vocab(uw)   # map may have changed (multimap) -> refresh type map
         avail = uw.get_avail_actions()
         self._prev_n_enemies = len(uw.enemies)
         self._prev_n_allies  = len(uw.agents)
@@ -786,37 +812,57 @@ class SMACliteDreamerEnv(gym.Env):
         """
         self._last_avail_returned = avail
 
+        # Padding diagnostics (independent of the obs representation; logged below).
         if self._pad_dims is not None:
+            MA = self._pad_dims.max_agents
+            MC = self._pad_dims.max_actions
+            n_padded            = MA - self.n_agents
+            extra_real_slots    = self.n_agents * (MC - self.n_actions)
+            padded_agent_slots  = n_padded * MC
+            ignored_pad_actions = n_padded
+        else:
+            n_padded = extra_real_slots = padded_agent_slots = ignored_pad_actions = 0
+        agent_mask_sum = float(self.n_agents)
+
+        _is = dict(
+            is_first=np.array(is_first, dtype=bool),
+            is_last=np.array(is_last, dtype=bool),
+            is_terminal=np.array(is_terminal, dtype=bool),
+        )
+        if self._obs_mode == "structured":
+            from smacdreamer.envs import structured_obs as _so
+            uw = getattr(self._env, 'unwrapped', self._env)
+            mi = uw.map_info
+            blocks = _so.build_structured_obs(
+                obs_tuple, avail,
+                n_agents=self.n_agents, n_enemies=self.n_enemies,
+                enemy_feat_size=int(uw.enemy_feat_size), ally_feat_size=int(uw.ally_feat_size),
+                enemy_has_shields=bool(mi.enemy_has_shields),
+                ally_has_shields=bool(mi.ally_has_shields),
+                num_unit_types=int(mi.num_unit_types), n_actions=self.n_actions,
+                alive_ids=list(uw.agents.keys()), local_to_global=self._local_to_global,
+                pad_dims=self._structured_pad_dims(),
+            )
+            obs = {**_so.flatten_for_model(blocks), **_is}
+        elif self._pad_dims is not None:
             from smacdreamer.envs.padding import (
                 pad_state, pad_avail, make_agent_mask, make_real_agent_action_mask,
             )
             MA = self._pad_dims.max_agents
             MC = self._pad_dims.max_actions
-            state     = pad_state(obs_tuple, self.obs_size, MA, self._pad_dims.max_obs_size)
-            avail_flat = pad_avail(avail, self.n_actions, MA, MC)
-            agent_mask             = make_agent_mask(self.n_agents, MA)
-            real_agent_action_mask = make_real_agent_action_mask(agent_mask, MC)
-            n_padded              = MA - self.n_agents
-            extra_real_slots      = self.n_agents * (MC - self.n_actions)
-            padded_agent_slots    = n_padded * MC
-            ignored_pad_actions   = n_padded
-            agent_mask_sum        = float(self.n_agents)
+            obs = {
+                "state":                  pad_state(obs_tuple, self.obs_size, MA, self._pad_dims.max_obs_size),
+                "avail_actions":          pad_avail(avail, self.n_actions, MA, MC),
+                **_is,
+                "agent_mask":             make_agent_mask(self.n_agents, MA),
+                "real_agent_action_mask": make_real_agent_action_mask(make_agent_mask(self.n_agents, MA), MC),
+            }
         else:
-            state      = np.concatenate(obs_tuple).astype(np.float32)
-            avail_flat = np.concatenate(avail).astype(np.float32)
-            n_padded = extra_real_slots = padded_agent_slots = ignored_pad_actions = 0
-            agent_mask_sum = float(self.n_agents)
-
-        obs = {
-            "state":         state,
-            "avail_actions": avail_flat,
-            "is_first":      np.array(is_first, dtype=bool),
-            "is_last":       np.array(is_last, dtype=bool),
-            "is_terminal":   np.array(is_terminal, dtype=bool),
-        }
-        if self._pad_dims is not None:
-            obs["agent_mask"]             = agent_mask
-            obs["real_agent_action_mask"] = real_agent_action_mask
+            obs = {
+                "state":         np.concatenate(obs_tuple).astype(np.float32),
+                "avail_actions": np.concatenate(avail).astype(np.float32),
+                **_is,
+            }
 
         _f = lambda x: np.array(float(x), dtype=np.float32)
         info = {
