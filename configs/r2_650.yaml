@@ -48,7 +48,7 @@ imag_horizon: 15
 
 # ---- Validation (checkpoint selection): map × fixed seeds ------------------
 validation:
-  every: 25000                          # env steps between validation passes
+  every: 100000                         # env steps between validation passes
   seeds: [0, 1, 2]                      # every validation map is run once per seed
 
 # ---- Replay buffer: large capacity, CPU storage (model computes on cuda) ---

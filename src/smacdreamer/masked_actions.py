@@ -79,6 +79,36 @@ def mask_quality_metrics(pred_avail_logits, true_avail, threshold_logit: float =
     }
 
 
+def invalid_mass_and_greedy_rate(raw_logits, mask, active):
+    """Diagnostics over ACTIVE agents for UNMASKED actor logits vs a mask.
+
+    Returns ``(pre_mask_invalid_mass, pre_mask_invalid_sample_rate)``:
+      * mass  = mean over active agents of the softmax probability the UNMASKED policy puts on
+                invalid actions;
+      * rate  = fraction of active agents whose UNMASKED greedy (argmax) action is invalid.
+    ``raw_logits`` (..., A*C); ``mask`` (..., A, C) bool; ``active`` (..., A) bool.
+    """
+    C = mask.shape[-1]
+    r = raw_logits.reshape(*mask.shape[:-1], C)
+    probs = F.softmax(r, dim=-1)
+    act = (active > 0.5)
+    n = act.float().sum().clamp(min=1.0)
+    mass = (((probs * (~mask).float()).sum(dim=-1)) * act.float()).sum() / n
+    greedy = r.argmax(dim=-1)
+    chosen_valid = mask.gather(-1, greedy.unsqueeze(-1)).squeeze(-1)
+    rate = (act & (~chosen_valid)).float().sum() / n
+    return float(mass.item()), float(rate.item())
+
+
+def empty_mask_rate(pre_fallback_avail, active):
+    """Fraction of ACTIVE agents whose PREDICTED availability (before the NOOP fallback) is
+    all-zero — a mask-collapse detector. ``pre_fallback_avail`` (..., A, C), ``active`` (..., A)."""
+    has_valid = (pre_fallback_avail > 0.5).any(dim=-1)
+    act = (active > 0.5)
+    n = act.float().sum().clamp(min=1.0)
+    return float(((act & (~has_valid)).float().sum() / n).item())
+
+
 class MaskedMultiOneHotDist:
     """Factorised multi-one-hot distribution with per-agent action masking.
 
@@ -163,8 +193,17 @@ class MaskedMultiOneHotDist:
         denom = active.float().sum().clamp(min=1.0)
         return invalid.float().sum() / denom
 
+    def post_mask_invalid_sample_rate(self):
+        """Fraction of ACTIVE agents whose MASKED sample is invalid — the invariant must be 0."""
+        s = self.rsample().reshape(*self._lead, self.A, self.C)
+        chosen = s.argmax(dim=-1)
+        valid = self.mask.gather(-1, chosen.unsqueeze(-1)).squeeze(-1)
+        denom = self.active.float().sum().clamp(min=1.0)
+        return (self.active & (~valid)).float().sum() / denom
+
 
 __all__ = [
     "MaskedMultiOneHotDist", "build_action_mask", "hard_mask_from_logits",
-    "mask_quality_metrics", "NOOP_INDEX", "NEG_LOGIT",
+    "mask_quality_metrics", "invalid_mass_and_greedy_rate", "empty_mask_rate",
+    "NOOP_INDEX", "NEG_LOGIT",
 ]

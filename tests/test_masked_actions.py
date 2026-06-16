@@ -6,7 +6,7 @@ torch = pytest.importorskip("torch")
 
 from smacdreamer.masked_actions import (
     MaskedMultiOneHotDist, build_action_mask, hard_mask_from_logits,
-    mask_quality_metrics, NOOP_INDEX,
+    mask_quality_metrics, invalid_mass_and_greedy_rate, empty_mask_rate, NOOP_INDEX,
 )
 
 
@@ -177,6 +177,55 @@ def test_mask_quality_metrics():
     assert m["precision"] == pytest.approx(0.5, abs=1e-4)
     assert m["recall"] == pytest.approx(0.5, abs=1e-4)
     assert m["fpr"] == pytest.approx(0.5, abs=1e-4)
+
+
+def test_post_mask_invalid_sample_rate_is_zero_invariant():
+    # The core invariant: a MASKED sample is never invalid, in 2D and 3D (imagination) shapes.
+    logits, mask, active = _setup([[1, 1, 1], [1, 1, 0]])
+    d = MaskedMultiOneHotDist(logits, mask, active, shape=(C,) * A)
+    assert float(d.post_mask_invalid_sample_rate()) == pytest.approx(0.0, abs=1e-7)
+    B, T = 2, 4
+    avail = torch.zeros(B, T, A, C); avail[..., 0, [1, 2]] = 1; avail[..., 1, [0]] = 1; avail[..., 2, [3]] = 1
+    act = torch.ones(B, T, A); act[..., 2] = 0
+    m, a = build_action_mask(avail.reshape(B, T, A * C), act, A, C)
+    d3 = MaskedMultiOneHotDist(torch.randn(B, T, A * C), m, a, shape=(C,) * A)
+    assert float(d3.post_mask_invalid_sample_rate()) == pytest.approx(0.0, abs=1e-7)
+
+
+def test_extreme_logits_no_nan():
+    logits, mask, active = _setup([[1, 1, 1]])
+    logits = logits.clone()
+    logits[:] = 1e9            # extreme positive logits everywhere
+    logits[0, :4] = -1e9       # and extreme negative for agent0
+    d = MaskedMultiOneHotDist(logits, mask, active, shape=(C,) * A)
+    assert torch.isfinite(d.probs).all()
+    assert torch.isfinite(d.log_prob(d.mode)).all()
+    assert torch.isfinite(d.entropy()).all()
+
+
+def test_flatten_reshape_preserves_agent_action_ordering():
+    # Make each agent's single valid action unique so the flat one-hot position is unambiguous.
+    B = 1
+    avail = torch.zeros(B, A, C)
+    valid_idx = [1, 3, 2]                       # agent a -> its only valid action
+    for a in range(A):
+        avail[0, a, valid_idx[a]] = 1.0
+    mask, active = build_action_mask(avail.reshape(B, A * C), torch.ones(B, A), A, C)
+    d = MaskedMultiOneHotDist(torch.zeros(B, A * C), mask, active, shape=(C,) * A)
+    flat = d.mode[0]                            # (A*C,)
+    for a in range(A):
+        block = flat[a * C:(a + 1) * C]
+        assert int(torch.argmax(block)) == valid_idx[a]   # ordering preserved: agent a @ block a
+
+
+def test_invalid_mass_and_empty_mask_helpers():
+    logits, mask, active = _setup([[1, 1, 1]])   # raw logits favour INVALID for agents 0,1
+    mass, rate = invalid_mass_and_greedy_rate(logits, mask, active)
+    assert 0.0 <= mass <= 1.0 and rate > 0.0     # agents 0,1 greedily invalid -> rate>0
+    # empty-mask rate on the PRE-fallback predicted avail
+    pre = torch.zeros(1, A, C); pre[0, 0, 1] = 1.0   # only agent0 has a predicted-valid action
+    er = empty_mask_rate(pre, torch.ones(1, A))
+    assert er == pytest.approx(2.0 / 3.0, abs=1e-4)  # agents 1,2 empty out of 3 active
 
 
 def test_unmasked_invalid_rate_counts_masking_interventions():

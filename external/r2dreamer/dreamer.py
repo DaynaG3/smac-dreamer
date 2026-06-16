@@ -369,7 +369,10 @@ class Dreamer(nn.Module):
         if self.rep_loss == "dreamerpro":
             self.ema_update()
         metrics = {}
-        with autocast(device_type=self.device.type, dtype=torch.float16):
+        # fp16 AMP + GradScaler are CUDA features; on CPU fp16 autocast is unstable (it
+        # overflows -> NaN, and the scaler can't protect it). Run fp32 on CPU, fp16 on GPU.
+        amp_enabled = self.device.type == "cuda"
+        with autocast(device_type=self.device.type, dtype=torch.float16, enabled=amp_enabled):
             (stoch, deter), mets = self._cal_grad(p_data, initial)
         self._scaler.unscale_(self._optimizer)  # unscale grads in params
         if self.rep_loss == "dreamerpro" and self._ema_updates < self.freeze_prototypes_iters:
@@ -542,12 +545,24 @@ class Dreamer(nn.Module):
             # Masked policy over imagined states, using the SAME detached predicted mask the
             # imagination sampler used (frozen heads on imag_feat). log_prob/entropy normalise
             # over living agents and exclude invalid actions.
-            from smacdreamer.masked_actions import MaskedMultiOneHotDist
+            from smacdreamer.masked_actions import (
+                MaskedMultiOneHotDist, invalid_mass_and_greedy_rate, empty_mask_rate,
+                hard_mask_from_logits)
             policy_logits = self.actor.last(self.actor.mlp(imag_feat))
             _amask, _aactive = self._predicted_action_mask(imag_feat)
             policy = MaskedMultiOneHotDist(
                 policy_logits, _amask, _aactive, self._actor_shape, self._actor_unimix)
-            metrics["imag_invalid_rate"] = policy.unmasked_invalid_rate(policy_logits.detach())
+            # Pre-mask (unmasked greedy/mass), post-mask (must be 0), and empty-mask diagnostics.
+            _mass, _grate = invalid_mass_and_greedy_rate(policy_logits.detach(), _amask, _aactive)
+            metrics["imag_pre_mask_invalid_mass"] = _mass
+            metrics["imag_pre_mask_invalid_sample_rate"] = _grate
+            metrics["imag_invalid_rate"] = _grate   # back-compat alias (= pre-mask greedy rate)
+            metrics["imag_post_mask_invalid_sample_rate"] = policy.post_mask_invalid_sample_rate()
+            _pred_avail = hard_mask_from_logits(
+                self._frozen_avail_head.last(self._frozen_avail_head.mlp(imag_feat)),
+                self._mask_threshold_logit,
+            ).reshape(*imag_feat.shape[:-1], self._mask_A, self._mask_C)
+            metrics["imag_empty_mask_rate"] = empty_mask_rate(_pred_avail, _aactive)
         else:
             policy = self.actor(imag_feat)
         # (B*T, T_imag-1, 1)
@@ -608,6 +623,21 @@ class Dreamer(nn.Module):
         metrics.update(tools.tensorstats(value, "value_replay"))
         metrics.update(tools.tensorstats(slow_value, "slow_value_replay"))
 
+        if self.action_masking:
+            # Real-data (posterior) masking diagnostics + per-horizon mask quality.
+            from smacdreamer.masked_actions import (
+                MaskedMultiOneHotDist, build_action_mask, invalid_mass_and_greedy_rate)
+            real_logits = self.actor.last(self.actor.mlp(feat)).detach()
+            _ract = to_f32(data["agent_slot_mask"]) * to_f32(data["agent_alive_mask"])
+            _rmask, _ractive = build_action_mask(
+                to_f32(data["avail_actions"]), _ract, self._mask_A, self._mask_C)
+            _rmass, _ = invalid_mass_and_greedy_rate(real_logits, _rmask, _ractive)
+            metrics["real_pre_mask_invalid_mass"] = _rmass
+            _rpolicy = MaskedMultiOneHotDist(
+                real_logits, _rmask, _ractive, self._actor_shape, self._actor_unimix)
+            metrics["real_post_mask_invalid_sample_rate"] = _rpolicy.post_mask_invalid_sample_rate()
+            metrics.update(self._horizon_mask_diagnostics(data, post_stoch, post_deter))
+
         total_loss = sum([v * self._loss_scales[k] for k, v in losses.items()])
         self._scaler.scale(total_loss).backward()
 
@@ -627,6 +657,33 @@ class Dreamer(nn.Module):
         pred_avail = hard_mask_from_logits(avail_logits, self._mask_threshold_logit)
         pred_active = hard_mask_from_logits(alive_logits, self._mask_threshold_logit)
         return build_action_mask(pred_avail, pred_active, self._mask_A, self._mask_C)
+
+    @torch.no_grad()
+    def _horizon_mask_diagnostics(self, data, post_stoch, post_deter, max_h=5):
+        """Mask precision/recall/FPR by regime: posterior (h0), then OPEN-LOOP prior states
+        rolled with the REAL actions, vs the true avail at each future step. Isolates how the
+        predicted mask degrades with imagination horizon (world-model drift) — posterior should
+        be high; long-horizon priors may fall off even while posterior stays high."""
+        from smacdreamer.masked_actions import mask_quality_metrics
+        thr = self._mask_threshold_logit
+        out = {}
+        feat0 = self.rssm.get_feat(post_stoch, post_deter)
+        m0 = mask_quality_metrics(
+            self.avail_head.last(self.avail_head.mlp(feat0)), to_f32(data["avail_actions"]), thr)
+        out["maskh0_posterior_precision"] = m0["precision"]
+        out["maskh0_posterior_recall"] = m0["recall"]
+        out["maskh0_posterior_fpr"] = m0["fpr"]
+        T = data["avail_actions"].shape[1]
+        stoch, deter = post_stoch[:, 0], post_deter[:, 0]
+        for h in range(1, min(max_h, T)):
+            stoch, deter = self.rssm.img_step(stoch, deter, data["action"][:, h - 1])
+            ah = self.avail_head.last(self.avail_head.mlp(self.rssm.get_feat(stoch, deter)))
+            mh = mask_quality_metrics(ah, to_f32(data["avail_actions"][:, h]), thr)
+            tag = "prior1" if h == 1 else "openloop"
+            out[f"maskh{h}_{tag}_precision"] = mh["precision"]
+            out[f"maskh{h}_{tag}_recall"] = mh["recall"]
+            out[f"maskh{h}_{tag}_fpr"] = mh["fpr"]
+        return out
 
     @torch.no_grad()
     def _imagine(self, start, imag_horizon):
