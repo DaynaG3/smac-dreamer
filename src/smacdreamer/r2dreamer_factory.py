@@ -154,6 +154,10 @@ def make_smaclite_multimap_envs(
     max_episode_steps=200,
     seed=0,
     padding_override=None,
+    obs_mode="flat",
+    train_entries=None,         # if given, skip discovery (explicit-folder datasets)
+    test_entries=None,
+    pad_dims=None,
 ):
     """Create multimap train + held-out eval ParallelEnv pools.
 
@@ -171,29 +175,35 @@ def make_smaclite_multimap_envs(
     from envs.parallel import ParallelEnv
     from smacdreamer.envs.map_discovery import discover, SplitSpec
 
-    if isinstance(split_spec, dict):
-        split_spec = SplitSpec(**split_spec)
+    if obs_mode not in ("flat", "structured"):
+        raise ValueError(f"unsupported obs_mode {obs_mode!r}; expected 'flat' or 'structured'")
 
-    # isolate_probe: probe each map in a recycled subprocess so discovery of a large
-    # folder (e.g. 500 maps) does not accumulate SMAClite native memory past the pod cap.
-    train_entries, test_entries, pad_dims = discover(
-        maps_folder, split_spec, padding_override=padding_override, verbose=True,
-        isolate_probe=True,
-    )
+    # Explicit-folder datasets (P0.4) pre-discover train/validation entries and pass them in;
+    # otherwise fall back to ratio/explicit split discovery on a single folder.
+    if train_entries is None:
+        if isinstance(split_spec, dict):
+            split_spec = SplitSpec(**split_spec)
+        # isolate_probe: probe each map in a recycled subprocess so discovery of a large
+        # folder does not accumulate SMAClite native memory past the pod cap. In structured
+        # mode the canonical layout is fixed by max_agents/enemies/actions (not max_obs_size).
+        train_entries, test_entries, pad_dims = discover(
+            maps_folder, split_spec, padding_override=padding_override, verbose=True,
+            isolate_probe=True, obs_mode=obs_mode,
+        )
 
     reward_params = reward_params or {}
 
     def train_ctor(idx):
         return lambda: make_smaclite_multimap_env(
             train_entries, pad_dims, sampling_mode, seed, idx,
-            reward_name, reward_params, gamma, max_episode_steps,
+            reward_name, reward_params, gamma, max_episode_steps, obs_mode=obs_mode,
         )
 
     # Eval pool: held-out TEST maps, SAME padding, ORIGINAL reward (smaclite_default).
     def eval_ctor(idx):
         return lambda: make_smaclite_multimap_env(
             test_entries, pad_dims, sampling_mode, seed + 10_000, idx,
-            "smaclite_default", {}, gamma, max_episode_steps,
+            "smaclite_default", {}, gamma, max_episode_steps, obs_mode=obs_mode,
         )
 
     train_envs = ParallelEnv(train_ctor, env_num, device)

@@ -15,6 +15,9 @@ split:
 
 sampling_mode: shuffled_round_robin
 
+observation:
+  mode: structured
+
 # ---- Reward: allied effective-HP (HP+shields) preservation potential, anchors off ----
 reward:
   name: ally_ehp_v4

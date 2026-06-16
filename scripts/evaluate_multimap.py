@@ -78,6 +78,20 @@ def main():
     device = str(cfg.device)
     seeds = _resolve_seeds(args, cfg)
 
+    # Reconstruct the EXACT training obs_mode + model dims from the checkpoint's sidecar
+    # (run_meta.json), so the rebuilt model matches the checkpoint regardless of --config.
+    meta_path = pathlib.Path(args.checkpoint).resolve().parent / "run_meta.json"
+    run_meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
+    obs_mode = str(run_meta.get("obs_mode",
+                                cfg.observation.mode if cfg.get("observation") else "flat"))
+    if obs_mode not in ("flat", "structured"):
+        sys.exit(f"unsupported obs_mode {obs_mode!r}")
+    _dim = lambda k: int(run_meta.get(k, cfg.get(k)))
+    units, deter = _dim("units"), _dim("deter")
+    batch_size, batch_length, imag_horizon = _dim("batch_size"), _dim("batch_length"), _dim("imag_horizon")
+    print(f"Reconstruction: obs_mode={obs_mode} units={units} deter={deter} "
+          f"(from {'run_meta.json' if run_meta else '--config'})")
+
     # Re-run discovery deterministically (same split seed) to get the SAME held-out test set.
     train_entries, test_entries, pad_dims = discover(
         str(cfg.maps_folder),
@@ -85,6 +99,7 @@ def main():
         padding_override=OmegaConf.to_container(cfg.padding, resolve=True) if cfg.get("padding") else None,
         verbose=True,
         isolate_probe=True,   # subprocess-isolated probe so 500-map discovery doesn't OOM
+        obs_mode=obs_mode,
     )
     if not test_entries:
         sys.exit("No held-out test maps to evaluate.")
@@ -94,13 +109,13 @@ def main():
     # one-map env to read the spaces, then load the checkpoint.
     probe = make_smaclite_multimap_env(
         [test_entries[0]], pad_dims, "fixed", 0, 0, "smaclite_default", {},
-        float(cfg.gamma), int(cfg.max_episode_steps),
+        float(cfg.gamma), int(cfg.max_episode_steps), obs_mode,
     )
     obs_space, act_space = probe.observation_space, probe.action_space
 
     config = _make_debug_config(argparse.Namespace(
-        steps=1, batch_size=int(cfg.batch_size), batch_length=int(cfg.batch_length),
-        units=int(cfg.units), deter=int(cfg.deter), imag_horizon=int(cfg.imag_horizon),
+        steps=1, batch_size=batch_size, batch_length=batch_length,
+        units=units, deter=deter, imag_horizon=imag_horizon,
     ))
     _propagate_device(config, device)   # set EVERY device field (buffer/encoder/heads)
 
@@ -120,8 +135,9 @@ def main():
     eval_report = evaluate_heldout(
         agent, test_entries, pad_dims,
         seeds=seeds, device=device, gamma=float(cfg.gamma),
-        max_episode_steps=int(cfg.max_episode_steps), progress=True,
+        max_episode_steps=int(cfg.max_episode_steps), obs_mode=obs_mode, progress=True,
     )
+    eval_report["obs_mode"] = obs_mode
 
     # Per-family macro win rate (each map = one sample within its family).
     per_family_winrates = defaultdict(list)

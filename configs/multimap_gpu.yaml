@@ -16,6 +16,10 @@ split:
 
 sampling_mode: shuffled_round_robin
 
+# ---- Observation representation -------------------------------------------
+observation:
+  mode: structured                      # "structured" (canonical per-entity) | "flat" (legacy)
+
 # Optional manual padding cap (else auto from TRAIN-max). Must cover every map.
 # padding:
 #   max_agents: 8

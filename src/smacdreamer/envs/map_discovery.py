@@ -325,12 +325,17 @@ def compute_train_max_padding(train: list, override: Optional[dict] = None) -> P
     )
 
 
-def safety_net_check(all_maps: list, pad_dims: PaddingDims) -> None:
+def safety_net_check(all_maps: list, pad_dims: PaddingDims, obs_mode: str = "flat") -> None:
     """Fail fast if ANY map (train or test) exceeds the chosen padding.
 
     A test map exceeding train-max is the leak path: never auto-grow the model. Raises
     ValueError naming each offending map and the dimension(s) it violates.
+
+    In ``structured`` obs mode the canonical layout is fixed by max_agents/max_enemies/
+    max_actions + the global type vocab, so ``max_obs_size`` (a legacy flat-layout quantity)
+    is NOT a constraint and is not checked.
     """
+    check_obs_size = (obs_mode != "structured")
     offenders = []
     for r in all_maps:
         mi = r["map_info"]
@@ -341,7 +346,7 @@ def safety_net_check(all_maps: list, pad_dims: PaddingDims) -> None:
             viol.append(f"n_enemies={mi['n_enemies']}>max_enemies={pad_dims.max_enemies}")
         if mi["n_actions"] > pad_dims.max_actions:
             viol.append(f"n_actions={mi['n_actions']}>max_actions={pad_dims.max_actions}")
-        if mi["obs_size"] > pad_dims.max_obs_size:
+        if check_obs_size and mi["obs_size"] > pad_dims.max_obs_size:
             viol.append(f"obs_size={mi['obs_size']}>max_obs_size={pad_dims.max_obs_size}")
         if viol:
             offenders.append(f"  '{mi['name']}' ({r['rel_path']}): " + "; ".join(viol))
@@ -365,6 +370,7 @@ def discover(
     isolate_probe: bool = False,
     probe_workers: int = 4,
     probe_maxtasks: int = 10,
+    obs_mode: str = "flat",
 ) -> tuple[list, list, PaddingDims]:
     """Top-level entry: scan folder -> split -> train-max padding -> safety-net.
 
@@ -385,7 +391,7 @@ def discover(
 
     train, test = split_maps(included, split_spec)
     pad_dims = compute_train_max_padding(train, padding_override)
-    safety_net_check(included, pad_dims)  # ALL maps (train + test)
+    safety_net_check(included, pad_dims, obs_mode=obs_mode)  # ALL maps (train + test)
 
     if verbose:
         src = "config override" if padding_override else "TRAIN-max"

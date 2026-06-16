@@ -176,6 +176,11 @@ class SMACliteDreamerEnv(gym.Env):
         # Observation representation. "flat" = the legacy whole-vector right-padding;
         # "structured" = the canonical per-entity layout (smacdreamer.envs.structured_obs).
         self._obs_mode = str(obs_mode)
+        if self._obs_mode not in ("flat", "structured"):
+            raise ValueError(
+                f"unsupported obs_mode {self._obs_mode!r}; expected 'flat' or 'structured' "
+                "(no silent fallback)"
+            )
         self._local_to_global = np.zeros(0, dtype=np.int64)  # map-local -> global type ids
         # Initial totals captured at reset, used to normalise potentials to [0,1] fractions.
         self._init_enemy_hp_total: float = 0.0

@@ -14,6 +14,9 @@ split:
 
 sampling_mode: shuffled_round_robin
 
+observation:
+  mode: structured
+
 # ---- Reward: existing dense_v3 (potential HP + ally-survival + terminal), unchanged ----
 reward:
   name: dense_v3

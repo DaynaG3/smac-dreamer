@@ -14,6 +14,9 @@ split:
 
 sampling_mode: shuffled_round_robin
 
+observation:
+  mode: structured
+
 # ---- Reward: original SMAClite (dense damage + kill + win), unchanged ----
 reward:
   name: smaclite_default

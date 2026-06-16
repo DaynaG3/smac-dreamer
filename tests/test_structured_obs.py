@@ -252,15 +252,23 @@ def test_flatten_unflatten_roundtrip():
 
 
 def test_build_local_to_global_names_and_enums():
-    import types
+    import enum
     by_name = so.build_local_to_global({"STALKER": 0, "ZEALOT": 1})
     assert by_name[0] == so.UNIT_TYPE_TO_GLOBAL["STALKER"]
     assert by_name[1] == so.UNIT_TYPE_TO_GLOBAL["ZEALOT"]
-    # enum-like keys with a .name attribute
-    Enum = lambda n: types.SimpleNamespace(name=n)
-    by_enum = so.build_local_to_global({Enum("MARINE"): 0, Enum("MEDIVAC"): 1})
+
+    # Real enum keys (hashable, with .name) — mirrors SMAClite's UnitType enum map keys.
+    class _UT(enum.Enum):
+        MARINE = 0
+        MEDIVAC = 1
+    by_enum = so.build_local_to_global({_UT.MARINE: 0, _UT.MEDIVAC: 1})
     assert by_enum[0] == so.UNIT_TYPE_TO_GLOBAL["MARINE"]
     assert by_enum[1] == so.UNIT_TYPE_TO_GLOBAL["MEDIVAC"]
+
+
+def test_unknown_unit_type_raises():
+    with pytest.raises(ValueError):
+        so.build_local_to_global({"DRAGON": 0})   # not in the global vocabulary
 
 
 def test_dead_agent_slot_is_zero_but_marked_not_alive():
@@ -307,5 +315,47 @@ def test_env_structured_mode_obs_matches_space():
         flat = env.codec.encode([1] * env.n_agents, num_real_agents=env.n_agents)
         obs2, _, _, _, _ = env.step(flat)
         assert env.observation_space.contains(obs2)
+    finally:
+        env.close()
+
+
+@requires_smaclite
+def test_structured_heterogeneous_map_switch_no_leakage():
+    # Cycle two built-in scenarios with DIFFERENT ally/enemy counts, shield support and unit
+    # types; confirm fixed output shape, consistent semantics, correct masks, and no leakage.
+    from smacdreamer.envs.smaclite_dreamer_env import SMACliteDreamerEnv
+    from smacdreamer.envs.map_sampler import MapSampler, MapEntry
+    from smacdreamer.envs.padding import PaddingDims
+
+    pad = PaddingDims(max_agents=6, max_enemies=6, max_actions=12, max_obs_size=999)
+    entries = [MapEntry(name="2s3z", type="builtin"),   # 5v5, shields, stalker/zealot
+               MapEntry(name="3m", type="builtin")]      # 3v3, no shields, marines
+    sampler = MapSampler.from_entries(entries, mode="round_robin", seed=0)
+    env = SMACliteDreamerEnv(scenario="2s3z", max_episode_steps=20, seed=0,
+                             map_sampler=sampler, pad_dims=pad, obs_mode="structured")
+    try:
+        shapes = set()
+        seen = {}
+        for _ in range(4):   # cycle through both maps twice
+            obs, _ = env.reset(seed=0)
+            assert set(obs) == set(env.observation_space.spaces)
+            assert env.observation_space.contains(obs)
+            shapes.add(tuple(obs["state"].shape))
+            # Mask reflects THIS map's real agent count (correct masks).
+            assert obs["agent_slot_mask"].sum() == pytest.approx(float(env.n_agents))
+            assert obs["agent_alive_mask"].sum() == pytest.approx(float(env.n_agents))
+            blocks = so.unflatten(obs["state"], pad)
+            # Consistent semantics: every live agent carries exactly one global type bit.
+            for a in range(env.n_agents):
+                assert blocks["self_features"][a, 2:2 + so.V].sum() == pytest.approx(1.0)
+            # No leakage: padded slots beyond this map's agents are fully zero, even after a
+            # previous (larger) map populated them.
+            for a in range(env.n_agents, pad.max_agents):
+                assert blocks["self_features"][a].sum() == pytest.approx(0.0)
+                assert obs["agent_slot_mask"][a] == pytest.approx(0.0)
+            seen[env._current_map_name] = env.n_agents
+        assert len(shapes) == 1                          # fixed output shape across maps
+        assert set(seen) == {"2s3z", "3m"}               # visited both heterogeneous maps
+        assert len(set(seen.values())) >= 2              # different ally counts
     finally:
         env.close()

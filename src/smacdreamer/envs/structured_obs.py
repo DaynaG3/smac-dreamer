@@ -55,7 +55,10 @@ def build_local_to_global(unit_type_ids: Optional[dict]) -> np.ndarray:
 
     ``unit_type_ids`` is the map's ``{unit_type_or_name: local_index}`` (SMAClite ``map_info``).
     Returns an int array ``local_to_global`` of length ``num_local`` where
-    ``local_to_global[local_index] = GLOBAL index``. Unknown names map to 0 (defensive).
+    ``local_to_global[local_index] = GLOBAL index``.
+
+    An unknown unit-type name RAISES (rather than silently mapping to index 0): a type outside
+    the global vocabulary would corrupt the canonical type encoding and must be caught.
     """
     if not unit_type_ids:
         return np.zeros(0, dtype=np.int64)
@@ -63,7 +66,12 @@ def build_local_to_global(unit_type_ids: Optional[dict]) -> np.ndarray:
     arr = np.zeros(num_local, dtype=np.int64)
     for key, local_idx in unit_type_ids.items():
         name = getattr(key, "name", str(key)).upper()
-        arr[int(local_idx)] = UNIT_TYPE_TO_GLOBAL.get(name, 0)
+        if name not in UNIT_TYPE_TO_GLOBAL:
+            raise ValueError(
+                f"unit type {name!r} is not in the global vocabulary {GLOBAL_UNIT_VOCAB}; "
+                "add it to GLOBAL_UNIT_VOCAB (no silent fallback to index 0)"
+            )
+        arr[int(local_idx)] = UNIT_TYPE_TO_GLOBAL[name]
     return arr
 
 

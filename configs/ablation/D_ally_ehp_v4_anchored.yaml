@@ -15,6 +15,9 @@ split:
 
 sampling_mode: shuffled_round_robin
 
+observation:
+  mode: structured
+
 # ---- Reward: allied EHP preservation + terminal win/loss + timeout anchors ----
 reward:
   name: ally_ehp_v4

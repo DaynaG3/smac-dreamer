@@ -112,6 +112,11 @@ def main():
     config.trainer.eval_every = eval_every if eval_every > 0 else steps + 1
     config.trainer.eval_episode_num = episodes_per_map
 
+    # --- Observation mode (flat | structured) ----------------------------------
+    obs_mode = str(cfg.observation.mode) if cfg.get("observation") else "flat"
+    if obs_mode not in ("flat", "structured"):
+        raise ValueError(f"observation.mode must be 'flat' or 'structured', got {obs_mode!r}")
+
     # --- Resolve reward for logging + hash -------------------------------------
     reward_name = str(cfg.reward.name)
     reward_params = OmegaConf.to_container(cfg.reward.get("params", {}), resolve=True) or {}
@@ -150,7 +155,9 @@ def main():
         max_episode_steps=int(cfg.max_episode_steps),
         seed=int(cfg.seed),
         padding_override=OmegaConf.to_container(cfg.padding, resolve=True) if cfg.get("padding") else None,
+        obs_mode=obs_mode,
     )
+    print(f"  obs_mode : {obs_mode}")
     print(f"  obs keys : {sorted(obs_space.spaces)}")
     print(f"  train maps: {discovery['n_train']}   held-out test maps: {discovery['n_test']}")
 
@@ -159,6 +166,7 @@ def main():
         "reward_name": reward_name,
         "reward_params_resolved": resolved,
         "reward_hash": rhash,
+        "obs_mode": obs_mode,
         "padding": discovery["padding"],
         "split": OmegaConf.to_container(cfg.split, resolve=True),
         "sampling_mode": str(cfg.sampling_mode),
@@ -166,6 +174,21 @@ def main():
         "n_test_maps": discovery["n_test"],
         "model": config.model,
     })
+
+    # Reconstruction metadata for standalone checkpoint eval: the EXACT obs mode + model dims
+    # used in training, written beside the checkpoint so eval rebuilds an identical model
+    # regardless of which --config is passed later.
+    run_meta = {
+        "obs_mode": obs_mode,
+        "units": int(cfg.units), "deter": int(cfg.deter),
+        "batch_size": int(cfg.batch_size), "batch_length": int(cfg.batch_length),
+        "imag_horizon": int(cfg.imag_horizon),
+        "max_episode_steps": int(cfg.max_episode_steps), "gamma": float(cfg.gamma),
+        "reward_name": reward_name, "padding": discovery["padding"],
+        "maps_folder": str(cfg.maps_folder),
+    }
+    (logdir / "run_meta.json").write_text(json.dumps(run_meta, indent=2), encoding="utf-8")
+
     wandb_project = cfg.wandb.get("project")
     if wandb_project:
         logger = WandbLogger(logdir, project=wandb_project, run_name=run_name, config=run_config)

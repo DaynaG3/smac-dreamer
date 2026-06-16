@@ -126,6 +126,7 @@ def evaluate_heldout(
     device: str = "cpu",
     gamma: float = 0.997,
     max_episode_steps: int = 200,
+    obs_mode: str = "flat",
     env_factory: Optional[Callable] = None,
     episode_fn: Optional[Callable] = None,
     progress: bool = False,
@@ -164,7 +165,7 @@ def evaluate_heldout(
     for entry in test_entries:
         env = env_factory(
             [entry], pad_dims, "fixed", 0, 0, "smaclite_default", {},
-            gamma, max_episode_steps,
+            gamma, max_episode_steps, obs_mode,
         )
         try:
             ep_metrics = []
