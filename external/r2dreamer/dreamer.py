@@ -177,7 +177,12 @@ class Dreamer(nn.Module):
             betas=(config.beta1, config.beta2),
             eps=config.eps,
         )
-        self._scaler = GradScaler()
+        # AMP dtype: fp16 (default, needs GradScaler) or bf16 (fp32 exponent range -> no overflow,
+        # no scaler). bf16 is the fix when fp16 overflows (grad_scale decays to 1) on large obs.
+        _amp = str(getattr(config, "amp_dtype", "float16")).lower()
+        self._amp_dtype = torch.bfloat16 if _amp in ("bfloat16", "bf16") else torch.float16
+        self._scaler = GradScaler(
+            enabled=(self.device.type == "cuda" and self._amp_dtype == torch.float16))
 
         def lr_lambda(step):
             if config.warmup:
@@ -372,7 +377,7 @@ class Dreamer(nn.Module):
         # fp16 AMP + GradScaler are CUDA features; on CPU fp16 autocast is unstable (it
         # overflows -> NaN, and the scaler can't protect it). Run fp32 on CPU, fp16 on GPU.
         amp_enabled = self.device.type == "cuda"
-        with autocast(device_type=self.device.type, dtype=torch.float16, enabled=amp_enabled):
+        with autocast(device_type=self.device.type, dtype=self._amp_dtype, enabled=amp_enabled):
             (stoch, deter), mets = self._cal_grad(p_data, initial)
         self._scaler.unscale_(self._optimizer)  # unscale grads in params
         if self.rep_loss == "dreamerpro" and self._ema_updates < self.freeze_prototypes_iters:

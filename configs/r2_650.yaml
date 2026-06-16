@@ -34,6 +34,7 @@ reward:
 
 # ---- Run / model knobs (GPU production) -----------------------------------
 device: cuda:0
+amp_dtype: bfloat16                     # bf16 (fp32 exponent range) avoids fp16 overflow on the large structured obs
 seed: 0
 gamma: 0.997
 steps: 1000000

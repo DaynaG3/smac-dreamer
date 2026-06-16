@@ -126,6 +126,7 @@ def main():
         raise ValueError("action_masking requires observation.mode: structured")
     config.model.action_masking = action_masking
     config.model.mask_threshold = float(cfg.get("mask_threshold", 0.7))
+    config.model.amp_dtype = str(cfg.get("amp_dtype", "float16"))   # "bfloat16" avoids fp16 overflow
 
     # --- Validation cadence + fixed seeds (explicit seed list, NOT a worker count) -----
     val_cfg = cfg.get("validation") or {}
