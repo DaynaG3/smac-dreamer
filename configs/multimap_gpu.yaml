@@ -8,7 +8,7 @@
 # points — the A40 has 46 GB, so there is plenty of head-room to raise them.
 
 # ---- Map discovery + split ------------------------------------------------
-maps_folder: configs/maps/easy500     # provide this folder (scanned for *.json maps)
+maps_folder: configs\maps\r2_smaclite_650_configs\configs\train     # provide this folder (scanned for *.json maps)
 split:
   mode: ratio
   train_ratio: 0.8
@@ -61,6 +61,6 @@ eval:
 # ---- Logging --------------------------------------------------------------
 wandb:
   project: smac-r2dreamer             # set null to fall back to TensorBoard/JSONL
-  run_name: null                      # auto: <folder>-<reward>-<resolved-params-hash>
+  run_name: 2M_650experimental                      # auto: <folder>-<reward>-<resolved-params-hash>
 logdir: logs/r2dreamer/multimap_gpu   # lives on the notebook's persistent volume
 checkpoint_every_minutes: 10.0
