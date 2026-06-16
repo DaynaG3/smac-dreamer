@@ -42,8 +42,9 @@ from omegaconf import OmegaConf
 import tools
 from buffer import Buffer
 from dreamer import Dreamer
-from trainer import OnlineTrainer
 from smacdreamer.r2dreamer_factory import make_smaclite_multimap_envs
+from smacdreamer.envs.map_discovery import discover, discover_folders, SplitSpec
+from smacdreamer.validation_trainer import ValidationTrainer
 from smacdreamer.wandb_logger import WandbLogger
 from smacdreamer.checkpointing import PeriodicCheckpointer, attach_checkpointing
 from smacdreamer.envs.reward_registry import resolved_params
@@ -106,47 +107,85 @@ def main():
     # some submodules read their own `device` field at forward time, so every
     # field must agree or you get a CUDA/CPU mismatch. Propagate to all of them.
     _propagate_device(config, str(cfg.device))
-    # Wire periodic held-out eval.
-    eval_every = int(cfg.eval.get("every", 0))
-    episodes_per_map = int(cfg.eval.get("episodes_per_map", 0))
-    config.trainer.eval_every = eval_every if eval_every > 0 else steps + 1
-    config.trainer.eval_episode_num = episodes_per_map
+
+    # --- Replay buffer: large capacity + CPU storage (model still computes on cfg.device).
+    # storage_device is overridden AFTER _propagate_device (which set every device field to
+    # cfg.device); the buffer pins+moves sampled batches to config.buffer.device on sample().
+    _buf_cfg = cfg.get("buffer") or {}
+    config.buffer.max_size = int(_buf_cfg.get("max_size", config.buffer.max_size))
+    config.buffer.storage_device = str(_buf_cfg.get("storage_device", config.buffer.storage_device))
 
     # --- Observation mode (flat | structured) ----------------------------------
     obs_mode = str(cfg.observation.mode) if cfg.get("observation") else "flat"
     if obs_mode not in ("flat", "structured"):
         raise ValueError(f"observation.mode must be 'flat' or 'structured', got {obs_mode!r}")
 
+    # --- Action masking (P0.1/P0.2): requires structured obs (per-agent avail + masks) -----
+    action_masking = bool(cfg.get("action_masking", False))
+    if action_masking and obs_mode != "structured":
+        raise ValueError("action_masking requires observation.mode: structured")
+    config.model.action_masking = action_masking
+    config.model.mask_threshold = float(cfg.get("mask_threshold", 0.7))
+
+    # --- Validation cadence + fixed seeds (explicit seed list, NOT a worker count) -----
+    val_cfg = cfg.get("validation") or {}
+    _eval_cfg = cfg.get("eval") or {}
+    val_every = int(val_cfg.get("every", _eval_cfg.get("every", 0)))
+    if val_cfg.get("seeds") is not None:
+        val_seeds = [int(s) for s in OmegaConf.to_container(val_cfg.seeds, resolve=True)]
+    elif _eval_cfg.get("fixed_seeds") is not None:
+        val_seeds = [int(s) for s in OmegaConf.to_container(_eval_cfg.fixed_seeds, resolve=True)]
+    else:
+        val_seeds = [0, 1, 2]
+    config.trainer.eval_every = val_every if val_every > 0 else steps + 1
+    config.trainer.eval_episode_num = 1   # sentinel >0 so ValidationTrainer.eval() fires
+
+    # --- Dataset: explicit train/validation folders (no ratio split) OR legacy split ----
+    padding_override = OmegaConf.to_container(cfg.padding, resolve=True) if cfg.get("padding") else None
+    maps_cfg = cfg.get("maps") or {}
+    explicit = bool(maps_cfg.get("train"))
+    print("Discovering maps (train + validation only; blind splits untouched) ...")
+    if explicit:
+        train_entries, val_entries, pad_dims = discover_folders(
+            str(maps_cfg.train), str(maps_cfg.validation),
+            padding_override=padding_override, obs_mode=obs_mode, isolate_probe=True, verbose=True,
+        )
+        dataset_tag = pathlib.Path(str(maps_cfg.train)).parent.name or "dataset"
+    else:
+        train_entries, val_entries, pad_dims = discover(
+            str(cfg.maps_folder),
+            SplitSpec(**OmegaConf.to_container(cfg.split, resolve=True)),
+            padding_override=padding_override, obs_mode=obs_mode, isolate_probe=True, verbose=True,
+        )
+        dataset_tag = pathlib.Path(str(cfg.maps_folder)).name
+
     # --- Resolve reward for logging + hash -------------------------------------
     reward_name = str(cfg.reward.name)
     reward_params = OmegaConf.to_container(cfg.reward.get("params", {}), resolve=True) or {}
     resolved = resolved_params(reward_name, reward_params)
     rhash = _reward_hash(reward_name, resolved)
-
-    folder_tag = pathlib.Path(str(cfg.maps_folder)).name
-    run_name = cfg.wandb.get("run_name") or f"{folder_tag}-{reward_name}-{rhash}"
+    run_name = cfg.wandb.get("run_name") or f"{dataset_tag}-{reward_name}-{rhash}"
 
     print(f"\n{'='*64}")
     print("R2-Dreamer × SMAClite  —  MULTIMAP training")
     print(f"{'='*64}")
-    print(f"  maps_folder : {cfg.maps_folder}")
-    print(f"  reward      : {reward_name}  (hash {rhash})")
-    print(f"  resolved    : {resolved}")
-    print(f"  sampling    : {cfg.sampling_mode}")
-    print(f"  steps       : {steps}   env_num: {cfg.env_num}   device: {cfg.device}")
-    print(f"  eval        : every {eval_every} steps, {episodes_per_map} episodes")
-    print(f"  run_name    : {run_name}")
+    print(f"  dataset    : {dataset_tag}  (explicit folders: {explicit})")
+    print(f"  obs_mode   : {obs_mode}")
+    print(f"  reward     : {reward_name}  (hash {rhash})")
+    print(f"  train maps : {len(train_entries)}   validation maps: {len(val_entries)}")
+    print(f"  validation : every {val_every} steps, seeds {val_seeds}")
+    print(f"  steps      : {steps}   env_num: {cfg.env_num}   device: {cfg.device}")
+    print(f"  run_name   : {run_name}")
     print(f"{'='*64}\n")
 
     tools.set_seed_everywhere(int(cfg.seed))
 
-    # --- Environments (discovery happens inside the factory) -------------------
-    print("Discovering maps and creating environments...")
+    # --- Train envs ONLY (validation handled by ValidationTrainer; no worker-eval pool) -
     train_envs, eval_envs, obs_space, act_space, discovery = make_smaclite_multimap_envs(
-        maps_folder=str(cfg.maps_folder),
-        split_spec=OmegaConf.to_container(cfg.split, resolve=True),
+        maps_folder=str(maps_cfg.get("train", cfg.get("maps_folder", ""))),
+        split_spec={},
         env_num=int(cfg.env_num),
-        eval_episode_num=episodes_per_map if eval_every > 0 else 0,
+        eval_episode_num=0,
         device=str(cfg.device),
         sampling_mode=str(cfg.sampling_mode),
         reward_name=reward_name,
@@ -154,12 +193,11 @@ def main():
         gamma=float(cfg.gamma),
         max_episode_steps=int(cfg.max_episode_steps),
         seed=int(cfg.seed),
-        padding_override=OmegaConf.to_container(cfg.padding, resolve=True) if cfg.get("padding") else None,
+        padding_override=padding_override,
         obs_mode=obs_mode,
+        train_entries=train_entries, test_entries=val_entries, pad_dims=pad_dims,
     )
-    print(f"  obs_mode : {obs_mode}")
     print(f"  obs keys : {sorted(obs_space.spaces)}")
-    print(f"  train maps: {discovery['n_train']}   held-out test maps: {discovery['n_test']}")
 
     # --- Logger: record resolved reward + padding into the run config ----------
     run_config = OmegaConf.create({
@@ -167,11 +205,14 @@ def main():
         "reward_params_resolved": resolved,
         "reward_hash": rhash,
         "obs_mode": obs_mode,
+        "dataset_tag": dataset_tag,
+        "explicit_folders": explicit,
         "padding": discovery["padding"],
-        "split": OmegaConf.to_container(cfg.split, resolve=True),
+        "split": (OmegaConf.to_container(cfg.split, resolve=True)
+                  if cfg.get("split") else {"mode": "explicit_folders"}),
         "sampling_mode": str(cfg.sampling_mode),
-        "n_train_maps": discovery["n_train"],
-        "n_test_maps": discovery["n_test"],
+        "n_train_maps": len(train_entries),
+        "n_validation_maps": len(val_entries),
         "model": config.model,
     })
 
@@ -185,7 +226,9 @@ def main():
         "imag_horizon": int(cfg.imag_horizon),
         "max_episode_steps": int(cfg.max_episode_steps), "gamma": float(cfg.gamma),
         "reward_name": reward_name, "padding": discovery["padding"],
-        "maps_folder": str(cfg.maps_folder),
+        "dataset_tag": dataset_tag, "explicit_folders": explicit,
+        "validation_seeds": val_seeds,
+        "maps_folder": str(maps_cfg.get("train", cfg.get("maps_folder", ""))),
     }
     (logdir / "run_meta.json").write_text(json.dumps(run_meta, indent=2), encoding="utf-8")
 
@@ -220,7 +263,15 @@ def main():
 
     # --- Train -----------------------------------------------------------------
     print(f"\nStarting multimap training ({steps} env steps)...\n")
-    trainer = OnlineTrainer(config.trainer, replay_buffer, logger, logdir, train_envs, eval_envs)
+    # ValidationTrainer replaces the old worker-based periodic evaluator: every `val_every`
+    # steps it runs map×seed validation, logs macro/micro metrics, and saves
+    # best_val_macro_winrate.pt (macro win rate; macro original return as tie-breaker).
+    trainer = ValidationTrainer(
+        config.trainer, replay_buffer, logger, logdir, train_envs,
+        validation_entries=val_entries, pad_dims=pad_dims, seeds=val_seeds,
+        device=str(cfg.device), gamma=float(cfg.gamma),
+        max_episode_steps=int(cfg.max_episode_steps), obs_mode=obs_mode,
+    )
     trainer.begin(agent)
 
     if checkpointer is not None:

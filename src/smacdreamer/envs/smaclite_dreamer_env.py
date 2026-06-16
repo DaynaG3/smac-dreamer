@@ -166,6 +166,7 @@ class SMACliteDreamerEnv(gym.Env):
         reward_fn=None,                   # Optional[callable(RewardContext)->(reward,terms)]
         gamma: float = 0.997,             # shaping discount; MUST equal the agent's discount
         obs_mode: str = "flat",           # "flat" (legacy right-padded) | "structured" (P0.3)
+        strict_actions: bool = False,     # raise on an invalid requested action (vs sanitise)
     ):
         super().__init__()
         from smacdreamer.envs.reward_shaping import RewardShapingConfig as _RSC
@@ -182,6 +183,12 @@ class SMACliteDreamerEnv(gym.Env):
                 "(no silent fallback)"
             )
         self._local_to_global = np.zeros(0, dtype=np.int64)  # map-local -> global type ids
+        # Action sanitiser is a DEBUG FALLBACK. In strict mode an invalid requested action
+        # raises immediately (it should never happen once the policy is masked). The last
+        # requested vs executed action lists are kept for inspection / tests.
+        self._strict_actions = bool(strict_actions)
+        self._last_requested_action: list = []
+        self._last_executed_action: list = []
         # Initial totals captured at reset, used to normalise potentials to [0,1] fractions.
         self._init_enemy_hp_total: float = 0.0
         self._init_n_allies: int = 0
@@ -494,12 +501,15 @@ class SMACliteDreamerEnv(gym.Env):
             )
 
         # Only extract actions for real agents; padded agent action slots are ignored.
-        acts = self._to_int_actions(action)
+        requested_acts = self._to_int_actions(action)
 
         avail = getattr(self._env, 'unwrapped', self._env).get_avail_actions()
         acts, n_invalid, n_was_prev_valid, n_was_prev_invalid = (
-            self._sanitise_actions(acts, avail)
+            self._sanitise_actions(requested_acts, avail, strict=self._strict_actions)
         )
+        # Expose requested vs EXECUTED action (what SMAClite actually runs) for tests/logging.
+        self._last_requested_action = list(requested_acts)
+        self._last_executed_action = list(acts)
 
         # Verify every sanitised action is valid under the current step-time mask.
         for _i, (_act, _mask) in enumerate(zip(acts, avail)):
@@ -739,9 +749,12 @@ class SMACliteDreamerEnv(gym.Env):
         return _SMACliteEnv(map_file=str(abs_path))
 
     def _sanitise_actions(
-        self, acts: list, avail: list
+        self, acts: list, avail: list, strict: bool = False
     ) -> tuple[list, int, int, int]:
-        """Replace each invalid action with the first valid fallback.
+        """Replace each invalid action with the first valid fallback (DEBUG FALLBACK).
+
+        With ``strict=True`` an invalid requested action raises immediately instead of being
+        replaced — used to prove the masked policy never emits an invalid action.
 
         Returns (sanitised, n_post_mask_invalid, n_timing_lag, n_masking_failure).
 
@@ -765,6 +778,12 @@ class SMACliteDreamerEnv(gym.Env):
             if act < len(mask) and mask[act]:
                 sanitised.append(act)
             else:
+                if strict:
+                    raise ValueError(
+                        f"strict_actions: invalid requested action {act} for agent {i} "
+                        f"(avail={list(mask)}, map={self._current_map_name}). The masked policy "
+                        "must never request an invalid action."
+                    )
                 n_invalid += 1
                 prev_mask = (
                     self._last_avail_returned[i]
@@ -838,6 +857,24 @@ class SMACliteDreamerEnv(gym.Env):
             from smacdreamer.envs import structured_obs as _so
             uw = getattr(self._env, 'unwrapped', self._env)
             mi = uw.map_info
+            # Global unit-type index per allied/enemy slot from the UNIT OBJECTS (consistent
+            # global vocab, independent of SMAClite's per-map local one-hot which is dropped
+            # for single-type maps). -1 for dead/absent slots; raises on an unknown type.
+            def _gtype(unit):
+                nm = getattr(unit.type, "name", str(unit.type)).upper()
+                if nm not in _so.UNIT_TYPE_TO_GLOBAL:
+                    raise ValueError(f"unit type {nm!r} not in global vocabulary")
+                return _so.UNIT_TYPE_TO_GLOBAL[nm]
+            agent_type_g = np.full(self.n_agents, -1, dtype=np.int64)
+            for _u in uw.agents.values():
+                _j = int(_u.id_in_faction)   # = canonical agent slot (matches the obs layout)
+                if 0 <= _j < self.n_agents:
+                    agent_type_g[_j] = _gtype(_u)
+            enemy_type_g = np.full(self.n_enemies, -1, dtype=np.int64)
+            for _u in uw.enemies.values():
+                _j = int(_u.id_in_faction)
+                if 0 <= _j < self.n_enemies:
+                    enemy_type_g[_j] = _gtype(_u)
             blocks = _so.build_structured_obs(
                 obs_tuple, avail,
                 n_agents=self.n_agents, n_enemies=self.n_enemies,
@@ -847,6 +884,7 @@ class SMACliteDreamerEnv(gym.Env):
                 num_unit_types=int(mi.num_unit_types), n_actions=self.n_actions,
                 alive_ids=list(uw.agents.keys()), local_to_global=self._local_to_global,
                 pad_dims=self._structured_pad_dims(),
+                agent_type_g=agent_type_g, enemy_type_g=enemy_type_g,
             )
             obs = {**_so.flatten_for_model(blocks), **_is}
         elif self._pad_dims is not None:
@@ -873,6 +911,7 @@ class SMACliteDreamerEnv(gym.Env):
         info = {
             # Step-level metrics (new canonical names)
             "log_step_post_mask_invalid_count":        _f(step_invalid),
+            "log_step_sanitisation_occurred":          _f(1.0 if step_invalid > 0 else 0.0),
             "log_step_timing_lag_invalid_count":       _f(step_timing_lag),
             "log_step_masking_failure_count":          _f(step_masking_failure),
             "log_step_avail_mask_mismatch_count":      _f(step_mask_mismatch),

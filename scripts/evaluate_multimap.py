@@ -63,7 +63,10 @@ def main():
     ap.add_argument("--config", default="configs/multimap.yaml")
     ap.add_argument("--checkpoint", required=True, help="path to latest.pt")
     ap.add_argument("--seeds", default=None,
-                    help="comma-separated fixed eval seeds (overrides cfg.eval.fixed_seeds)")
+                    help="comma-separated fixed eval seeds (overrides cfg.eval/validation seeds)")
+    ap.add_argument("--split", default="validation",
+                    help="explicit-folder dataset split to evaluate: validation | blind_iid | "
+                         "blind_compositional (ignored for legacy ratio-split configs)")
     ap.add_argument("--episodes-per-map", type=int, default=None,
                     help="DEPRECATED/ignored: eval is now map × fixed seeds, not a worker count")
     ap.add_argument("--output", default=None, help="JSON report path")
@@ -92,18 +95,36 @@ def main():
     print(f"Reconstruction: obs_mode={obs_mode} units={units} deter={deter} "
           f"(from {'run_meta.json' if run_meta else '--config'})")
 
-    # Re-run discovery deterministically (same split seed) to get the SAME held-out test set.
-    train_entries, test_entries, pad_dims = discover(
-        str(cfg.maps_folder),
-        SplitSpec(**OmegaConf.to_container(cfg.split, resolve=True)),
-        padding_override=OmegaConf.to_container(cfg.padding, resolve=True) if cfg.get("padding") else None,
-        verbose=True,
-        isolate_probe=True,   # subprocess-isolated probe so 500-map discovery doesn't OOM
-        obs_mode=obs_mode,
-    )
+    # Maps to evaluate: explicit-folder split (validation / blind_iid / blind_compositional)
+    # using the EXACT training padding (from run_meta), or the legacy ratio held-out split.
+    if cfg.get("maps"):
+        from smacdreamer.envs.map_discovery import scan_folder_entries
+        from smacdreamer.envs.padding import PaddingDims
+        split_folder = cfg.maps.get(args.split)
+        if not split_folder:
+            sys.exit(f"--split {args.split!r} not in cfg.maps; available: {list(cfg.maps.keys())}")
+        if not run_meta.get("padding"):
+            sys.exit("explicit-folder eval needs run_meta.json (with padding) beside the checkpoint")
+        p = run_meta["padding"]
+        pad_dims = PaddingDims(max_agents=int(p["max_agents"]), max_enemies=int(p["max_enemies"]),
+                               max_actions=int(p["max_actions"]), max_obs_size=int(p["max_obs_size"]))
+        test_entries = scan_folder_entries(str(split_folder))
+        train_names = set()   # separate folders -> inherently disjoint from train
+        eval_tag = f"{run_meta.get('dataset_tag', 'dataset')}_{args.split}"
+        print(f"Evaluating split '{args.split}': {split_folder} ({len(test_entries)} maps)")
+    else:
+        train_entries, test_entries, pad_dims = discover(
+            str(cfg.maps_folder),
+            SplitSpec(**OmegaConf.to_container(cfg.split, resolve=True)),
+            padding_override=OmegaConf.to_container(cfg.padding, resolve=True) if cfg.get("padding") else None,
+            verbose=True,
+            isolate_probe=True,   # subprocess-isolated probe so large discovery doesn't OOM
+            obs_mode=obs_mode,
+        )
+        train_names = {e.name for e in train_entries}
+        eval_tag = pathlib.Path(str(cfg.maps_folder)).name
     if not test_entries:
-        sys.exit("No held-out test maps to evaluate.")
-    train_names = {e.name for e in train_entries}
+        sys.exit("No maps to evaluate.")
 
     # Build the agent with the SAME obs/action shape the model was trained with: construct a
     # one-map env to read the spaces, then load the checkpoint.
@@ -148,11 +169,13 @@ def main():
         for fam, wrs in per_family_winrates.items()
     }
     eval_report["checkpoint"] = str(args.checkpoint)
-    eval_report["maps_folder"] = str(cfg.maps_folder)
-    eval_report["split"] = OmegaConf.to_container(cfg.split, resolve=True)
+    eval_report["split_name"] = args.split if cfg.get("maps") else "ratio_heldout"
+    eval_report["eval_tag"] = eval_tag
+    if cfg.get("split"):
+        eval_report["split"] = OmegaConf.to_container(cfg.split, resolve=True)
 
     out = pathlib.Path(args.output) if args.output else (
-        ROOT / "results" / f"multimap_eval_{pathlib.Path(str(cfg.maps_folder)).name}.json")
+        ROOT / "results" / f"multimap_eval_{eval_tag}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(eval_report, indent=2), encoding="utf-8")
 

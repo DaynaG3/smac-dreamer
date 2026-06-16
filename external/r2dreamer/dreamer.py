@@ -56,6 +56,33 @@ class Dreamer(nn.Module):
         # Actor-critic components
         self.actor = networks.MLPHead(config.actor, self.rssm.feat_size)
         self.value = networks.MLPHead(config.critic, self.rssm.feat_size)
+
+        # --- Action masking (P0.1 real / P0.2 imagined). Gated on config.action_masking; the
+        # actor shape is (C,)*A so A/C come straight from it. unimix is spread over VALID
+        # actions only inside MaskedMultiOneHotDist. ---------------------------------------
+        self.action_masking = bool(getattr(config, "action_masking", False))
+        self._actor_shape = tuple(map(int, config.actor.shape))
+        self._mask_A = len(self._actor_shape)
+        self._mask_C = int(self._actor_shape[0]) if self._mask_A else 0
+        self._actor_unimix = (
+            float(getattr(config.actor.dist, "unimix_ratio", 0.0)) if self.act_discrete else 0.0
+        )
+        # P0.2: prob threshold for the predicted availability mask -> logit cut.
+        _p = min(max(float(getattr(config, "mask_threshold", 0.7)), 1e-4), 1 - 1e-4)
+        self._mask_threshold = _p
+        self._mask_threshold_logit = float(math.log(_p / (1.0 - _p)))
+        # P0.2 latent heads: predict next available-action mask (A*C) and next alive mask (A).
+        # Binary (BCE) heads built from the continuation head's config (same trunk/dist). Only
+        # created when masking is on so non-masked runs and clone_and_freeze are unaffected.
+        if self.action_masking:
+            avail_cfg = copy.deepcopy(config.cont)
+            avail_cfg.shape = [self._mask_A * self._mask_C]
+            avail_cfg.name = "avail_head"
+            alive_cfg = copy.deepcopy(config.cont)
+            alive_cfg.shape = [self._mask_A]
+            alive_cfg.name = "alive_head"
+            self.avail_head = networks.MLPHead(avail_cfg, self.rssm.feat_size)
+            self.alive_head = networks.MLPHead(alive_cfg, self.rssm.feat_size)
         self.slow_target_update = int(config.slow_target_update)
         self.slow_target_fraction = float(config.slow_target_fraction)
         self._slow_value = copy.deepcopy(self.value)
@@ -74,6 +101,9 @@ class Dreamer(nn.Module):
             "cont": self.cont,
             "encoder": self.encoder,
         }
+        if self.action_masking:
+            modules["avail_head"] = self.avail_head
+            modules["alive_head"] = self.alive_head
 
         if self.rep_loss == "dreamer":
             self.decoder = networks.MultiDecoder(
@@ -236,6 +266,18 @@ class Dreamer(nn.Module):
             param_new.data = param_orig.data
             param_new.requires_grad_(False)
 
+        # P0.2 predicted-mask heads: frozen copies (shared storage -> track trained weights),
+        # used to derive the imagination action mask without grad flowing into them.
+        if self.action_masking:
+            for _src, _name in ((self.avail_head, "_frozen_avail_head"),
+                                (self.alive_head, "_frozen_alive_head")):
+                _frozen = copy.deepcopy(_src)
+                for (no, po), (nn_, pn) in zip(_src.named_parameters(), _frozen.named_parameters()):
+                    assert no == nn_
+                    pn.data = po.data
+                    pn.requires_grad_(False)
+                setattr(self, _name, _frozen)
+
     def to(self, *args, **kwargs):
         super().to(*args, **kwargs)
         # Re-establish shared memory after moving the model to a new device
@@ -259,7 +301,18 @@ class Dreamer(nn.Module):
         stoch, deter, _ = self._frozen_rssm.obs_step(prev_stoch, prev_deter, prev_action, embed, obs["is_first"])
         # (B, F)
         feat = self._frozen_rssm.get_feat(stoch, deter)
-        action_dist = self._frozen_actor(feat)
+        if self.action_masking:
+            # Real masking: invalid actions can never be requested; padded/dead -> NOOP. Uses
+            # the RAW (un-preprocessed) avail + agent masks from the structured obs.
+            from smacdreamer.masked_actions import MaskedMultiOneHotDist, build_action_mask
+            raw_logits = self._frozen_actor.last(self._frozen_actor.mlp(feat))
+            agent_active = obs["agent_slot_mask"] * obs["agent_alive_mask"]
+            amask, aactive = build_action_mask(
+                obs["avail_actions"], agent_active, self._mask_A, self._mask_C)
+            action_dist = MaskedMultiOneHotDist(
+                raw_logits, amask, aactive, self._actor_shape, self._actor_unimix)
+        else:
+            action_dist = self._frozen_actor(feat)
         # (B, A)
         action = action_dist.mode if eval else action_dist.rsample()
         return action, TensorDict(
@@ -430,6 +483,20 @@ class Dreamer(nn.Module):
         losses["rew"] = torch.mean(-self.reward(feat).log_prob(to_f32(data["reward"])))
         cont = 1.0 - to_f32(data["is_terminal"])
         losses["con"] = torch.mean(-self.cont(feat).log_prob(cont))
+        if self.action_masking:
+            # P0.2 auxiliary heads (BCE) on REAL data: predict this step's availability + alive
+            # mask, so imagination can reconstruct them. Low loss weight (auxiliary, not reward).
+            losses["avail"] = torch.mean(
+                -self.avail_head(feat).log_prob(to_f32(data["avail_actions"])))
+            losses["alive"] = torch.mean(
+                -self.alive_head(feat).log_prob(to_f32(data["agent_alive_mask"])))
+            from smacdreamer.masked_actions import mask_quality_metrics
+            _avail_logits = self.avail_head.last(self.avail_head.mlp(feat)).detach()
+            _mq = mask_quality_metrics(
+                _avail_logits, to_f32(data["avail_actions"]), self._mask_threshold_logit)
+            metrics["mask_precision"] = _mq["precision"]
+            metrics["mask_recall"] = _mq["recall"]
+            metrics["mask_fpr"] = _mq["fpr"]
         # log
         metrics["dyn_entropy"] = torch.mean(self.rssm.get_dist(prior_logit).entropy())
         metrics["rep_entropy"] = torch.mean(self.rssm.get_dist(post_logit).entropy())
@@ -454,6 +521,14 @@ class Dreamer(nn.Module):
         disc = 1 - 1 / self.horizon
         # (B*T, T_imag, 1)
         weight = torch.cumprod(imag_cont * disc, dim=1)
+        if self.action_masking:
+            # P0.2: exclude reset/terminal states from imagination START states —
+            # imag_start_mask = valid_time & ~is_first & ~is_last. Trajectories launched from
+            # those states get zero actor-critic loss weight.
+            start_valid = (
+                (1.0 - to_f32(data["is_first"])) * (1.0 - to_f32(data["is_last"]))
+            ).reshape(-1, 1, 1)   # (B*T, 1, 1)
+            weight = weight * start_valid
         last = torch.zeros_like(imag_cont)
         term = 1 - imag_cont
         ret = self._lambda_return(
@@ -463,7 +538,18 @@ class Dreamer(nn.Module):
         # (B*T, T_imag-1, 1)
         adv = (ret - imag_value[:, :-1]) / ret_scale
 
-        policy = self.actor(imag_feat)
+        if self.action_masking:
+            # Masked policy over imagined states, using the SAME detached predicted mask the
+            # imagination sampler used (frozen heads on imag_feat). log_prob/entropy normalise
+            # over living agents and exclude invalid actions.
+            from smacdreamer.masked_actions import MaskedMultiOneHotDist
+            policy_logits = self.actor.last(self.actor.mlp(imag_feat))
+            _amask, _aactive = self._predicted_action_mask(imag_feat)
+            policy = MaskedMultiOneHotDist(
+                policy_logits, _amask, _aactive, self._actor_shape, self._actor_unimix)
+            metrics["imag_invalid_rate"] = policy.unmasked_invalid_rate(policy_logits.detach())
+        else:
+            policy = self.actor(imag_feat)
         # (B*T, T_imag-1, 1)
         logpi = policy.log_prob(imag_action)[:, :-1].unsqueeze(-1)
         entropy = policy.entropy()[:, :-1].unsqueeze(-1)
@@ -529,6 +615,19 @@ class Dreamer(nn.Module):
         metrics.update({"opt/loss": total_loss})
         return (post_stoch, post_deter), metrics
 
+    def _predicted_action_mask(self, feat):
+        """(amask, aactive) from the FROZEN avail/alive heads at ``feat``.
+
+        A DETACHED hard mask (the >= threshold is non-differentiable), so it never leaks gradient
+        into the heads. NOOP is guaranteed valid by build_action_mask. Used to mask imagination
+        actions and the actor-critic policy in imagination (P0.2)."""
+        from smacdreamer.masked_actions import hard_mask_from_logits, build_action_mask
+        avail_logits = self._frozen_avail_head.last(self._frozen_avail_head.mlp(feat))
+        alive_logits = self._frozen_alive_head.last(self._frozen_alive_head.mlp(feat))
+        pred_avail = hard_mask_from_logits(avail_logits, self._mask_threshold_logit)
+        pred_active = hard_mask_from_logits(alive_logits, self._mask_threshold_logit)
+        return build_action_mask(pred_avail, pred_active, self._mask_A, self._mask_C)
+
     @torch.no_grad()
     def _imagine(self, start, imag_horizon):
         """Roll out the policy in latent space."""
@@ -540,7 +639,14 @@ class Dreamer(nn.Module):
             # (B, F)
             feat = self._frozen_rssm.get_feat(stoch, deter)
             # (B, A)
-            action = self._frozen_actor(feat).rsample()
+            if self.action_masking:
+                from smacdreamer.masked_actions import MaskedMultiOneHotDist
+                raw_logits = self._frozen_actor.last(self._frozen_actor.mlp(feat))
+                amask, aactive = self._predicted_action_mask(feat)
+                action = MaskedMultiOneHotDist(
+                    raw_logits, amask, aactive, self._actor_shape, self._actor_unimix).rsample()
+            else:
+                action = self._frozen_actor(feat).rsample()
             # Append feat and its corresponding sampled action at the same time step.
             feats.append(feat)
             actions.append(action)

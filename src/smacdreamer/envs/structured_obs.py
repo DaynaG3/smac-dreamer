@@ -102,12 +102,22 @@ def build_structured_obs(
     alive_ids: Iterable[int],
     local_to_global: np.ndarray,
     pad_dims=None,
+    agent_type_g=None,
+    enemy_type_g=None,
 ) -> Dict[str, np.ndarray]:
     """Parse SMAClite's per-agent flat obs into the canonical padded blocks + masks.
 
     ``obs_tuple`` : sequence of n_agents flat obs vectors (SMAClite layout; dead agents are
                     all-zero). ``avail`` : per-agent available-action vectors (length n_actions).
     Returns a dict of the canonical blocks, every array shaped to the (padded) caps.
+
+    Unit type: when ``agent_type_g`` / ``enemy_type_g`` (arrays of GLOBAL type indices, -1 for
+    dead/unknown slots) are provided, the type one-hot is set from them — a single GLOBAL
+    vocabulary independent of the map's local encoding (SMAClite drops the local one-hot
+    entirely for single-type maps, so parsing it cannot give a consistent global type). Type is
+    set for self (always, when alive) and for allies/enemies only where they are VISIBLE in the
+    obs (no leaking hidden enemies). When the arrays are omitted, the local one-hot is parsed
+    via ``local_to_global`` (used by isolated feature-parsing unit tests).
     """
     A, E, C = _caps(pad_dims, n_agents, n_enemies, n_actions)
     alive = set(int(i) for i in alive_ids)
@@ -154,7 +164,12 @@ def build_structured_obs(
             enemy_features[a, e, 3] = o[base + 3]   # dy / sight
             enemy_features[a, e, 4] = o[base + 4]   # hp / max_hp
             enemy_features[a, e, 5] = shield        # shield / max_shield (0 if none)
-            enemy_features[a, e, 6:6 + V] = _global_type(tl)
+            if enemy_type_g is not None:
+                g = int(enemy_type_g[e])
+                if g >= 0 and enemy_features[a, e, 4] > 0.0:   # visible alive enemy only
+                    enemy_features[a, e, 6 + g] = 1.0
+            else:
+                enemy_features[a, e, 6:6 + V] = _global_type(tl)
             enemy_entity_mask[a, e] = 1.0
 
         # --- Allies (canonical slot = ally global id b; SMAClite block skips self) ---
@@ -173,7 +188,12 @@ def build_structured_obs(
             ally_features[a, b, 3] = o[base + 3]   # dy / sight
             ally_features[a, b, 4] = o[base + 4]   # hp / max_hp
             ally_features[a, b, 5] = shield
-            ally_features[a, b, 6:6 + V] = _global_type(tl)
+            if agent_type_g is not None:
+                g = int(agent_type_g[b])
+                if g >= 0 and ally_features[a, b, 0] > 0.0:    # visible ally only
+                    ally_features[a, b, 6 + g] = 1.0
+            else:
+                ally_features[a, b, 6:6 + V] = _global_type(tl)
             ally_entity_mask[a, b] = 1.0
 
         # --- Self ---
@@ -184,7 +204,12 @@ def build_structured_obs(
         tl = o[idx: idx + num_unit_types] if num_unit_types else np.zeros(0, np.float32)
         self_features[a, 0] = hp
         self_features[a, 1] = shield
-        self_features[a, 2:2 + V] = _global_type(tl)
+        if agent_type_g is not None:
+            g = int(agent_type_g[a])
+            if g >= 0:   # self is always observed
+                self_features[a, 2 + g] = 1.0
+        else:
+            self_features[a, 2:2 + V] = _global_type(tl)
 
     return {
         "self_features": self_features,

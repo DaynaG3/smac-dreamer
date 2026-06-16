@@ -136,6 +136,8 @@ def make_config(args):
                 "rew": 1.0, "con": 1.0, "dyn": 1.0, "rep": 0.1,
                 "policy": 1.0, "value": 1.0, "repval": 0.3,
                 "swav": 1.0, "temp": 1.0, "norm": 1.0,
+                # P0.2 auxiliary predicted-mask heads (low weight; representation targets only).
+                "avail": 0.1, "alive": 0.1,
             },
             "r2dreamer": {"lambd": 5e-4},
 

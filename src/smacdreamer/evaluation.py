@@ -235,6 +235,18 @@ def evaluate_heldout(
     }
 
 
+def is_validation_improvement(win_rate, original_return,
+                              best_win_rate, best_original_return, eps: float = 1e-9) -> bool:
+    """Checkpoint-selection rule: MACRO validation win rate is primary, MACRO original return
+    is the tie-breaker. Never uses shaped return. Returns True if (win_rate, original_return)
+    improves over the current best."""
+    if win_rate > best_win_rate + eps:
+        return True
+    if abs(win_rate - best_win_rate) <= eps and original_return > best_original_return + eps:
+        return True
+    return False
+
+
 __all__ = [
-    "evaluate_episode", "evaluate_heldout", "DEFAULT_FIXED_SEEDS",
+    "evaluate_episode", "evaluate_heldout", "is_validation_improvement", "DEFAULT_FIXED_SEEDS",
 ]

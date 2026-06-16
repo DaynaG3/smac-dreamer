@@ -251,6 +251,52 @@ def test_flatten_unflatten_roundtrip():
         assert np.allclose(rec[k], blocks[k]), k
 
 
+def test_global_type_arrays_set_types_even_without_local_onehot():
+    # Single-type maps carry NO local type one-hot (SMAClite sets num_unit_types=0). The global
+    # type arrays must still set a consistent global type for self + visible entities.
+    g_stalker = so.UNIT_TYPE_TO_GLOBAL["STALKER"]
+    g_marine = so.UNIT_TYPE_TO_GLOBAL["MARINE"]
+    obs0 = _encode_agent_obs(
+        a=0, n_agents=2, n_enemies=1, enemy_has_shields=False, ally_has_shields=False,
+        num_unit_types=0, movement=[0, 0, 0, 0],
+        enemies=[{"attackable": 1, "dist": 0.2, "dx": 0, "dy": 0, "hp": 0.5, "type_local": []}],
+        allies={1: {"visible": 1, "dist": 0.1, "dx": 0, "dy": 0, "hp": 1.0, "type_local": []}},
+        self_feat={"hp": 1.0, "type_local": []})
+    obs1 = _encode_agent_obs(
+        a=1, n_agents=2, n_enemies=1, enemy_has_shields=False, ally_has_shields=False,
+        num_unit_types=0, movement=[0, 0, 0, 0],
+        enemies=[{"attackable": 0, "dist": 0, "dx": 0, "dy": 0, "hp": 0, "type_local": []}],
+        allies={0: {"visible": 1, "dist": 0.1, "dx": 0, "dy": 0, "hp": 1.0, "type_local": []}},
+        self_feat={"hp": 1.0, "type_local": []})
+    blocks = so.build_structured_obs(
+        [obs0, obs1], avail=[np.ones(7), np.ones(7)], n_agents=2, n_enemies=1,
+        enemy_feat_size=5, ally_feat_size=5, enemy_has_shields=False, ally_has_shields=False,
+        num_unit_types=0, n_actions=7, alive_ids=[0, 1],
+        local_to_global=np.zeros(0, dtype=np.int64), pad_dims=_pad(),
+        agent_type_g=[g_stalker, g_stalker], enemy_type_g=[g_marine])
+    assert blocks["self_features"][0, 2 + g_stalker] == 1.0
+    assert blocks["self_features"][1, 2 + g_stalker] == 1.0
+    assert blocks["self_features"][0, 2:2 + so.V].sum() == pytest.approx(1.0)
+    assert blocks["enemy_features"][0, 0, 6 + g_marine] == 1.0   # visible enemy typed
+    assert blocks["ally_features"][0, 1, 6 + g_stalker] == 1.0   # visible ally typed
+
+
+def test_global_type_array_not_leaked_for_invisible_enemy():
+    g_marine = so.UNIT_TYPE_TO_GLOBAL["MARINE"]
+    # enemy not visible (hp feature 0) -> type must NOT be set (no hidden-enemy leakage).
+    obs0 = _encode_agent_obs(
+        a=0, n_agents=1, n_enemies=1, enemy_has_shields=False, ally_has_shields=False,
+        num_unit_types=0, movement=[0, 0, 0, 0],
+        enemies=[{"attackable": 0, "dist": 0, "dx": 0, "dy": 0, "hp": 0, "type_local": []}],
+        allies={}, self_feat={"hp": 1.0, "type_local": []})
+    blocks = so.build_structured_obs(
+        [obs0], avail=[np.ones(7)], n_agents=1, n_enemies=1, enemy_feat_size=5, ally_feat_size=5,
+        enemy_has_shields=False, ally_has_shields=False, num_unit_types=0, n_actions=7,
+        alive_ids=[0], local_to_global=np.zeros(0, dtype=np.int64), pad_dims=_pad(),
+        agent_type_g=[g_marine], enemy_type_g=[g_marine])
+    assert blocks["enemy_features"][0, 0, 6:6 + so.V].sum() == pytest.approx(0.0)
+
+
 def test_build_local_to_global_names_and_enums():
     import enum
     by_name = so.build_local_to_global({"STALKER": 0, "ZEALOT": 1})
@@ -328,8 +374,8 @@ def test_structured_heterogeneous_map_switch_no_leakage():
     from smacdreamer.envs.padding import PaddingDims
 
     pad = PaddingDims(max_agents=6, max_enemies=6, max_actions=12, max_obs_size=999)
-    entries = [MapEntry(name="2s3z", type="builtin"),   # 5v5, shields, stalker/zealot
-               MapEntry(name="3m", type="builtin")]      # 3v3, no shields, marines
+    entries = [MapEntry(name="2s3z", type="builtin"),       # 5v5, stalker/zealot, both shielded
+               MapEntry(name="2s_vs_1sc", type="builtin")]  # 2v1, stalkers vs spine-crawler (enemy shield-less)
     sampler = MapSampler.from_entries(entries, mode="round_robin", seed=0)
     env = SMACliteDreamerEnv(scenario="2s3z", max_episode_steps=20, seed=0,
                              map_sampler=sampler, pad_dims=pad, obs_mode="structured")
@@ -355,7 +401,7 @@ def test_structured_heterogeneous_map_switch_no_leakage():
                 assert obs["agent_slot_mask"][a] == pytest.approx(0.0)
             seen[env._current_map_name] = env.n_agents
         assert len(shapes) == 1                          # fixed output shape across maps
-        assert set(seen) == {"2s3z", "3m"}               # visited both heterogeneous maps
-        assert len(set(seen.values())) >= 2              # different ally counts
+        assert set(seen) == {"2s3z", "2s_vs_1sc"}        # visited both heterogeneous maps
+        assert len(set(seen.values())) >= 2              # different ally counts (5 vs 2)
     finally:
         env.close()

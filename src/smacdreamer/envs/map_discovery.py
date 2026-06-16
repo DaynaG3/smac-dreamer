@@ -407,8 +407,76 @@ def discover(
     return [_to_entry(r) for r in train], [_to_entry(r) for r in test], pad_dims
 
 
+def discover_folders(
+    train_folder: str,
+    validation_folder: str,
+    padding_override: Optional[dict] = None,
+    obs_mode: str = "flat",
+    recursive: bool = True,
+    family_from_parent: bool = True,
+    verbose: bool = True,
+    isolate_probe: bool = False,
+    probe_workers: int = 4,
+    probe_maxtasks: int = 10,
+) -> tuple[list, list, PaddingDims]:
+    """Explicit-folder discovery (no ratio split).
+
+    The TRAIN folder alone sets the model padding (TRAIN-max, or the config override). The
+    VALIDATION folder is held out for checkpoint selection and must FIT that padding (safety
+    net over train+validation). ONLY these two folders are scanned — blind splits are never
+    touched during training. Returns ``(train_entries, validation_entries, pad_dims)``.
+    """
+    tr_incl, tr_exc, tr_inv = scan_folder(
+        train_folder, recursive=recursive, family_from_parent=family_from_parent,
+        verbose=verbose, isolate_probe=isolate_probe,
+        probe_workers=probe_workers, probe_maxtasks=probe_maxtasks)
+    if not tr_incl:
+        raise ValueError(f"no valid TRAIN maps in {train_folder} "
+                         f"(excluded={len(tr_exc)}, invalid={len(tr_inv)})")
+    pad_dims = compute_train_max_padding(tr_incl, padding_override)
+
+    va_incl, va_exc, va_inv = scan_folder(
+        validation_folder, recursive=recursive, family_from_parent=family_from_parent,
+        verbose=verbose, isolate_probe=isolate_probe,
+        probe_workers=probe_workers, probe_maxtasks=probe_maxtasks)
+    if not va_incl:
+        raise ValueError(f"no valid VALIDATION maps in {validation_folder} "
+                         f"(excluded={len(va_exc)}, invalid={len(va_inv)})")
+
+    # Validation maps must fit the TRAIN-derived padding (never grow the model for validation).
+    safety_net_check(tr_incl + va_incl, pad_dims, obs_mode=obs_mode)
+
+    if verbose:
+        src = "config override" if padding_override else "TRAIN-max"
+        print(f"[discover_folders] train={len(tr_incl)} validation={len(va_incl)}  "
+              f"PADDING ({src}): max_agents={pad_dims.max_agents} max_enemies={pad_dims.max_enemies} "
+              f"max_actions={pad_dims.max_actions} max_obs_size={pad_dims.max_obs_size}  "
+              f"obs_mode={obs_mode}")
+        print(f"[discover_folders] safety-net: all {len(tr_incl) + len(va_incl)} train+val maps fit ✓")
+
+    return [_to_entry(r) for r in tr_incl], [_to_entry(r) for r in va_incl], pad_dims
+
+
+def scan_folder_entries(
+    folder: str,
+    *,
+    recursive: bool = True,
+    family_from_parent: bool = True,
+    verbose: bool = True,
+    isolate_probe: bool = True,
+) -> list:
+    """Scan a single folder and return its valid MapEntry list (e.g. a blind split for
+    post-training standalone evaluation). Does NOT compute padding or a split."""
+    incl, _exc, _inv = scan_folder(
+        folder, recursive=recursive, family_from_parent=family_from_parent,
+        verbose=verbose, isolate_probe=isolate_probe)
+    if not incl:
+        raise ValueError(f"no valid maps in {folder}")
+    return [_to_entry(r) for r in incl]
+
+
 __all__ = [
-    "SplitSpec", "discover", "scan_folder", "split_maps",
-    "compute_train_max_padding", "safety_net_check", "validate_map", "sha256_file",
-    "KNOWN_UNIT_TYPES",
+    "SplitSpec", "discover", "discover_folders", "scan_folder", "scan_folder_entries",
+    "split_maps", "compute_train_max_padding", "safety_net_check", "validate_map",
+    "sha256_file", "KNOWN_UNIT_TYPES",
 ]

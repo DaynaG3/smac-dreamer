@@ -10,7 +10,9 @@ import types
 import numpy as np
 import pytest
 
-from smacdreamer.evaluation import evaluate_heldout, DEFAULT_FIXED_SEEDS
+from smacdreamer.evaluation import (
+    evaluate_heldout, is_validation_improvement, DEFAULT_FIXED_SEEDS,
+)
 
 from conftest import requires_smaclite
 
@@ -138,6 +140,40 @@ def test_empty_seeds_raises():
 
 def test_default_fixed_seeds_present():
     assert len(DEFAULT_FIXED_SEEDS) >= 1
+
+
+# ----------------------------------------------------------------------
+# P0.4: best-checkpoint selection rule (macro win rate; tie-break macro return)
+# ----------------------------------------------------------------------
+
+def test_validation_improvement_win_rate_dominates():
+    # Higher macro win rate wins regardless of return.
+    assert is_validation_improvement(0.6, 0.0, best_win_rate=0.5, best_original_return=100.0)
+    # Lower win rate never improves, even with a much higher return.
+    assert not is_validation_improvement(0.4, 999.0, best_win_rate=0.5, best_original_return=0.0)
+
+
+def test_validation_improvement_tie_broken_by_return():
+    # Equal win rate -> higher ORIGINAL return wins.
+    assert is_validation_improvement(0.5, 12.0, best_win_rate=0.5, best_original_return=10.0)
+    # Equal win rate + lower/equal return -> no improvement.
+    assert not is_validation_improvement(0.5, 10.0, best_win_rate=0.5, best_original_return=10.0)
+    assert not is_validation_improvement(0.5, 9.0, best_win_rate=0.5, best_original_return=10.0)
+
+
+def test_validation_improvement_first_eval_always_improves():
+    # Initial best is (-1.0, -inf) in ValidationTrainer, so the first validation always saves.
+    assert is_validation_improvement(0.0, 0.0, best_win_rate=-1.0, best_original_return=float("-inf"))
+
+
+# ----------------------------------------------------------------------
+# P0.4: explicit-folder discovery guards (no smaclite needed for missing folders)
+# ----------------------------------------------------------------------
+
+def test_discover_folders_missing_folder_raises():
+    from smacdreamer.envs.map_discovery import discover_folders
+    with pytest.raises(FileNotFoundError):
+        discover_folders("does/not/exist/train", "does/not/exist/validation", verbose=False)
 
 
 # ======================================================================
