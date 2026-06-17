@@ -13,11 +13,16 @@ class Targeter(object):
 
 class StandardTargeter(Targeter):
     def target(self, origin, target, **kwargs) -> float:
+        if target is None or target.hp <= 0:
+            return 0
         return origin.deal_damage(target)
 
 
 class HealTargeter(Targeter):
     def target(self, origin, target, **kwargs) -> float:
+        if target is None or target.hp <= 0:
+            origin.target = None
+            return 0
         origin.heal(target)
         return 0
 
@@ -31,6 +36,8 @@ class KamikazeTargeter(Targeter):
         self.radius = radius
 
     def target(self, origin, target, **kwargs) -> float:
+        if target is None or target.hp <= 0:
+            return 0
         neighbour_finder = kwargs["neighbour_finder"]
         max_radius = kwargs["max_radius"]
         reward_bonus = 0 if origin.faction == Faction.ALLY else origin.hp
@@ -63,10 +70,15 @@ class LaserBeamTargeter(Targeter):
         self.radius = np.hypot(self.width, self.height) / 2
 
     def target(self, origin, target, **kwargs) -> float:
+        if target is None or target.hp <= 0:
+            origin.target = None
+            return 0
         neighbour_finder = kwargs["neighbour_finder"]
 
         neighbours = neighbour_finder.query_radius([target], self.radius)[0]
-        poses = np.array([neighbour.pos for neighbour in neighbours])
+        if not neighbours:
+            return 0
+        poses = np.asarray([neighbour.pos for neighbour in neighbours], dtype=np.float32).reshape(-1, 2)
         transform_function = self.__get_transform_function(origin, target)
         transformed_target = transform_function(target.pos)
         transformed_poses = transform_function(poses)
@@ -85,7 +97,10 @@ class LaserBeamTargeter(Targeter):
         self, origin, target
     ) -> Callable[[np.ndarray], np.ndarray]:
         diff = target.pos - origin.pos
-        theta = np.arctan(-1 / (diff[1] / diff[0]))
+        if np.linalg.norm(diff) == 0:
+            theta = 0.0
+        else:
+            theta = np.arctan2(-diff[0], diff[1])
         c, s = np.cos(theta), np.sin(theta)
         rot_matrix = np.array([[c, -s], [s, c]])
         return lambda x: np.dot(x, rot_matrix)

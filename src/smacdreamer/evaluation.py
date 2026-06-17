@@ -129,6 +129,7 @@ def evaluate_heldout(
     obs_mode: str = "flat",
     env_factory: Optional[Callable] = None,
     episode_fn: Optional[Callable] = None,
+    shutdown_timeout_seconds: float = 5.0,
     progress: bool = False,
 ) -> dict:
     """Evaluate ``agent`` on every held-out map under every seed; return a structured report.
@@ -137,7 +138,7 @@ def evaluate_heldout(
     ----------
     test_entries : list of MapEntry (need ``.name``; ``.family`` optional).
     seeds        : the fixed eval seeds — every map is run once per seed.
-    env_factory  : ``make_smaclite_multimap_env`` by default; injectable for testing.
+    env_factory  : isolated SMAClite subprocess factory by default; injectable for testing.
     episode_fn   : ``evaluate_episode`` by default; injectable for testing (no torch needed).
 
     The env for each map uses a ``fixed`` sampler over the single entry and the
@@ -151,8 +152,8 @@ def evaluate_heldout(
         raise ValueError("evaluate_heldout: fixed_eval_seeds is empty")
 
     if env_factory is None:
-        from smacdreamer.r2dreamer_factory import make_smaclite_multimap_env
-        env_factory = make_smaclite_multimap_env
+        from smacdreamer.isolated_env import make_isolated_smaclite_env
+        env_factory = make_isolated_smaclite_env
     if episode_fn is None:
         episode_fn = evaluate_episode
 
@@ -161,13 +162,26 @@ def evaluate_heldout(
 
     per_map: dict = {}
     pooled: list = []   # every episode's metric dict (for micro averaging)
+    validation_children: list = []
 
     for entry in test_entries:
-        env = env_factory(
-            [entry], pad_dims, "fixed", 0, 0, "smaclite_default", {},
-            gamma, max_episode_steps, obs_mode,
-        )
         try:
+            env = env_factory(
+                [entry], pad_dims, "fixed", 0, 0, "smaclite_default", {},
+                gamma, max_episode_steps, obs_mode,
+                shutdown_timeout_seconds=shutdown_timeout_seconds,
+            )
+        except TypeError as exc:
+            if "shutdown_timeout_seconds" not in str(exc):
+                raise
+            env = env_factory(
+                [entry], pad_dims, "fixed", 0, 0, "smaclite_default", {},
+                gamma, max_episode_steps, obs_mode,
+            )
+        try:
+            child_pid = getattr(env, "pid", None)
+            if child_pid is not None:
+                validation_children.append({"map": entry.name, "pid": int(child_pid)})
             ep_metrics = []
             for seed in seeds:
                 m = episode_fn(agent, env, seed, device, max_episode_steps)
@@ -178,6 +192,11 @@ def evaluate_heldout(
                 env.close()
             except Exception:
                 pass
+            if getattr(env, "is_alive", False):
+                raise RuntimeError(
+                    f"validation child still alive after map {entry.name!r}: "
+                    f"pid={getattr(env, 'pid', None)}"
+                )
 
         agg = {k: _mean([m[k] for m in ep_metrics]) for k in _METRICS}
         wins = int(sum(1 for m in ep_metrics if m["win"]))
@@ -232,6 +251,7 @@ def evaluate_heldout(
         "macro": macro,
         "micro": micro,
         "per_map": per_map,
+        "validation_children": validation_children,
     }
 
 

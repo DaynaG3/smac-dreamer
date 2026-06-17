@@ -24,6 +24,7 @@ Acceptance (this script):
 import argparse
 import hashlib
 import json
+import os
 import pathlib
 import sys
 
@@ -48,6 +49,7 @@ from smacdreamer.validation_trainer import ValidationTrainer
 from smacdreamer.wandb_logger import WandbLogger
 from smacdreamer.checkpointing import PeriodicCheckpointer, attach_checkpointing
 from smacdreamer.envs.reward_registry import resolved_params
+from smacdreamer.cuda_preflight import resolve_amp_dtype, run_cuda_preflight
 
 # Reuse the exact Dreamer/buffer/trainer config from the debug script.
 from train_r2dreamer_smaclite_debug import make_config as _make_debug_config  # noqa: E402
@@ -88,12 +90,22 @@ def main():
     ap.add_argument("--config", default="configs/multimap.yaml", help="multimap YAML config")
     ap.add_argument("--steps", type=int, default=None, help="override total env steps")
     ap.add_argument("--logdir", default=None, help="override logdir")
+    ap.add_argument("--wandb-project", default=None, help="override W&B project")
+    ap.add_argument("--wandb-entity", default=None, help="override W&B entity/user/team")
+    ap.add_argument("--wandb-mode", default=None, choices=("online", "offline", "disabled"),
+                    help="override W&B mode")
+    ap.add_argument("--resume", default=None, help="checkpoint path to resume model/training state")
     args = ap.parse_args()
 
     cfg = OmegaConf.load(str((ROOT / args.config) if not pathlib.Path(args.config).is_absolute() else args.config))
     steps = int(args.steps if args.steps is not None else cfg.steps)
     logdir = pathlib.Path(args.logdir or cfg.get("logdir", "logs/r2dreamer/multimap"))
     logdir.mkdir(parents=True, exist_ok=True)
+    train_envs = None
+    logger = None
+    replay_buffer = None
+    checkpointer = None
+    wandb_project = None
 
     # --- Build the Dreamer/buffer/trainer config (reuse debug builder) ---------
     debug_args = argparse.Namespace(
@@ -114,6 +126,12 @@ def main():
     _buf_cfg = cfg.get("buffer") or {}
     config.buffer.max_size = int(_buf_cfg.get("max_size", config.buffer.max_size))
     config.buffer.storage_device = str(_buf_cfg.get("storage_device", config.buffer.storage_device))
+    config.buffer.storage_backend = str(_buf_cfg.get("storage_backend", "tensor"))
+    scratch_cfg = _buf_cfg.get("scratch_dir", "replay")
+    scratch_path = pathlib.Path(str(scratch_cfg))
+    if not scratch_path.is_absolute():
+        scratch_path = logdir / scratch_path
+    config.buffer.scratch_dir = str(scratch_path)
 
     # --- Observation mode (flat | structured) ----------------------------------
     obs_mode = str(cfg.observation.mode) if cfg.get("observation") else "flat"
@@ -126,12 +144,14 @@ def main():
         raise ValueError("action_masking requires observation.mode: structured")
     config.model.action_masking = action_masking
     config.model.mask_threshold = float(cfg.get("mask_threshold", 0.7))
-    config.model.amp_dtype = str(cfg.get("amp_dtype", "float16"))   # "bfloat16" avoids fp16 overflow
+    config.model.amp_dtype = resolve_amp_dtype(str(cfg.get("amp_dtype", "bfloat16")), str(cfg.device))
+    run_cuda_preflight(str(cfg.device), str(config.model.amp_dtype))
 
     # --- Validation cadence + fixed seeds (explicit seed list, NOT a worker count) -----
     val_cfg = cfg.get("validation") or {}
     _eval_cfg = cfg.get("eval") or {}
     val_every = int(val_cfg.get("every", _eval_cfg.get("every", 0)))
+    val_run_at_start = bool(val_cfg.get("run_at_start", False))
     if val_cfg.get("seeds") is not None:
         val_seeds = [int(s) for s in OmegaConf.to_container(val_cfg.seeds, resolve=True)]
     elif _eval_cfg.get("fixed_seeds") is not None:
@@ -140,6 +160,7 @@ def main():
         val_seeds = [0, 1, 2]
     config.trainer.eval_every = val_every if val_every > 0 else steps + 1
     config.trainer.eval_episode_num = 1   # sentinel >0 so ValidationTrainer.eval() fires
+    config.trainer.system_log_every = int(cfg.get("system_log_every", 10_000))
 
     # --- Dataset: explicit train/validation folders (no ratio split) OR legacy split ----
     padding_override = OmegaConf.to_container(cfg.padding, resolve=True) if cfg.get("padding") else None
@@ -175,6 +196,10 @@ def main():
     print(f"  reward     : {reward_name}  (hash {rhash})")
     print(f"  train maps : {len(train_entries)}   validation maps: {len(val_entries)}")
     print(f"  validation : every {val_every} steps, seeds {val_seeds}")
+    print(f"  val start  : {val_run_at_start}")
+    print(f"  amp_dtype  : {config.model.amp_dtype}")
+    print(f"  replay     : backend={config.buffer.storage_backend} capacity={config.buffer.max_size} "
+          f"storage_device={config.buffer.storage_device} scratch={config.buffer.scratch_dir}")
     print(f"  steps      : {steps}   env_num: {cfg.env_num}   device: {cfg.device}")
     print(f"  run_name   : {run_name}")
     print(f"{'='*64}\n")
@@ -182,6 +207,7 @@ def main():
     tools.set_seed_everywhere(int(cfg.seed))
 
     # --- Train envs ONLY (validation handled by ValidationTrainer; no worker-eval pool) -
+    env_lifecycle = OmegaConf.to_container(cfg.get("env_lifecycle", {}), resolve=True) or {}
     train_envs, eval_envs, obs_space, act_space, discovery = make_smaclite_multimap_envs(
         maps_folder=str(maps_cfg.get("train", cfg.get("maps_folder", ""))),
         split_spec={},
@@ -197,6 +223,7 @@ def main():
         padding_override=padding_override,
         obs_mode=obs_mode,
         train_entries=train_entries, test_entries=val_entries, pad_dims=pad_dims,
+        env_lifecycle=env_lifecycle,
     )
     print(f"  obs keys : {sorted(obs_space.spaces)}")
 
@@ -233,9 +260,28 @@ def main():
     }
     (logdir / "run_meta.json").write_text(json.dumps(run_meta, indent=2), encoding="utf-8")
 
-    wandb_project = cfg.wandb.get("project")
+    wandb_cfg = cfg.get("wandb") or {}
+    wandb_project = args.wandb_project or os.environ.get("WANDB_PROJECT") or wandb_cfg.get("project")
+    wandb_entity = args.wandb_entity or os.environ.get("WANDB_ENTITY") or wandb_cfg.get("entity")
+    wandb_mode = args.wandb_mode or os.environ.get("WANDB_MODE") or wandb_cfg.get("mode")
+    wandb_tags = wandb_cfg.get("tags")
+    if wandb_tags is not None:
+        wandb_tags = list(OmegaConf.to_container(wandb_tags, resolve=True))
     if wandb_project:
-        logger = WandbLogger(logdir, project=wandb_project, run_name=run_name, config=run_config)
+        wandb_kwargs = {}
+        if wandb_entity:
+            wandb_kwargs["entity"] = str(wandb_entity)
+        if wandb_mode:
+            wandb_kwargs["mode"] = str(wandb_mode)
+        if wandb_tags:
+            wandb_kwargs["tags"] = wandb_tags
+        logger = WandbLogger(
+            logdir,
+            project=str(wandb_project),
+            run_name=run_name,
+            config=run_config,
+            **wandb_kwargs,
+        )
     else:
         logger = tools.Logger(logdir)
         # Persist the run config alongside TensorBoard/JSONL so configs are distinguishable.
@@ -244,46 +290,62 @@ def main():
             encoding="utf-8",
         )
 
-    replay_buffer = Buffer(config.buffer)
+    try:
+        replay_buffer = Buffer(config.buffer)
 
-    # --- Agent -----------------------------------------------------------------
-    print("\nBuilding Dreamer agent...")
-    agent = Dreamer(config.model, obs_space, act_space).to(config.device)
-    print(f"  Parameters : {sum(p.numel() for p in agent.parameters()):,}")
+        # --- Agent -------------------------------------------------------------
+        print("\nBuilding Dreamer agent...")
+        agent = Dreamer(config.model, obs_space, act_space).to(config.device)
+        print(f"  Parameters : {sum(p.numel() for p in agent.parameters()):,}")
+        if args.resume:
+            ckpt = torch.load(args.resume, map_location=str(cfg.device))
+            agent.load_state_dict(ckpt["agent_state_dict"])
+            if ckpt.get("agent_training_state") and hasattr(agent, "load_training_state_dict"):
+                agent.load_training_state_dict(ckpt["agent_training_state"])
+                print(f"  [resume] restored model + optimizer/scheduler/scaler state from {args.resume}")
+            else:
+                print(f"  [resume] restored model weights only from {args.resume}")
+            print("  [resume] replay memmap restore is not implemented; replay will refill before updates.")
 
-    # --- Checkpointing ---------------------------------------------------------
-    checkpointer = None
-    if float(cfg.get("checkpoint_every_minutes", 0)) > 0:
-        checkpointer = PeriodicCheckpointer(
-            agent, logdir,
-            interval_seconds=float(cfg.checkpoint_every_minutes) * 60.0,
-            step_fn=lambda: replay_buffer.count() * config.trainer.action_repeat,
+        # --- Checkpointing -----------------------------------------------------
+        checkpointer = None
+        if float(cfg.get("checkpoint_every_minutes", 0)) > 0:
+            checkpointer = PeriodicCheckpointer(
+                agent, logdir,
+                interval_seconds=float(cfg.checkpoint_every_minutes) * 60.0,
+                step_fn=lambda: replay_buffer.count() * config.trainer.action_repeat,
+            )
+            attach_checkpointing(agent, checkpointer)
+            print(f"  Checkpoints : every {cfg.checkpoint_every_minutes:g} min -> {logdir/'latest.pt'}")
+
+        # --- Train -------------------------------------------------------------
+        print(f"\nStarting multimap training ({steps} env steps)...\n")
+        # ValidationTrainer replaces the old worker-based periodic evaluator: every `val_every`
+        # steps it runs map×seed validation, logs macro/micro metrics, and saves
+        # best_val_macro_winrate.pt (macro win rate; macro original return as tie-breaker).
+        trainer = ValidationTrainer(
+            config.trainer, replay_buffer, logger, logdir, train_envs,
+            validation_entries=val_entries, pad_dims=pad_dims, seeds=val_seeds,
+            device=str(cfg.device), gamma=float(cfg.gamma),
+            max_episode_steps=int(cfg.max_episode_steps), obs_mode=obs_mode,
+            run_at_start=val_run_at_start,
+            shutdown_timeout_seconds=float(env_lifecycle.get("shutdown_timeout_seconds", 5.0)),
         )
-        attach_checkpointing(agent, checkpointer)
-        print(f"  Checkpoints : every {cfg.checkpoint_every_minutes:g} min -> {logdir/'latest.pt'}")
+        trainer.begin(agent)
 
-    # --- Train -----------------------------------------------------------------
-    print(f"\nStarting multimap training ({steps} env steps)...\n")
-    # ValidationTrainer replaces the old worker-based periodic evaluator: every `val_every`
-    # steps it runs map×seed validation, logs macro/micro metrics, and saves
-    # best_val_macro_winrate.pt (macro win rate; macro original return as tie-breaker).
-    trainer = ValidationTrainer(
-        config.trainer, replay_buffer, logger, logdir, train_envs,
-        validation_entries=val_entries, pad_dims=pad_dims, seeds=val_seeds,
-        device=str(cfg.device), gamma=float(cfg.gamma),
-        max_episode_steps=int(cfg.max_episode_steps), obs_mode=obs_mode,
-    )
-    trainer.begin(agent)
-
-    if checkpointer is not None:
-        checkpointer.save(final=True)
-    else:
-        torch.save({"agent_state_dict": agent.state_dict()}, logdir / "latest.pt")
-        print(f"\nCheckpoint saved -> {logdir/'latest.pt'}")
-
-    if wandb_project:
-        logger.finish()
-    print("\nMultimap training complete.")
+        if checkpointer is not None:
+            checkpointer.save(final=True)
+        else:
+            torch.save({"agent_state_dict": agent.state_dict()}, logdir / "latest.pt")
+            print(f"\nCheckpoint saved -> {logdir/'latest.pt'}")
+        print("\nMultimap training complete.")
+    finally:
+        if train_envs is not None:
+            train_envs.close()
+        if replay_buffer is not None and hasattr(replay_buffer, "close"):
+            replay_buffer.close()
+        if wandb_project and logger is not None:
+            logger.finish()
 
 
 if __name__ == "__main__":

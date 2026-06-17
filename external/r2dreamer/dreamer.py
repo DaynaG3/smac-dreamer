@@ -177,10 +177,21 @@ class Dreamer(nn.Module):
             betas=(config.beta1, config.beta2),
             eps=config.eps,
         )
-        # AMP dtype: fp16 (default, needs GradScaler) or bf16 (fp32 exponent range -> no overflow,
-        # no scaler). bf16 is the fix when fp16 overflows (grad_scale decays to 1) on large obs.
+        # AMP dtype is explicit. bf16 avoids fp16 overflow on large structured observations;
+        # float32 disables autocast and GradScaler. Unknown values fail instead of silently
+        # becoming fp16.
         _amp = str(getattr(config, "amp_dtype", "float16")).lower()
-        self._amp_dtype = torch.bfloat16 if _amp in ("bfloat16", "bf16") else torch.float16
+        if _amp in ("bfloat16", "bf16"):
+            self._amp_dtype = torch.bfloat16
+        elif _amp in ("float16", "fp16"):
+            self._amp_dtype = torch.float16
+        elif _amp in ("float32", "fp32", "none", "off"):
+            self._amp_dtype = torch.float32
+        else:
+            raise ValueError(
+                f"Unsupported amp_dtype {getattr(config, 'amp_dtype', None)!r}; "
+                "expected bfloat16, float16, or float32."
+            )
         self._scaler = GradScaler(
             enabled=(self.device.type == "cuda" and self._amp_dtype == torch.float16))
 
@@ -196,6 +207,28 @@ class Dreamer(nn.Module):
         if config.compile:
             print("Compiling update function with torch.compile...")
             self._cal_grad = torch.compile(self._cal_grad, mode="reduce-overhead")
+
+    def training_state_dict(self):
+        return {
+            "optimizer": self._optimizer.state_dict(),
+            "scheduler": self._scheduler.state_dict(),
+            "scaler": self._scaler.state_dict(),
+            "slow_value": self._slow_value.state_dict(),
+            "slow_value_updates": self._slow_value_updates,
+            "return_ema": self.return_ema.state_dict() if hasattr(self.return_ema, "state_dict") else None,
+            "torch_rng": torch.get_rng_state(),
+            "torch_cuda_rng": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
+        }
+
+    def load_training_state_dict(self, state):
+        self._optimizer.load_state_dict(state["optimizer"])
+        self._scheduler.load_state_dict(state["scheduler"])
+        if state.get("scaler") is not None:
+            self._scaler.load_state_dict(state["scaler"])
+        self._slow_value.load_state_dict(state["slow_value"])
+        self._slow_value_updates = int(state.get("slow_value_updates", self._slow_value_updates))
+        if state.get("return_ema") is not None and hasattr(self.return_ema, "load_state_dict"):
+            self.return_ema.load_state_dict(state["return_ema"])
 
     def _update_slow_target(self):
         """Update slow-moving value target network."""
@@ -374,9 +407,9 @@ class Dreamer(nn.Module):
         if self.rep_loss == "dreamerpro":
             self.ema_update()
         metrics = {}
-        # fp16 AMP + GradScaler are CUDA features; on CPU fp16 autocast is unstable (it
-        # overflows -> NaN, and the scaler can't protect it). Run fp32 on CPU, fp16 on GPU.
-        amp_enabled = self.device.type == "cuda"
+        # CUDA autocast is used only for real low-precision AMP. float32 intentionally runs
+        # without autocast and with GradScaler disabled.
+        amp_enabled = self.device.type == "cuda" and self._amp_dtype in (torch.float16, torch.bfloat16)
         with autocast(device_type=self.device.type, dtype=self._amp_dtype, enabled=amp_enabled):
             (stoch, deter), mets = self._cal_grad(p_data, initial)
         self._scaler.unscale_(self._optimizer)  # unscale grads in params

@@ -8,7 +8,7 @@ split / train-max padding / safety-net logic on synthetic 'included' result dict
 import pytest
 
 from smacdreamer.envs.map_discovery import (
-    SplitSpec, split_maps, compute_train_max_padding, safety_net_check,
+    SplitSpec, split_maps, compute_train_max_padding, safety_net_check, _raise_scan_failures,
 )
 from smacdreamer.envs.padding import PaddingDims
 
@@ -79,3 +79,23 @@ def test_safety_net_fails_and_names_oversize_test_map():
     with pytest.raises(ValueError) as ei:
         safety_net_check(inc, pad)
     assert "huge" in str(ei.value)
+
+
+def test_discovery_failure_report_consolidates_skipped_maps():
+    with pytest.raises(ValueError) as ei:
+        _raise_scan_failures(
+            "TRAIN",
+            excluded=[{"path": "dup.json", "reason": "duplicate"}],
+            invalid=[{"path": "bad.json", "reason": "env load/step failed: boom"}],
+        )
+    msg = str(ei.value)
+    assert "bad.json" in msg
+    assert "dup.json" in msg
+
+
+def test_r2_650_expected_split_file_counts():
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    base = root / "configs" / "maps" / "r2_650" / "configs"
+    assert len(list((base / "train").glob("*.json"))) == 400
+    assert len(list((base / "validation").glob("*.json"))) == 50

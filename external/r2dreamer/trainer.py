@@ -23,6 +23,8 @@ class OnlineTrainer:
         self._should_log = tools.Every(config.update_log_every)
         self._should_eval = tools.Every(self.eval_every)
         self._action_repeat = config.action_repeat
+        self.system_log_every = int(getattr(config, "system_log_every", 0) or 0)
+        self._should_log_system = tools.Every(self.system_log_every) if self.system_log_every > 0 else None
 
     def eval(self, agent, train_step):
         """Run evaluation episodes.
@@ -53,6 +55,7 @@ class OnlineTrainer:
             # on GPU).  The .to() calls below are no-ops when the data is
             # already on agent.device.
             # (B, A), (B,)
+            envs._last_step = int(step)
             trans, step_done = envs.step(act.detach(), done)
             # dict of (B, 1, *)
             trans = trans.to(agent.device, non_blocking=True)
@@ -121,6 +124,22 @@ class OnlineTrainer:
         # (B, A)
         act = agent_state["prev_action"].clone()
         while step < self.steps:
+            if self._should_log_system is not None and self._should_log_system(step):
+                try:
+                    from smacdreamer.system_metrics import log_system_metrics
+
+                    log_system_metrics(
+                        self.logger,
+                        step,
+                        worker_infos=envs.worker_infos() if hasattr(envs, "worker_infos") else (),
+                        replay_count=self.replay_buffer.count(),
+                        replay_backend=getattr(self.replay_buffer, "storage_backend", None),
+                        completed_episodes=getattr(envs, "completed_episodes", None),
+                        worker_restarts=getattr(envs, "worker_restarts", None),
+                    )
+                    self.logger.write(step)
+                except Exception as exc:
+                    print(f"[telemetry] skipped system metrics at step {step}: {exc}", flush=True)
             # Evaluation
             if self._should_eval(step) and self.eval_episode_num > 0 and self.eval_envs is not None:
                 self.eval(agent, step)

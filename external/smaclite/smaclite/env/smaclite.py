@@ -91,11 +91,12 @@ class SMACliteEnv(gym.Env):
         )
         # NOTE this has an assumption that healers can heal anything but
         # themselves, which is not exactly true in SC2
-        num_target_actions = (
-            max(self.n_agents - num_healers, self.n_enemies)
-            if num_healers
-            else self.n_enemies
-        )
+        # Healer target actions are addressed by ally id_in_faction
+        # (see __get_agent_avail_actions and __get_command), not by a compacted
+        # non-healer index. Allocate enough slots for the largest original ally
+        # id, otherwise maps with healer groups can raise e.g. "index 14 is out
+        # of bounds for axis 0 with size 14" during discovery/observation.
+        num_target_actions = max(self.n_agents, self.n_enemies) if num_healers else self.n_enemies
 
         self.n_actions = 6 + num_target_actions
         self.max_unit_radius = max(

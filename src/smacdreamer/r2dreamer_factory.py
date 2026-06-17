@@ -13,13 +13,16 @@ import sys
 import numpy as np
 
 
-def _worker_seed(base_seed: int, idx: int) -> int:
-    """Robust per-worker seed: hash (base_seed, idx) via SeedSequence.
+def _worker_seed(base_seed: int, idx: int, generation: int = 0) -> int:
+    """Robust per-worker seed: hash (base_seed, idx, generation) via SeedSequence.
 
     Avoids correlating adjacent RNG streams (base+idx). Validated by the §0 spike to give
     de-correlated per-worker map sequences.
     """
-    return int(np.random.SeedSequence([int(base_seed), int(idx)]).generate_state(1, dtype=np.uint32)[0])
+    return int(
+        np.random.SeedSequence([int(base_seed), int(idx), int(generation)])
+        .generate_state(1, dtype=np.uint32)[0]
+    )
 
 
 def _ensure_paths():
@@ -107,6 +110,7 @@ def make_smaclite_envs(
 def make_smaclite_multimap_env(
     entries, pad_dims, sampling_mode, base_seed, worker_idx,
     reward_name, reward_params, gamma, max_episode_steps, obs_mode="flat",
+    worker_generation=0,
 ):
     """Construct one R2-Dreamer-compatible multimap SMAClite env (worker-side).
 
@@ -125,13 +129,19 @@ def make_smaclite_multimap_env(
     from smacdreamer.envs.reward_registry import resolve
 
     sampler = MapSampler.from_entries(
-        entries, mode=sampling_mode, seed=_worker_seed(base_seed, worker_idx),
+        entries, mode=sampling_mode, seed=_worker_seed(base_seed, worker_idx, worker_generation),
     )
     reward_fn = resolve(reward_name, reward_params)
+    derived_seed = _worker_seed(base_seed, worker_idx, worker_generation)
+    print(
+        f"[env_lifecycle] constructing smaclite worker idx={worker_idx} "
+        f"generation={worker_generation} seed={derived_seed}",
+        flush=True,
+    )
     env = SMACliteDreamerEnv(
         scenario=entries[0].name,                 # placeholder; sampler drives map selection
         max_episode_steps=max_episode_steps,
-        seed=_worker_seed(base_seed, worker_idx),
+        seed=derived_seed,
         map_sampler=sampler,
         pad_dims=pad_dims,
         reward_fn=reward_fn,
@@ -158,6 +168,7 @@ def make_smaclite_multimap_envs(
     train_entries=None,         # if given, skip discovery (explicit-folder datasets)
     test_entries=None,
     pad_dims=None,
+    env_lifecycle=None,
 ):
     """Create multimap train + held-out eval ParallelEnv pools.
 
@@ -193,22 +204,40 @@ def make_smaclite_multimap_envs(
 
     reward_params = reward_params or {}
 
-    def train_ctor(idx):
+    lifecycle = env_lifecycle or {}
+
+    def train_ctor(idx, generation=0):
         return lambda: make_smaclite_multimap_env(
             train_entries, pad_dims, sampling_mode, seed, idx,
             reward_name, reward_params, gamma, max_episode_steps, obs_mode=obs_mode,
+            worker_generation=generation,
         )
 
     # Eval pool: held-out TEST maps, SAME padding, ORIGINAL reward (smaclite_default).
-    def eval_ctor(idx):
+    def eval_ctor(idx, generation=0):
         return lambda: make_smaclite_multimap_env(
             test_entries, pad_dims, sampling_mode, seed + 10_000, idx,
             "smaclite_default", {}, gamma, max_episode_steps, obs_mode=obs_mode,
+            worker_generation=generation,
         )
 
-    train_envs = ParallelEnv(train_ctor, env_num, device)
+    train_envs = ParallelEnv(
+        train_ctor,
+        env_num,
+        device,
+        max_episodes_per_worker=int(lifecycle.get("max_episodes_per_worker", 0) or 0),
+        shutdown_timeout_seconds=float(lifecycle.get("shutdown_timeout_seconds", 5.0)),
+        log_worker_memory=bool(lifecycle.get("log_worker_memory", False)),
+    )
     eval_envs = (
-        ParallelEnv(eval_ctor, eval_episode_num, device)
+        ParallelEnv(
+            eval_ctor,
+            eval_episode_num,
+            device,
+            max_episodes_per_worker=0,
+            shutdown_timeout_seconds=float(lifecycle.get("shutdown_timeout_seconds", 5.0)),
+            log_worker_memory=bool(lifecycle.get("log_worker_memory", False)),
+        )
         if eval_episode_num > 0 and test_entries
         else None
     )

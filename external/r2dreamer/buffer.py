@@ -1,7 +1,25 @@
+import pathlib
+
 import torch
 from tensordict import TensorDict
 from torchrl.data.replay_buffers import LazyTensorStorage, ReplayBuffer
 from torchrl.data.replay_buffers.samplers import SliceSampler
+
+
+def _load_memmap_storage():
+    try:
+        from torchrl.data.replay_buffers import LazyMemmapStorage
+        return LazyMemmapStorage
+    except Exception as first:
+        try:
+            from torchrl.data import LazyMemmapStorage
+            return LazyMemmapStorage
+        except Exception as second:
+            raise RuntimeError(
+                "buffer.storage_backend='memmap' was requested, but this TorchRL "
+                "installation does not expose LazyMemmapStorage. Upgrade TorchRL or "
+                "set buffer.storage_backend='tensor'."
+            ) from second
 
 
 class Buffer:
@@ -11,13 +29,54 @@ class Buffer:
         self.batch_size = int(config.batch_size)
         self.batch_length = int(config.batch_length)
         self.num_eps = 0
+        self.storage_backend = str(getattr(config, "storage_backend", "tensor"))
+        self.scratch_dir = getattr(config, "scratch_dir", None)
+        storage = self._make_storage(config)
+        if self.storage_backend == "memmap":
+            print(
+                f"[replay] backend=memmap capacity={int(config.max_size)} "
+                f"storage_device={self.storage_device} scratch_dir={self.scratch_dir}",
+                flush=True,
+            )
+        else:
+            print(
+                f"[replay] backend=tensor capacity={int(config.max_size)} "
+                f"storage_device={self.storage_device}",
+                flush=True,
+            )
         self._buffer = ReplayBuffer(
-            storage=LazyTensorStorage(max_size=config.max_size, device=self.storage_device, ndim=2),
+            storage=storage,
             sampler=SliceSampler(
                 num_slices=self.batch_size, end_key=None, traj_key="episode", truncated_key=None, strict_length=True
             ),
             prefetch=0,
             batch_size=self.batch_size * (self.batch_length + 1),  # +1 for context
+        )
+
+    def _make_storage(self, config):
+        if self.storage_backend == "tensor":
+            return LazyTensorStorage(max_size=config.max_size, device=self.storage_device, ndim=2)
+        if self.storage_backend == "memmap":
+            if not self.scratch_dir:
+                raise ValueError("buffer.storage_backend='memmap' requires buffer.scratch_dir")
+            scratch = pathlib.Path(str(self.scratch_dir))
+            scratch.mkdir(parents=True, exist_ok=True)
+            LazyMemmapStorage = _load_memmap_storage()
+            kwargs = {
+                "max_size": config.max_size,
+                "scratch_dir": str(scratch),
+                "device": self.storage_device,
+                "ndim": 2,
+            }
+            try:
+                return LazyMemmapStorage(**kwargs)
+            except TypeError as exc:
+                if "ndim" not in str(exc):
+                    raise
+                kwargs.pop("ndim")
+                return LazyMemmapStorage(**kwargs)
+        raise ValueError(
+            f"Unknown buffer.storage_backend {self.storage_backend!r}; expected 'tensor' or 'memmap'."
         )
 
     def add_transition(self, data):
@@ -57,3 +116,9 @@ class Buffer:
         if self._buffer.storage.shape is None:
             return 0
         return self._buffer.storage.shape.numel()
+
+    def close(self):
+        storage = getattr(self._buffer, "storage", None)
+        close = getattr(storage, "close", None)
+        if callable(close):
+            close()

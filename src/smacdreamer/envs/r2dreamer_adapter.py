@@ -106,3 +106,7 @@ class SMACliteR2DreamerAdapter(gym.Wrapper):
         done = bool(terminated or truncated)
         obs = self._merge_log_keys(obs, info)
         return obs, float(reward), done, info               # 4-tuple expected by ParallelEnv
+
+    def get_debug_context(self):
+        fn = getattr(self.env, "get_debug_context", None)
+        return fn() if callable(fn) else {}

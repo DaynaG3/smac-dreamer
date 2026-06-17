@@ -20,9 +20,11 @@ is a separate, larger task.
 """
 
 import os
+import random
 import time
 import pathlib
 
+import numpy as np
 import torch
 
 import tools  # r2dreamer's tools (recursively_collect_optim_state_dict)
@@ -71,7 +73,17 @@ class PeriodicCheckpointer:
         payload = {
             "agent_state_dict": self._agent.state_dict(),
             "optims_state_dict": tools.recursively_collect_optim_state_dict(self._agent),
+            "agent_training_state": (
+                self._agent.training_state_dict()
+                if hasattr(self._agent, "training_state_dict") else None
+            ),
             "step": step,
+            "rng_state": {
+                "python": random.getstate(),
+                "numpy": np.random.get_state(),
+                "torch": torch.get_rng_state(),
+                "torch_cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
+            },
         }
 
         latest = self._logdir / "latest.pt"

@@ -735,6 +735,16 @@ class SMACliteDreamerEnv(gym.Env):
     def close(self):
         self._env.close()
 
+    def get_debug_context(self) -> dict:
+        return {
+            "current_map": getattr(self, "_current_map_name", None),
+            "episode_step": getattr(self, "_ep_step", None),
+            "last_requested_action": list(getattr(self, "_last_requested_action", [])),
+            "last_executed_action": list(getattr(self, "_last_executed_action", [])),
+            "episode_invalid_action_count": getattr(self, "_ep_invalid_count", None),
+            "episode_total_action_count": getattr(self, "_ep_total_count", None),
+        }
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------

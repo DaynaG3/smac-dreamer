@@ -15,9 +15,86 @@ import tools
 
 
 class ParallelEnv:
-    def __init__(self, constructor, env_num, device):
-        self.envs = [Parallel(constructor(i), "process") for i in range(env_num)]
+    def __init__(
+        self,
+        constructor,
+        env_num,
+        device,
+        *,
+        max_episodes_per_worker=0,
+        shutdown_timeout_seconds=5.0,
+        log_worker_memory=False,
+    ):
+        self.constructor = constructor
+        self.envs = []
         self.device = device
+        self.max_episodes_per_worker = int(max_episodes_per_worker or 0)
+        self.shutdown_timeout_seconds = float(shutdown_timeout_seconds)
+        self.log_worker_memory = bool(log_worker_memory)
+        self._generations = [0 for _ in range(env_num)]
+        self._episodes_since_restart = [0 for _ in range(env_num)]
+        self._completed_episodes = [0 for _ in range(env_num)]
+        self._restart_count = 0
+        for idx in range(env_num):
+            self.envs.append(self._make_env(idx))
+
+    def _constructor_for(self, idx, generation):
+        try:
+            return self.constructor(idx, generation)
+        except TypeError:
+            return self.constructor(idx)
+
+    def _make_env(self, idx):
+        return Parallel(self._constructor_for(idx, self._generations[idx]), "process", slot=idx)
+
+    def _worker_context(self, idx, phase):
+        worker = self.envs[idx].worker.impl
+        return (
+            f"worker slot={idx} pid={worker.pid} exitcode={worker.exitcode} "
+            f"generation={self._generations[idx]} env_step={getattr(self, '_last_step', None)} "
+            f"phase={phase}"
+        )
+
+    def _restart_worker_if_due(self, idx, phase):
+        if self.max_episodes_per_worker <= 0:
+            return
+        if self._episodes_since_restart[idx] < self.max_episodes_per_worker:
+            return
+        old = self.envs[idx]
+        old_pid = old.worker.impl.pid
+        old.close(timeout=self.shutdown_timeout_seconds)
+        self._generations[idx] += 1
+        self._episodes_since_restart[idx] = 0
+        self._restart_count += 1
+        self.envs[idx] = self._make_env(idx)
+        print(
+            f"[env_lifecycle] restarted worker slot={idx} old_pid={old_pid} "
+            f"new_pid={self.envs[idx].worker.impl.pid} generation={self._generations[idx]} "
+            f"completed_episodes={self._completed_episodes[idx]} phase={phase}",
+            flush=True,
+        )
+
+    @property
+    def worker_restarts(self):
+        return self._restart_count
+
+    @property
+    def completed_episodes(self):
+        return int(sum(self._completed_episodes))
+
+    def worker_infos(self):
+        infos = []
+        for idx, env in enumerate(self.envs):
+            impl = env.worker.impl
+            infos.append({
+                "slot": idx,
+                "pid": impl.pid,
+                "exitcode": impl.exitcode,
+                "generation": self._generations[idx],
+                "episodes_since_restart": self._episodes_since_restart[idx],
+                "completed_episodes": self._completed_episodes[idx],
+            })
+        return infos
 
     @property
     def observation_space(self):
@@ -52,18 +129,37 @@ class ParallelEnv:
         # Ensure inputs are on CPU for worker processes.
         action_np = tools.to_np(action)  # handles any device via .detach().cpu().numpy()
         done = done.cpu() if done.is_cuda else done
-        promise = [e.reset() if d else e.step(a) for e, a, d in zip(self.envs, action_np, done)]
+        promise = []
+        for idx, (e, a, d) in enumerate(zip(self.envs, action_np, done)):
+            phase = "reset" if bool(d) else "step"
+            if bool(d):
+                self._restart_worker_if_due(idx, phase)
+                e = self.envs[idx]
+            try:
+                promise.append(e.reset() if bool(d) else e.step(a))
+            except Exception as exc:
+                raise RuntimeError(f"{self._worker_context(idx, phase)} failed to submit work") from exc
         new_o, new_r, new_d = [], [], []
-        for p, d in zip(promise, done):
-            if d:
-                new_o.append(p())
+        for idx, (p, d) in enumerate(zip(promise, done)):
+            phase = "reset" if bool(d) else "step"
+            if bool(d):
+                try:
+                    new_o.append(p())
+                except Exception as exc:
+                    raise RuntimeError(f"{self._worker_context(idx, phase)} failed during reset") from exc
                 new_r.append(0.0)
                 new_d.append(False)
             else:
-                o, r, d, _ = p()
+                try:
+                    o, r, d, _ = p()
+                except Exception as exc:
+                    raise RuntimeError(f"{self._worker_context(idx, phase)} failed during step") from exc
                 new_o.append(o)
                 new_r.append(r)
                 new_d.append(d)
+                if d:
+                    self._completed_episodes[idx] += 1
+                    self._episodes_since_restart[idx] += 1
         obs_stacked = {k: np.stack([o[k] for o in new_o]) for k in new_o[0].keys()}
 
         # Build CPU tensors first to avoid implicit GPU syncs and enable async H2D in caller.
@@ -79,11 +175,16 @@ class ParallelEnv:
         done = torch.as_tensor(new_d, device="cpu")
         return self.lift_dim(td), done
 
+    def close(self):
+        for env in self.envs:
+            env.close(timeout=self.shutdown_timeout_seconds)
+
 
 class Parallel:
-    def __init__(self, constructor, strategy):
+    def __init__(self, constructor, strategy, slot=None):
         self.worker = Worker(bind(self._respond, constructor), strategy, state=True)
         self.callables = {}
+        self.slot = slot
 
     def __getattr__(self, name):
         if name.startswith("_"):
@@ -100,20 +201,28 @@ class Parallel:
     def __len__(self):
         return self.worker(PMessage.CALL, "__len__")()
 
-    def close(self):
-        self.worker.close()
+    def close(self, timeout=None):
+        self.worker.close(timeout=timeout)
 
     @staticmethod
     def _respond(constructor, state, message, name, *args, **kwargs):
         state = state or constructor()  # Instantiate at first time
-        if message == PMessage.CALLABLE:
-            assert not args and not kwargs, (args, kwargs)
-            result = callable(getattr(state, name))
-        elif message == PMessage.CALL:
-            result = getattr(state, name)(*args, **kwargs)
-        elif message == PMessage.READ:
-            assert not args and not kwargs, (args, kwargs)
-            result = getattr(state, name)
+        try:
+            if message == PMessage.CALLABLE:
+                assert not args and not kwargs, (args, kwargs)
+                result = callable(getattr(state, name))
+            elif message == PMessage.CALL:
+                result = getattr(state, name)(*args, **kwargs)
+            elif message == PMessage.READ:
+                assert not args and not kwargs, (args, kwargs)
+                result = getattr(state, name)
+        except Exception as exc:
+            context = {}
+            debug_context = getattr(state, "get_debug_context", None)
+            if callable(debug_context):
+                with contextlib.suppress(Exception):
+                    context = debug_context()
+            raise RuntimeError(f"worker env call failed: op={name} context={context}") from exc
         return state, result
 
 
@@ -148,8 +257,8 @@ class Worker:
     def wait(self):
         return self.impl.wait()
 
-    def close(self):
-        self.impl.close()
+    def close(self, timeout=None):
+        self.impl.close(timeout=0.1 if timeout is None else timeout)
 
 
 class ProcessPipeWorker:
@@ -175,22 +284,33 @@ class ProcessPipeWorker:
     def wait(self):
         pass
 
-    def close(self):
+    def close(self, timeout=0.1):
         try:
             self._pipe.send((Message.STOP, self._nextid, None))
             self._pipe.close()
         except (AttributeError, OSError):
             pass  # The connection was already closed.
         try:
-            self._process.join(0.1)
+            self._process.join(float(timeout))
             if self._process.exitcode is None:
                 try:
-                    os.kill(self._process.pid, 9)
-                    time.sleep(0.1)
+                    self._process.terminate()
+                    self._process.join(float(timeout))
+                    if self._process.exitcode is None:
+                        os.kill(self._process.pid, 9)
+                        time.sleep(0.1)
                 except Exception:
                     pass
         except (AttributeError, AssertionError):
             pass
+
+    @property
+    def pid(self):
+        return getattr(self._process, "pid", None)
+
+    @property
+    def exitcode(self):
+        return getattr(self._process, "exitcode", None)
 
     def _submit(self, message, payload=None):
         callid = self._nextid
@@ -203,7 +323,9 @@ class ProcessPipeWorker:
             try:
                 message, received_callid, payload = self._pipe.recv()
             except (OSError, EOFError):
-                raise RuntimeError("Lost connection to worker.")
+                raise RuntimeError(
+                    f"Lost connection to worker pid={self.pid} exitcode={self.exitcode}."
+                )
             if message == Message.ERROR:
                 raise Exception(payload)
             if message == Message.RESULT:

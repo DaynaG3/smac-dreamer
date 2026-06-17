@@ -45,11 +45,22 @@ class AttackUnitCommand(Command):
     def __init__(self, target: Unit):
         self.target = target
 
+    def _target_alive(self) -> bool:
+        return self.target is not None and self.target.hp > 0
+
     def clean_up_target(self, unit: Unit) -> None:
+        if not self._target_alive():
+            unit.target = None
+            unit.attacking = False
+            return
         assert self.target.hp >= 0
-        unit.target = self.target if self.target.hp > 0 else None
+        unit.target = self.target
 
     def prepare_velocity(self, unit: Unit) -> None:
+        if not self._target_alive():
+            unit.target = None
+            unit.attacking = False
+            return np.zeros(2)
         if not unit.has_within_attack_range(self.target) \
                 or self.target.plane not in unit.valid_targets:
             # Target too far away or unit incapable of attacking target
@@ -59,6 +70,10 @@ class AttackUnitCommand(Command):
         return np.zeros(2)
 
     def execute(self, unit: Unit, **kwargs) -> float:
+        if not self._target_alive():
+            unit.target = None
+            unit.attacking = False
+            return 0
         if not unit.attacking:
             return MoveCommand(self.target.pos).execute(unit, **kwargs)
         unit.attacking = False

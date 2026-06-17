@@ -273,6 +273,19 @@ def _to_entry(r: dict) -> MapEntry:
     )
 
 
+def _raise_scan_failures(label: str, excluded: list, invalid: list) -> None:
+    failures = []
+    for item in invalid:
+        failures.append(f"INVALID {item['path']}: {item['reason']}")
+    for item in excluded:
+        failures.append(f"EXCLUDED {item['path']}: {item['reason']}")
+    if failures:
+        raise ValueError(
+            f"{label} map discovery found {len(failures)} skipped map(s); refusing "
+            "to start with silent map loss:\n  " + "\n  ".join(failures)
+        )
+
+
 @dataclass
 class SplitSpec:
     """Train/test split specification (test = held-out)."""
@@ -386,6 +399,7 @@ def discover(
     included, excluded, invalid = scan_folder(
         folder, recursive=recursive, family_from_parent=family_from_parent, verbose=verbose,
         isolate_probe=isolate_probe, probe_workers=probe_workers, probe_maxtasks=probe_maxtasks)
+    _raise_scan_failures(str(folder), excluded, invalid)
     if not included:
         raise ValueError(f"no valid maps in {folder} (excluded={len(excluded)}, invalid={len(invalid)})")
 
@@ -430,6 +444,7 @@ def discover_folders(
         train_folder, recursive=recursive, family_from_parent=family_from_parent,
         verbose=verbose, isolate_probe=isolate_probe,
         probe_workers=probe_workers, probe_maxtasks=probe_maxtasks)
+    _raise_scan_failures("TRAIN", tr_exc, tr_inv)
     if not tr_incl:
         raise ValueError(f"no valid TRAIN maps in {train_folder} "
                          f"(excluded={len(tr_exc)}, invalid={len(tr_inv)})")
@@ -439,6 +454,7 @@ def discover_folders(
         validation_folder, recursive=recursive, family_from_parent=family_from_parent,
         verbose=verbose, isolate_probe=isolate_probe,
         probe_workers=probe_workers, probe_maxtasks=probe_maxtasks)
+    _raise_scan_failures("VALIDATION", va_exc, va_inv)
     if not va_incl:
         raise ValueError(f"no valid VALIDATION maps in {validation_folder} "
                          f"(excluded={len(va_exc)}, invalid={len(va_inv)})")
@@ -470,6 +486,7 @@ def scan_folder_entries(
     incl, _exc, _inv = scan_folder(
         folder, recursive=recursive, family_from_parent=family_from_parent,
         verbose=verbose, isolate_probe=isolate_probe)
+    _raise_scan_failures(str(folder), _exc, _inv)
     if not incl:
         raise ValueError(f"no valid maps in {folder}")
     return [_to_entry(r) for r in incl]

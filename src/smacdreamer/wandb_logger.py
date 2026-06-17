@@ -13,6 +13,7 @@ Usage
 """
 
 import pathlib
+import os
 
 import tools  # r2dreamer's tools module (must be on sys.path)
 
@@ -34,6 +35,8 @@ class WandbLogger(tools.Logger):
 
         import wandb
         self._wandb = wandb
+        if os.environ.get("WANDB_API_KEY"):
+            wandb.login(key=os.environ["WANDB_API_KEY"], relogin=True)
 
         # Flatten OmegaConf config to a plain dict for wandb hparams panel.
         flat_config = None
