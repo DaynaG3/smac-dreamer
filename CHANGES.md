@@ -19,3 +19,10 @@
 - Discovery now refuses to start when maps were skipped and reports all skipped filenames and causes together.
 - Added Kaggle setup script/docs and runtime dependencies in `pyproject.toml` without listing `torch` directly.
 - Checkpoints now include richer Dreamer training state and RNG state. Replay memmap resume is still not implemented; resume logs that replay refills.
+
+## Worker recycling sampler continuity
+
+- Worker recycling no longer changes the logical map stream. Sampler seeds are stable per worker slot; simulator seeds remain generation-dependent.
+- Replacement workers receive the slot's completed-episode offset and advance the sampler cursor before the first reset.
+- `MapSampler.advance(count)` restores deterministic cursor and coverage state for round-robin, shuffled-round-robin, and RNG-based modes.
+- `ParallelEnv` constructor compatibility now uses signature inspection instead of broad `TypeError` fallback.

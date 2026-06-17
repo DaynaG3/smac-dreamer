@@ -254,37 +254,56 @@ class MapSampler:
 
         if mode == 'fixed':
             entry = self.maps[0]
+            wrapped = False
         elif mode == 'round_robin':
             entry = self.maps[self._idx]
             self._idx = (self._idx + 1) % len(self.maps)
-            if self._idx == 0:
-                self.sampling_cycle += 1
-                self.maps_seen_this_cycle = 0
+            wrapped = self._idx == 0
         elif mode == 'seeded_random':
             entry = self._next_random
             self._next_random = self._rng.choice(self.maps)
+            wrapped = False
         elif mode in ('shuffled_round_robin', 'curriculum'):
             entry = self._shuffled_order[self._shuffled_idx]
             self._shuffled_idx += 1
-            if self._shuffled_idx >= len(self._shuffled_order):
-                self.sampling_cycle += 1
-                self.maps_seen_this_cycle = 0
+            wrapped = self._shuffled_idx >= len(self._shuffled_order)
+        elif mode == 'uniform_map':
+            entry = self._peek_cache
+            wrapped = False
+        elif mode == 'uniform_family':
+            entry = self._peek_cache
+            wrapped = False
+        elif mode == 'weighted':
+            entry = self._peek_cache
+            wrapped = False
+        else:
+            entry = self.maps[0]
+            wrapped = False
+
+        self._update_coverage(entry)
+        if wrapped:
+            self.sampling_cycle += 1
+            self.maps_seen_this_cycle = 0
+            if mode in ('shuffled_round_robin', 'curriculum'):
                 self._shuffled_order = list(self.maps)
                 self._rng.shuffle(self._shuffled_order)
                 self._shuffled_idx = 0
-        elif mode == 'uniform_map':
-            entry = self._rng.choice(self.maps)
-        elif mode == 'uniform_family':
-            fam = self._rng.choice(self._family_list)
-            entry = self._rng.choice(self._by_family[fam])
-        elif mode == 'weighted':
-            entry = self._rng.choices(self.maps, weights=self._weights, k=1)[0]
-        else:
-            entry = self.maps[0]
-
-        self._update_coverage(entry)
         self._peek_cache = self._compute_next_peek(mode)
         return entry
+
+    def advance(self, count: int) -> None:
+        """Advance the sampler by ``count`` consumed episodes.
+
+        Used when a recycled environment worker reconstructs a fresh sampler process but
+        must continue the same logical per-slot map sequence. Coverage metrics are updated
+        exactly as if ``next()`` had been called for each consumed episode, and ``peek()``
+        remains the next map that a subsequent reset will consume.
+        """
+        count = int(count)
+        if count < 0:
+            raise ValueError(f"advance count must be non-negative, got {count}")
+        for _ in range(count):
+            self.next()
 
     def _compute_next_peek(self, mode: str) -> MapEntry:
         """Compute peek after next() has advanced state."""

@@ -1,6 +1,7 @@
 import atexit
 import contextlib
 import enum
+import inspect
 import os
 import sys
 import time
@@ -39,10 +40,29 @@ class ParallelEnv:
             self.envs.append(self._make_env(idx))
 
     def _constructor_for(self, idx, generation):
+        offset = self._completed_episodes[idx]
         try:
+            sig = inspect.signature(self.constructor)
+        except (TypeError, ValueError):
+            return self.constructor(idx, generation, offset)
+        params = list(sig.parameters.values())
+        if any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in params):
+            return self.constructor(idx, generation, offset)
+        positional = [
+            p for p in params
+            if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+        ]
+        required = [p for p in positional if p.default is inspect.Parameter.empty]
+        if len(positional) >= 3:
+            return self.constructor(idx, generation, offset)
+        if len(positional) >= 2:
             return self.constructor(idx, generation)
-        except TypeError:
+        if len(positional) >= 1:
             return self.constructor(idx)
+        raise TypeError(
+            "ParallelEnv constructor must accept at least worker_idx, and may also accept "
+            "worker_generation and completed_episode_offset"
+        )
 
     def _make_env(self, idx):
         return Parallel(self._constructor_for(idx, self._generations[idx]), "process", slot=idx)
@@ -91,6 +111,7 @@ class ParallelEnv:
                 "pid": impl.pid,
                 "exitcode": impl.exitcode,
                 "generation": self._generations[idx],
+                "completed_episode_offset": self._completed_episodes[idx],
                 "episodes_since_restart": self._episodes_since_restart[idx],
                 "completed_episodes": self._completed_episodes[idx],
             })

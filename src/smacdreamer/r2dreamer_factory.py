@@ -110,7 +110,7 @@ def make_smaclite_envs(
 def make_smaclite_multimap_env(
     entries, pad_dims, sampling_mode, base_seed, worker_idx,
     reward_name, reward_params, gamma, max_episode_steps, obs_mode="flat",
-    worker_generation=0,
+    worker_generation=0, completed_episode_offset=0,
 ):
     """Construct one R2-Dreamer-compatible multimap SMAClite env (worker-side).
 
@@ -128,20 +128,22 @@ def make_smaclite_multimap_env(
     from smacdreamer.envs.map_sampler import MapSampler
     from smacdreamer.envs.reward_registry import resolve
 
-    sampler = MapSampler.from_entries(
-        entries, mode=sampling_mode, seed=_worker_seed(base_seed, worker_idx, worker_generation),
-    )
+    sampler_seed = _worker_seed(base_seed, worker_idx, 0)
+    simulator_seed = _worker_seed(base_seed, worker_idx, worker_generation)
+    sampler = MapSampler.from_entries(entries, mode=sampling_mode, seed=sampler_seed)
+    sampler.advance(int(completed_episode_offset))
     reward_fn = resolve(reward_name, reward_params)
-    derived_seed = _worker_seed(base_seed, worker_idx, worker_generation)
     print(
         f"[env_lifecycle] constructing smaclite worker idx={worker_idx} "
-        f"generation={worker_generation} seed={derived_seed}",
+        f"generation={worker_generation} sampler_seed={sampler_seed} "
+        f"simulator_seed={simulator_seed} completed_episode_offset={int(completed_episode_offset)} "
+        f"next_map={sampler.peek().name}",
         flush=True,
     )
     env = SMACliteDreamerEnv(
         scenario=entries[0].name,                 # placeholder; sampler drives map selection
         max_episode_steps=max_episode_steps,
-        seed=derived_seed,
+        seed=simulator_seed,
         map_sampler=sampler,
         pad_dims=pad_dims,
         reward_fn=reward_fn,
@@ -206,19 +208,21 @@ def make_smaclite_multimap_envs(
 
     lifecycle = env_lifecycle or {}
 
-    def train_ctor(idx, generation=0):
+    def train_ctor(idx, generation=0, completed_episode_offset=0):
         return lambda: make_smaclite_multimap_env(
             train_entries, pad_dims, sampling_mode, seed, idx,
             reward_name, reward_params, gamma, max_episode_steps, obs_mode=obs_mode,
             worker_generation=generation,
+            completed_episode_offset=completed_episode_offset,
         )
 
     # Eval pool: held-out TEST maps, SAME padding, ORIGINAL reward (smaclite_default).
-    def eval_ctor(idx, generation=0):
+    def eval_ctor(idx, generation=0, completed_episode_offset=0):
         return lambda: make_smaclite_multimap_env(
             test_entries, pad_dims, sampling_mode, seed + 10_000, idx,
             "smaclite_default", {}, gamma, max_episode_steps, obs_mode=obs_mode,
             worker_generation=generation,
+            completed_episode_offset=completed_episode_offset,
         )
 
     train_envs = ParallelEnv(
