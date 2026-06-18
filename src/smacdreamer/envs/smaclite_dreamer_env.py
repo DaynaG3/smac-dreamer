@@ -167,6 +167,7 @@ class SMACliteDreamerEnv(gym.Env):
         gamma: float = 0.997,             # shaping discount; MUST equal the agent's discount
         obs_mode: str = "flat",           # "flat" (legacy right-padded) | "structured" (P0.3)
         strict_actions: bool = False,     # raise on an invalid requested action (vs sanitise)
+        include_jepa_obs: bool = False,
     ):
         super().__init__()
         from smacdreamer.envs.reward_shaping import RewardShapingConfig as _RSC
@@ -177,6 +178,7 @@ class SMACliteDreamerEnv(gym.Env):
         # Observation representation. "flat" = the legacy whole-vector right-padding;
         # "structured" = the canonical per-entity layout (smacdreamer.envs.structured_obs).
         self._obs_mode = str(obs_mode)
+        self._include_jepa_obs = bool(include_jepa_obs)
         if self._obs_mode not in ("flat", "structured"):
             raise ValueError(
                 f"unsupported obs_mode {self._obs_mode!r}; expected 'flat' or 'structured' "
@@ -332,7 +334,17 @@ class SMACliteDreamerEnv(gym.Env):
         """
         if self._obs_mode == "structured":
             from smacdreamer.envs import structured_obs as _so
-            return _so.observation_space(self._structured_pad_dims())
+            d = dict(_so.observation_space(self._structured_pad_dims()).spaces)
+            if self._include_jepa_obs:
+                from smacdreamer.jepa.online_tokens import spec_from_env
+                spec = spec_from_env(getattr(self._env, "unwrapped", self._env), self._structured_pad_dims())
+                d["jepa_entity"] = spaces.Box(
+                    -np.inf, np.inf, shape=(spec.entities, spec.token_dim), dtype=np.float32)
+                d["jepa_entity_mask"] = spaces.Box(0.0, 1.0, shape=(spec.entities,), dtype=np.float32)
+                d["jepa_entity_slot_mask"] = spaces.Box(0.0, 1.0, shape=(spec.entities,), dtype=np.float32)
+                d["jepa_static_condition"] = spaces.Box(
+                    -np.inf, np.inf, shape=(spec.static_dim,), dtype=np.float32)
+            return spaces.Dict(d)
         A, C, O = self._obs_dims()
         d = {
             "state":         spaces.Box(-np.inf, np.inf, shape=(A * O,), dtype=np.float32),
@@ -897,6 +909,10 @@ class SMACliteDreamerEnv(gym.Env):
                 agent_type_g=agent_type_g, enemy_type_g=enemy_type_g,
             )
             obs = {**_so.flatten_for_model(blocks), **_is}
+            if self._include_jepa_obs:
+                from smacdreamer.jepa.online_tokens import build_jepa_observation
+                jepa_obs, _ = build_jepa_observation(uw, self._structured_pad_dims())
+                obs.update(jepa_obs)
         elif self._pad_dims is not None:
             from smacdreamer.envs.padding import (
                 pad_state, pad_avail, make_agent_mask, make_real_agent_action_mask,

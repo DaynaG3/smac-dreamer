@@ -1,5 +1,14 @@
 # Changes
 
+## Frozen JEPA world-model backend
+
+- Added optional `world_model.backend: jepa` alongside the default RSSM backend.
+- Added a strict JEPA checkpoint loader that requires `model_state`, `memory_module_state`, metadata, and resolved config.
+- Added a frozen JEPA runtime adapter with packed `stoch`/`deter` state, action adaptation, recursive imagination, and a trainable JEPA feature adapter.
+- Structured SMAClite envs can expose JEPA token fields only when JEPA mode is selected; RSSM observations remain unchanged.
+- Added `configs/r2_650_jepa.yaml`, checkpoint inspection/parity scripts, synthetic JEPA tests, and docs.
+- Real dataset/checkpoint parity is intentionally still a release gate because the real `.npz` episodes and checkpoint are not present locally.
+
 ## Runtime memory lifecycle patch
 
 - Held-out validation now runs SMAClite environments in spawned child processes, one child per validation map, while policy inference stays in the parent process.

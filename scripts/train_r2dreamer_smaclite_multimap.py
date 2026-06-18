@@ -95,6 +95,7 @@ def main():
     ap.add_argument("--wandb-mode", default=None, choices=("online", "offline", "disabled"),
                     help="override W&B mode")
     ap.add_argument("--resume", default=None, help="checkpoint path to resume model/training state")
+    ap.add_argument("--jepa-checkpoint", default=None, help="override world_model.jepa.checkpoint")
     args = ap.parse_args()
 
     cfg = OmegaConf.load(str((ROOT / args.config) if not pathlib.Path(args.config).is_absolute() else args.config))
@@ -144,6 +145,25 @@ def main():
         raise ValueError("action_masking requires observation.mode: structured")
     config.model.action_masking = action_masking
     config.model.mask_threshold = float(cfg.get("mask_threshold", 0.7))
+    wm_cfg = cfg.get("world_model") or {}
+    wm_backend = str(wm_cfg.get("backend", "rssm")).lower()
+    if wm_backend not in ("rssm", "jepa"):
+        raise ValueError(f"world_model.backend must be 'rssm' or 'jepa', got {wm_backend!r}")
+    config.model.world_model = OmegaConf.create(OmegaConf.to_container(wm_cfg, resolve=True) if wm_cfg else {})
+    config.model.world_model.backend = wm_backend
+    if wm_backend == "jepa":
+        if obs_mode != "structured":
+            raise ValueError("world_model.backend='jepa' requires observation.mode: structured")
+        if bool(config.model.world_model.get("jepa", {}).get("freeze_core", True)) is False:
+            raise NotImplementedError("JEPA online fine-tuning is not implemented; set freeze_core: true")
+        if bool(getattr(config.model, "compile", False)):
+            raise NotImplementedError("torch.compile is not enabled for the JEPA backend in this branch")
+        jepa_cfg = config.model.world_model.get("jepa") or OmegaConf.create({})
+        if args.jepa_checkpoint:
+            jepa_cfg.checkpoint = args.jepa_checkpoint
+        if not jepa_cfg.get("checkpoint"):
+            raise ValueError("world_model.backend='jepa' requires world_model.jepa.checkpoint or --jepa-checkpoint")
+        config.model.world_model.jepa = jepa_cfg
     config.model.amp_dtype = resolve_amp_dtype(str(cfg.get("amp_dtype", "bfloat16")), str(cfg.device))
     run_cuda_preflight(str(cfg.device), str(config.model.amp_dtype))
 
@@ -197,6 +217,9 @@ def main():
     print(f"  train maps : {len(train_entries)}   validation maps: {len(val_entries)}")
     print(f"  validation : every {val_every} steps, seeds {val_seeds}")
     print(f"  val start  : {val_run_at_start}")
+    print(f"  world_model: {wm_backend}")
+    if wm_backend == "jepa":
+        print(f"  jepa ckpt  : {config.model.world_model.jepa.checkpoint}")
     print(f"  amp_dtype  : {config.model.amp_dtype}")
     print(f"  replay     : backend={config.buffer.storage_backend} capacity={config.buffer.max_size} "
           f"storage_device={config.buffer.storage_device} scratch={config.buffer.scratch_dir}")
@@ -224,6 +247,7 @@ def main():
         obs_mode=obs_mode,
         train_entries=train_entries, test_entries=val_entries, pad_dims=pad_dims,
         env_lifecycle=env_lifecycle,
+        include_jepa_obs=(wm_backend == "jepa"),
     )
     print(f"  obs keys : {sorted(obs_space.spaces)}")
 
@@ -242,6 +266,7 @@ def main():
         "n_train_maps": len(train_entries),
         "n_validation_maps": len(val_entries),
         "model": config.model,
+        "world_model": config.model.world_model,
     })
 
     # Reconstruction metadata for standalone checkpoint eval: the EXACT obs mode + model dims
@@ -257,7 +282,13 @@ def main():
         "dataset_tag": dataset_tag, "explicit_folders": explicit,
         "validation_seeds": val_seeds,
         "maps_folder": str(maps_cfg.get("train", cfg.get("maps_folder", ""))),
+        "world_model_backend": wm_backend,
     }
+    if wm_backend == "jepa":
+        from smacdreamer.jepa.checkpoint import sha256_file
+        ckpt_path = pathlib.Path(str(config.model.world_model.jepa.checkpoint))
+        run_meta["jepa_checkpoint"] = str(ckpt_path)
+        run_meta["jepa_checkpoint_sha256"] = sha256_file(ckpt_path) if ckpt_path.exists() else None
     (logdir / "run_meta.json").write_text(json.dumps(run_meta, indent=2), encoding="utf-8")
 
     wandb_cfg = cfg.get("wandb") or {}

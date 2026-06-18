@@ -27,6 +27,10 @@ python scripts/evaluate_multimap.py --config configs/r2_650.yaml \
     --checkpoint logs/r2dreamer/r2_650/best_val_macro_winrate.pt --split blind_iid
 ```
 
+Optional frozen-JEPA backend work lives behind `world_model.backend: jepa` and
+requires installing the local `smac-jepa-wm` package plus providing a real JEPA
+checkpoint. See [`docs/jepa_r2dreamer_integration.md`](docs/jepa_r2dreamer_integration.md).
+
 See [`docs/CHANGES.md`](docs/CHANGES.md) for the full feature changelog and
 [`docs/diagnostics/`](docs/diagnostics/) for diagnostic reports.
 

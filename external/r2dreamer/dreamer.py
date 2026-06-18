@@ -15,6 +15,10 @@ import tools
 from networks import Projector
 from optim import LaProp, clip_grad_agc_
 from tools import to_f32
+try:
+    from smacdreamer.jepa.state import unpack_state as _jepa_unpack_state
+except Exception:  # smacdreamer may be absent for non-SMAClite RSSM users.
+    _jepa_unpack_state = None
 
 
 class Dreamer(nn.Module):
@@ -29,18 +33,78 @@ class Dreamer(nn.Module):
         self.return_ema = networks.ReturnEMA(device=self.device)
         self.act_dim = act_space.n if hasattr(act_space, "n") else sum(act_space.shape)
         self.rep_loss = str(config.rep_loss)
+        wm_cfg = getattr(config, "world_model", None)
+        self.world_model_backend = str(getattr(wm_cfg, "backend", "rssm") if wm_cfg is not None else "rssm").lower()
+        if self.world_model_backend not in ("rssm", "jepa"):
+            raise ValueError(f"Unsupported world_model.backend {self.world_model_backend!r}")
 
         # World model components
         shapes = {k: tuple(v.shape) for k, v in obs_space.spaces.items()}
-        self.encoder = networks.MultiEncoder(config.encoder, shapes)
-        self.embed_size = self.encoder.out_dim
-        self.rssm = rssm.RSSM(
-            config.rssm,
-            self.embed_size,
-            self.act_dim,
-        )
-        self.reward = networks.MLPHead(config.reward, self.rssm.feat_size)
-        self.cont = networks.MLPHead(config.cont, self.rssm.feat_size)
+        if self.world_model_backend == "rssm":
+            self.encoder = networks.MultiEncoder(config.encoder, shapes)
+            self.embed_size = self.encoder.out_dim
+            self.rssm = rssm.RSSM(
+                config.rssm,
+                self.embed_size,
+                self.act_dim,
+            )
+            self.feat_size = self.rssm.feat_size
+            self.jepa_world_model = None
+        else:
+            from smacdreamer.jepa.checkpoint import load_frozen_jepa_checkpoint
+            from smacdreamer.jepa.world_model import FrozenJEPAWorldModel
+
+            jepa_cfg = wm_cfg.jepa
+            if bool(getattr(jepa_cfg, "freeze_core", True)) is False:
+                raise NotImplementedError("JEPA fine-tuning is not implemented; set freeze_core=true")
+            if "jepa_entity" not in shapes:
+                raise ValueError("JEPA backend requires jepa_entity observation fields; enable include_jepa_obs")
+            e, token_dim = shapes["jepa_entity"]
+            static_dim = shapes["jepa_static_condition"][0]
+            actor_nvec = getattr(act_space, "nvec", None)
+            if actor_nvec is not None:
+                max_agents = int(len(actor_nvec))
+                max_actions = int(actor_nvec[0])
+            else:
+                max_agents = int(shapes.get("agent_slot_mask", (1,))[0])
+                max_actions = int(self.act_dim // max(max_agents, 1))
+            max_enemies = int(e) - max_agents
+            live_metadata = {
+                "mode": "entity",
+                "max_agents": max_agents,
+                "max_enemies": max_enemies,
+                "max_actions": max_actions,
+                "token_dim": int(token_dim),
+                "static_dim": int(static_dim),
+                "n_actions": max_actions,
+            }
+            core, memory, info = load_frozen_jepa_checkpoint(
+                str(jepa_cfg.checkpoint),
+                map_location=self.device,
+                live_metadata=live_metadata,
+                strict=bool(getattr(jepa_cfg, "strict_checkpoint", True)),
+            )
+            feature_dim = getattr(jepa_cfg, "feature_dim", None)
+            if feature_dim is None:
+                feature_dim = int(config.rssm.deter) + int(config.rssm.stoch) * int(config.rssm.discrete)
+            self.jepa_world_model = FrozenJEPAWorldModel(
+                core=core,
+                memory_module=memory,
+                info=info,
+                feature_dim=int(feature_dim),
+                presence_threshold=float(getattr(jepa_cfg, "presence_threshold", 0.5)),
+            )
+            self.encoder = None
+            self.rssm = None
+            self.embed_size = 0
+            self.feat_size = self.jepa_world_model.feat_size
+            self.rep_loss = "jepa"
+            frozen = sum(p.numel() for p in self.jepa_world_model.parameters_frozen())
+            trainable_adapter = sum(p.numel() for p in self.jepa_world_model.feature_adapter.parameters())
+            print(f"{frozen:>14,}: frozen_jepa_core")
+            print(f"{trainable_adapter:>14,}: jepa_feature_adapter")
+        self.reward = networks.MLPHead(config.reward, self.feat_size)
+        self.cont = networks.MLPHead(config.cont, self.feat_size)
 
         config.actor.shape = (act_space.n,) if hasattr(act_space, "n") else tuple(map(int, act_space.shape))
         self.act_discrete = False
@@ -54,8 +118,8 @@ class Dreamer(nn.Module):
             config.actor.dist = config.actor.dist.cont
 
         # Actor-critic components
-        self.actor = networks.MLPHead(config.actor, self.rssm.feat_size)
-        self.value = networks.MLPHead(config.critic, self.rssm.feat_size)
+        self.actor = networks.MLPHead(config.actor, self.feat_size)
+        self.value = networks.MLPHead(config.critic, self.feat_size)
 
         # --- Action masking (P0.1 real / P0.2 imagined). Gated on config.action_masking; the
         # actor shape is (C,)*A so A/C come straight from it. unimix is spread over VALID
@@ -81,8 +145,8 @@ class Dreamer(nn.Module):
             alive_cfg = copy.deepcopy(config.cont)
             alive_cfg.shape = [self._mask_A]
             alive_cfg.name = "alive_head"
-            self.avail_head = networks.MLPHead(avail_cfg, self.rssm.feat_size)
-            self.alive_head = networks.MLPHead(alive_cfg, self.rssm.feat_size)
+            self.avail_head = networks.MLPHead(avail_cfg, self.feat_size)
+            self.alive_head = networks.MLPHead(alive_cfg, self.feat_size)
         self.slow_target_update = int(config.slow_target_update)
         self.slow_target_fraction = float(config.slow_target_fraction)
         self._slow_value = copy.deepcopy(self.value)
@@ -94,18 +158,23 @@ class Dreamer(nn.Module):
         self._log_grads = bool(config.log_grads)
 
         modules = {
-            "rssm": self.rssm,
             "actor": self.actor,
             "value": self.value,
             "reward": self.reward,
             "cont": self.cont,
-            "encoder": self.encoder,
         }
+        if self.world_model_backend == "rssm":
+            modules["rssm"] = self.rssm
+            modules["encoder"] = self.encoder
+        else:
+            modules["jepa_feature_adapter"] = self.jepa_world_model.feature_adapter
         if self.action_masking:
             modules["avail_head"] = self.avail_head
             modules["alive_head"] = self.alive_head
 
-        if self.rep_loss == "dreamer":
+        if self.world_model_backend == "jepa":
+            pass
+        elif self.rep_loss == "dreamer":
             self.decoder = networks.MultiDecoder(
                 config.decoder,
                 self.rssm._deter,
@@ -243,26 +312,34 @@ class Dreamer(nn.Module):
         super().train(mode)
         # slow_value should be always eval mode
         self._slow_value.train(False)
+        if self.world_model_backend == "jepa":
+            self.jepa_world_model.train(False)
         return self
 
     def clone_and_freeze(self):
         # NOTE: "requires_grad" affects whether a parameter is updated
         # not whether gradients flow through its operations
-        self._frozen_encoder = copy.deepcopy(self.encoder)
-        for (name_orig, param_orig), (name_new, param_new) in zip(
-            self.encoder.named_parameters(), self._frozen_encoder.named_parameters()
-        ):
-            assert name_orig == name_new
-            param_new.data = param_orig.data
-            param_new.requires_grad_(False)
+        if self.world_model_backend == "rssm":
+            self._frozen_encoder = copy.deepcopy(self.encoder)
+            for (name_orig, param_orig), (name_new, param_new) in zip(
+                self.encoder.named_parameters(), self._frozen_encoder.named_parameters()
+            ):
+                assert name_orig == name_new
+                param_new.data = param_orig.data
+                param_new.requires_grad_(False)
 
-        self._frozen_rssm = copy.deepcopy(self.rssm)
-        for (name_orig, param_orig), (name_new, param_new) in zip(
-            self.rssm.named_parameters(), self._frozen_rssm.named_parameters()
-        ):
-            assert name_orig == name_new
-            param_new.data = param_orig.data
-            param_new.requires_grad_(False)
+            self._frozen_rssm = copy.deepcopy(self.rssm)
+            for (name_orig, param_orig), (name_new, param_new) in zip(
+                self.rssm.named_parameters(), self._frozen_rssm.named_parameters()
+            ):
+                assert name_orig == name_new
+                param_new.data = param_orig.data
+                param_new.requires_grad_(False)
+        else:
+            self._frozen_encoder = None
+            self._frozen_rssm = None
+            self._frozen_jepa_world_model = self.jepa_world_model
+            self._frozen_jepa_world_model.train(False)
 
         self._frozen_reward = copy.deepcopy(self.reward)
         for (name_orig, param_orig), (name_new, param_new) in zip(
@@ -328,17 +405,23 @@ class Dreamer(nn.Module):
         # obs: dict of (B, *), state: (stoch: (B, S, K), deter: (B, D), prev_action: (B, A))
         torch.compiler.cudagraph_mark_step_begin()
         p_obs = self.preprocess(obs)
-        # (B, E)
-        embed = self._frozen_encoder(p_obs)
         prev_stoch, prev_deter, prev_action = (
             state["stoch"],
             state["deter"],
             state["prev_action"],
         )
-        # (B, S, K), (B, D)
-        stoch, deter, _ = self._frozen_rssm.obs_step(prev_stoch, prev_deter, prev_action, embed, obs["is_first"])
-        # (B, F)
-        feat = self._frozen_rssm.get_feat(stoch, deter)
+        if self.world_model_backend == "jepa":
+            encoded = self._frozen_jepa_world_model.encode_obs(p_obs)
+            stoch, deter = self._frozen_jepa_world_model.obs_step(
+                prev_stoch, prev_deter, prev_action, encoded, obs["is_first"])
+            feat = self._frozen_jepa_world_model.get_feat(stoch, deter)
+        else:
+            # (B, E)
+            embed = self._frozen_encoder(p_obs)
+            # (B, S, K), (B, D)
+            stoch, deter, _ = self._frozen_rssm.obs_step(prev_stoch, prev_deter, prev_action, embed, obs["is_first"])
+            # (B, F)
+            feat = self._frozen_rssm.get_feat(stoch, deter)
         if self.action_masking:
             # Real masking: invalid actions can never be requested; padded/dead -> NOOP. Uses
             # the RAW (un-preprocessed) avail + agent masks from the structured obs.
@@ -360,7 +443,10 @@ class Dreamer(nn.Module):
 
     @torch.no_grad()
     def get_initial_state(self, B):
-        stoch, deter = self.rssm.initial(B)
+        if self.world_model_backend == "jepa":
+            stoch, deter = self.jepa_world_model.initial(B, device=self.device)
+        else:
+            stoch, deter = self.rssm.initial(B)
         action = torch.zeros(B, self.act_dim, dtype=torch.float32, device=self.device)
         return TensorDict({"stoch": stoch, "deter": deter, "prev_action": action}, batch_size=(B,))
 
@@ -451,6 +537,8 @@ class Dreamer(nn.Module):
         3) Imagination rollouts for actor-critic updates
         4) Replay-based value learning
         """
+        if self.world_model_backend == "jepa":
+            return self._cal_grad_jepa(data, initial)
         # data: dict of (B, T, *), initial: (stoch: (B, S, K), deter: (B, D))
         losses = {}
         metrics = {}
@@ -683,6 +771,143 @@ class Dreamer(nn.Module):
         metrics.update({"opt/loss": total_loss})
         return (post_stoch, post_deter), metrics
 
+    def _cal_grad_jepa(self, data, initial):
+        losses = {}
+        metrics = {}
+        B, T = data.shape
+        encoded = self.jepa_world_model.encode_obs(data)
+        post_stoch, post_deter = self.jepa_world_model.observe(
+            encoded,
+            data["action"],
+            initial,
+            data["is_first"],
+        )
+        feat = self.jepa_world_model.get_feat(post_stoch, post_deter)
+
+        losses["rew"] = torch.mean(-self.reward(feat).log_prob(to_f32(data["reward"])))
+        cont = 1.0 - to_f32(data["is_terminal"])
+        losses["con"] = torch.mean(-self.cont(feat).log_prob(cont))
+        if self.action_masking:
+            losses["avail"] = torch.mean(-self.avail_head(feat).log_prob(to_f32(data["avail_actions"])))
+            losses["alive"] = torch.mean(-self.alive_head(feat).log_prob(to_f32(data["agent_alive_mask"])))
+            from smacdreamer.masked_actions import mask_quality_metrics
+            _avail_logits = self.avail_head.last(self.avail_head.mlp(feat)).detach()
+            _mq = mask_quality_metrics(
+                _avail_logits, to_f32(data["avail_actions"]), self._mask_threshold_logit)
+            metrics["mask_precision"] = _mq["precision"]
+            metrics["mask_recall"] = _mq["recall"]
+            metrics["mask_fpr"] = _mq["fpr"]
+
+        start = (
+            post_stoch.reshape(-1, *post_stoch.shape[2:]).detach(),
+            post_deter.reshape(-1, post_deter.shape[-1]).detach(),
+        )
+        imag_feat, imag_action = self._imagine(start, self.imag_horizon + 1)
+        imag_feat, imag_action = imag_feat.detach(), imag_action.detach()
+        imag_reward = self._frozen_reward(imag_feat).mode()
+        imag_cont = self._frozen_cont(imag_feat).mean
+        imag_value = self._frozen_value(imag_feat).mode()
+        imag_slow_value = self._frozen_slow_value(imag_feat).mode()
+        disc = 1 - 1 / self.horizon
+        weight = torch.cumprod(imag_cont * disc, dim=1)
+        if self.action_masking:
+            start_valid = ((1.0 - to_f32(data["is_first"])) * (1.0 - to_f32(data["is_last"]))).reshape(-1, 1, 1)
+            weight = weight * start_valid
+        last = torch.zeros_like(imag_cont)
+        term = 1 - imag_cont
+        ret = self._lambda_return(last, term, imag_reward, imag_value, imag_value, disc, self.lamb)
+        ret_offset, ret_scale = self.return_ema(ret)
+        adv = (ret - imag_value[:, :-1]) / ret_scale
+        if self.action_masking:
+            from smacdreamer.masked_actions import (
+                MaskedMultiOneHotDist, invalid_mass_and_greedy_rate, empty_mask_rate,
+                hard_mask_from_logits)
+            policy_logits = self.actor.last(self.actor.mlp(imag_feat))
+            _amask, _aactive = self._predicted_action_mask(imag_feat)
+            policy = MaskedMultiOneHotDist(
+                policy_logits, _amask, _aactive, self._actor_shape, self._actor_unimix)
+            _mass, _grate = invalid_mass_and_greedy_rate(policy_logits.detach(), _amask, _aactive)
+            metrics["imag_pre_mask_invalid_mass"] = _mass
+            metrics["imag_pre_mask_invalid_sample_rate"] = _grate
+            metrics["imag_invalid_rate"] = _grate
+            metrics["imag_post_mask_invalid_sample_rate"] = policy.post_mask_invalid_sample_rate()
+            _pred_avail = hard_mask_from_logits(
+                self._frozen_avail_head.last(self._frozen_avail_head.mlp(imag_feat)),
+                self._mask_threshold_logit,
+            ).reshape(*imag_feat.shape[:-1], self._mask_A, self._mask_C)
+            metrics["imag_empty_mask_rate"] = empty_mask_rate(_pred_avail, _aactive)
+        else:
+            policy = self.actor(imag_feat)
+        logpi = policy.log_prob(imag_action)[:, :-1].unsqueeze(-1)
+        entropy = policy.entropy()[:, :-1].unsqueeze(-1)
+        losses["policy"] = torch.mean(weight[:, :-1].detach() * -(logpi * adv.detach() + self.act_entropy * entropy))
+        imag_value_dist = self.value(imag_feat)
+        tar_padded = torch.cat([ret, 0 * ret[:, -1:]], 1)
+        losses["value"] = torch.mean(
+            weight[:, :-1].detach()
+            * (-imag_value_dist.log_prob(tar_padded.detach()) - imag_value_dist.log_prob(imag_slow_value.detach()))[
+                :, :-1
+            ].unsqueeze(-1)
+        )
+
+        last, term, reward = to_f32(data["is_last"]), to_f32(data["is_terminal"]), to_f32(data["reward"])
+        boot = ret[:, 0].reshape(B, T, 1)
+        value = self._frozen_value(feat).mode()
+        slow_value = self._frozen_slow_value(feat).mode()
+        weight_replay = 1.0 - last
+        ret_replay = self._lambda_return(last, term, reward, value, boot, disc, self.lamb)
+        ret_padded = torch.cat([ret_replay, 0 * ret_replay[:, -1:]], 1)
+        value_dist = self.value(feat)
+        losses["repval"] = torch.mean(
+            weight_replay[:, :-1]
+            * (-value_dist.log_prob(ret_padded.detach()) - value_dist.log_prob(slow_value.detach()))[:, :-1].unsqueeze(-1)
+        )
+        if self.action_masking:
+            from smacdreamer.masked_actions import (
+                MaskedMultiOneHotDist, build_action_mask, invalid_mass_and_greedy_rate)
+            real_logits = self.actor.last(self.actor.mlp(feat)).detach()
+            _ract = to_f32(data["agent_slot_mask"]) * to_f32(data["agent_alive_mask"])
+            _rmask, _ractive = build_action_mask(to_f32(data["avail_actions"]), _ract, self._mask_A, self._mask_C)
+            _rmass, _ = invalid_mass_and_greedy_rate(real_logits, _rmask, _ractive)
+            metrics["real_pre_mask_invalid_mass"] = _rmass
+            _rpolicy = MaskedMultiOneHotDist(real_logits, _rmask, _ractive, self._actor_shape, self._actor_unimix)
+            metrics["real_post_mask_invalid_sample_rate"] = _rpolicy.post_mask_invalid_sample_rate()
+            metrics.update(self._horizon_mask_diagnostics(data, post_stoch, post_deter))
+
+        memory, entity_mask, _, _ = _jepa_unpack_state(
+            post_deter.reshape(-1, post_deter.shape[-1]), self.jepa_world_model.state_spec)
+        metrics["jepa/latent_norm"] = post_stoch.detach().float().norm(dim=-1).mean()
+        metrics["jepa/latent_std"] = post_stoch.detach().float().std()
+        metrics["jepa/memory_norm"] = memory.detach().float().norm(dim=-1).mean()
+        metrics["jepa/presence_rate"] = entity_mask.detach().float().mean()
+        metrics["jepa/predicted_entity_count"] = entity_mask.detach().float().sum(dim=-1).mean()
+        metrics["jepa/feature_norm"] = feat.detach().float().norm(dim=-1).mean()
+        metrics["jepa/frozen_parameter_count"] = torch.tensor(
+            float(sum(p.numel() for p in self.jepa_world_model.parameters_frozen())), device=feat.device)
+        metrics["jepa/trainable_adapter_parameter_count"] = torch.tensor(
+            float(sum(p.numel() for p in self.jepa_world_model.feature_adapter.parameters())), device=feat.device)
+        metrics["ret"] = torch.mean((ret - ret_offset) / ret_scale)
+        metrics["ret_005"] = self.return_ema.ema_vals[0]
+        metrics["ret_095"] = self.return_ema.ema_vals[1]
+        metrics["adv"] = torch.mean(adv)
+        metrics["con"] = torch.mean(imag_cont)
+        metrics["rew"] = torch.mean(imag_reward)
+        metrics["val"] = torch.mean(imag_value)
+        metrics["tar"] = torch.mean(ret)
+        metrics["slowval"] = torch.mean(imag_slow_value)
+        metrics["weight"] = torch.mean(weight)
+        metrics["action_entropy"] = torch.mean(entropy)
+        metrics.update(tools.tensorstats(imag_action, "action"))
+        metrics.update(tools.tensorstats(ret_replay, "ret_replay"))
+        metrics.update(tools.tensorstats(value, "value_replay"))
+        metrics.update(tools.tensorstats(slow_value, "slow_value_replay"))
+
+        total_loss = sum([v * self._loss_scales[k] for k, v in losses.items()])
+        self._scaler.scale(total_loss).backward()
+        metrics.update({f"loss/{name}": loss for name, loss in losses.items()})
+        metrics.update({"opt/loss": total_loss})
+        return (post_stoch, post_deter), metrics
+
     def _predicted_action_mask(self, feat):
         """(amask, aactive) from the FROZEN avail/alive heads at ``feat``.
 
@@ -705,7 +930,10 @@ class Dreamer(nn.Module):
         from smacdreamer.masked_actions import mask_quality_metrics
         thr = self._mask_threshold_logit
         out = {}
-        feat0 = self.rssm.get_feat(post_stoch, post_deter)
+        if self.world_model_backend == "jepa":
+            feat0 = self.jepa_world_model.get_feat(post_stoch, post_deter)
+        else:
+            feat0 = self.rssm.get_feat(post_stoch, post_deter)
         m0 = mask_quality_metrics(
             self.avail_head.last(self.avail_head.mlp(feat0)), to_f32(data["avail_actions"]), thr)
         out["maskh0_posterior_precision"] = m0["precision"]
@@ -714,8 +942,13 @@ class Dreamer(nn.Module):
         T = data["avail_actions"].shape[1]
         stoch, deter = post_stoch[:, 0], post_deter[:, 0]
         for h in range(1, min(max_h, T)):
-            stoch, deter = self.rssm.img_step(stoch, deter, data["action"][:, h - 1])
-            ah = self.avail_head.last(self.avail_head.mlp(self.rssm.get_feat(stoch, deter)))
+            if self.world_model_backend == "jepa":
+                stoch, deter = self.jepa_world_model.img_step(stoch, deter, data["action"][:, h - 1])
+                hfeat = self.jepa_world_model.get_feat(stoch, deter)
+            else:
+                stoch, deter = self.rssm.img_step(stoch, deter, data["action"][:, h - 1])
+                hfeat = self.rssm.get_feat(stoch, deter)
+            ah = self.avail_head.last(self.avail_head.mlp(hfeat))
             mh = mask_quality_metrics(ah, to_f32(data["avail_actions"][:, h]), thr)
             tag = "prior1" if h == 1 else "openloop"
             out[f"maskh{h}_{tag}_precision"] = mh["precision"]
@@ -732,7 +965,10 @@ class Dreamer(nn.Module):
         stoch, deter = start
         for _ in range(imag_horizon):
             # (B, F)
-            feat = self._frozen_rssm.get_feat(stoch, deter)
+            if self.world_model_backend == "jepa":
+                feat = self._frozen_jepa_world_model.get_feat(stoch, deter)
+            else:
+                feat = self._frozen_rssm.get_feat(stoch, deter)
             # (B, A)
             if self.action_masking:
                 from smacdreamer.masked_actions import MaskedMultiOneHotDist
@@ -745,7 +981,10 @@ class Dreamer(nn.Module):
             # Append feat and its corresponding sampled action at the same time step.
             feats.append(feat)
             actions.append(action)
-            stoch, deter = self._frozen_rssm.img_step(stoch, deter, action)
+            if self.world_model_backend == "jepa":
+                stoch, deter = self._frozen_jepa_world_model.img_step(stoch, deter, action)
+            else:
+                stoch, deter = self._frozen_rssm.img_step(stoch, deter, action)
 
         # Stack along sequence dim T_imag.
         # (B, T_imag, F), (B, T_imag, A)

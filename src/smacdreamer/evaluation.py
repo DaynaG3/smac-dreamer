@@ -30,6 +30,7 @@ measured return is the true (unshaped) environment return regardless of the trai
 from __future__ import annotations
 
 import math
+import inspect
 from typing import Callable, Optional, Sequence
 
 import numpy as np
@@ -41,6 +42,17 @@ _METRICS = ("win", "original_return", "length", "timeout",
 
 # Sensible default fixed seeds when a config does not specify them.
 DEFAULT_FIXED_SEEDS = (0, 1, 2, 3, 4)
+
+
+def _call_env_factory(env_factory, args, *, include_jepa_obs, shutdown_timeout_seconds):
+    sig = inspect.signature(env_factory)
+    accepts_kwargs = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
+    kwargs = {}
+    if accepts_kwargs or "include_jepa_obs" in sig.parameters:
+        kwargs["include_jepa_obs"] = include_jepa_obs
+    if accepts_kwargs or "shutdown_timeout_seconds" in sig.parameters:
+        kwargs["shutdown_timeout_seconds"] = shutdown_timeout_seconds
+    return env_factory(*args, **kwargs)
 
 
 def _mean(xs) -> float:
@@ -127,6 +139,7 @@ def evaluate_heldout(
     gamma: float = 0.997,
     max_episode_steps: int = 200,
     obs_mode: str = "flat",
+    include_jepa_obs: bool = False,
     env_factory: Optional[Callable] = None,
     episode_fn: Optional[Callable] = None,
     shutdown_timeout_seconds: float = 5.0,
@@ -165,19 +178,13 @@ def evaluate_heldout(
     validation_children: list = []
 
     for entry in test_entries:
-        try:
-            env = env_factory(
-                [entry], pad_dims, "fixed", 0, 0, "smaclite_default", {},
-                gamma, max_episode_steps, obs_mode,
-                shutdown_timeout_seconds=shutdown_timeout_seconds,
-            )
-        except TypeError as exc:
-            if "shutdown_timeout_seconds" not in str(exc):
-                raise
-            env = env_factory(
-                [entry], pad_dims, "fixed", 0, 0, "smaclite_default", {},
-                gamma, max_episode_steps, obs_mode,
-            )
+        env = _call_env_factory(
+            env_factory,
+            ([entry], pad_dims, "fixed", 0, 0, "smaclite_default", {},
+             gamma, max_episode_steps, obs_mode),
+            include_jepa_obs=include_jepa_obs,
+            shutdown_timeout_seconds=shutdown_timeout_seconds,
+        )
         try:
             child_pid = getattr(env, "pid", None)
             if child_pid is not None:

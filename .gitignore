@@ -17,6 +17,9 @@ build/
 
 # Training logs and checkpoints (large, generated at runtime)
 logs/
+checkpoints/jepa/*.pt
+checkpoints/jepa/*.pth
+checkpoints/jepa/*.ckpt
 
 # Large result files (trajectories can be MB each)
 results/*.jsonl

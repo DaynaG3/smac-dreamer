@@ -193,6 +193,7 @@ def make_isolated_smaclite_env(
     max_episode_steps,
     obs_mode="flat",
     *,
+    include_jepa_obs: bool = False,
     shutdown_timeout_seconds: float = 5.0,
 ):
     map_name = getattr(entries[0], "name", "unknown")
@@ -210,8 +211,7 @@ def make_isolated_smaclite_env(
             max_episode_steps,
             obs_mode,
         ),
-        {},
+        {"include_jepa_obs": bool(include_jepa_obs)},
         map_name=map_name,
         shutdown_timeout_seconds=shutdown_timeout_seconds,
     )
-
