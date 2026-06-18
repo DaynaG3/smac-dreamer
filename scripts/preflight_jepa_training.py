@@ -63,11 +63,14 @@ def _padding_from_config(config, episode_meta: dict, config_path: pathlib.Path) 
                 "max_enemies": int(pad.max_enemies),
                 "max_actions": int(pad.max_actions),
             }
-    return {
-        "max_agents": int(episode_meta["n_agents"]),
-        "max_enemies": int(episode_meta["n_enemies"]),
-        "max_actions": int(episode_meta["n_actions"]),
-    }
+        raise FileNotFoundError(
+            f"cannot derive JEPA runtime padding: configured train map folder does not exist: {folder}. "
+            "Provide a valid maps.train source or an explicit YAML padding block."
+        )
+    raise ValueError(
+        "cannot derive JEPA runtime padding: config has no explicit padding block and no maps.train source. "
+        "Provide one of them before running preflight."
+    )
 
 
 def derive_runtime_metadata(config_path: str | pathlib.Path, episode_npz: str | pathlib.Path, ckpt_cfg, vis):

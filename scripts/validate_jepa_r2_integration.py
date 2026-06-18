@@ -46,6 +46,21 @@ def previous_action_masks_for_states(action_mask_seq: torch.Tensor) -> torch.Ten
     return torch.cat([zero, action_mask_seq], dim=0)
 
 
+def rollout_actions_from_start(
+    transition_actions: torch.Tensor,
+    start_idx: int,
+    rollout_horizon: int,
+) -> torch.Tensor:
+    if transition_actions.ndim != 3:
+        raise ValueError(f"transition_actions must have [B,ACTIONS,F], got {tuple(transition_actions.shape)}")
+    if start_idx < 0 or start_idx >= transition_actions.shape[1]:
+        raise ValueError(f"start_idx={start_idx} outside transition action range 0..{transition_actions.shape[1] - 1}")
+    length = min(int(rollout_horizon), int(transition_actions.shape[1] - start_idx))
+    if length <= 0:
+        raise ValueError(f"no rollout actions available from start_idx={start_idx}")
+    return transition_actions[:, start_idx : start_idx + length]
+
+
 def _reference_obs_rollout(wm: FrozenJEPAWorldModel, core, memory_module, item, device: torch.device):
     entity = item["entity_seq"].unsqueeze(0).to(device)
     mask = item["entity_mask_seq"].unsqueeze(0).to(device)
@@ -176,11 +191,12 @@ def run_integration_parity(
     start_idx = min(1, wrapper_z.shape[1] - 1)
     z, deter = wrapper_z[:, start_idx], wrapper_deter[:, start_idx]
     ref_z, ref_deter = z.clone(), deter.clone()
-    max_steps = min(int(rollout_horizon), transition_actions.shape[1])
+    rollout_actions = rollout_actions_from_start(transition_actions, start_idx, int(rollout_horizon))
+    max_steps = int(rollout_actions.shape[1])
     wrapper_zs, wrapper_ds = [], []
     ref_zs, ref_ds = [], []
     for idx in range(max_steps):
-        action = transition_actions[:, idx]
+        action = rollout_actions[:, idx]
         wz, wd = wm.img_step(z, deter, action)
         rz, rd, conditioned, logits, next_mask = _reference_img_step(wm, core, memory, ref_z, ref_deter, action)
         wrapper_memory, wrapper_entity_mask, _, _ = unpack_state(deter, wm.state_spec)
@@ -202,7 +218,7 @@ def run_integration_parity(
         z, deter = wz, wd
         ref_z, ref_deter = rz, rd
 
-    seq_z, seq_d = wm.imagine_with_action(wrapper_z[:, start_idx], wrapper_deter[:, start_idx], transition_actions[:, :max_steps])
+    seq_z, seq_d = wm.imagine_with_action(wrapper_z[:, start_idx], wrapper_deter[:, start_idx], rollout_actions)
     comparisons["imagine_with_action_latents"] = _first_mismatch(
         "imagine_with_action_latents", seq_z, torch.stack(wrapper_zs, 1)
     )

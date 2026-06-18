@@ -781,11 +781,9 @@ class Dreamer(nn.Module):
         metrics = {}
         B, T = data.shape
         encoded = self.jepa_world_model.encode_obs(data)
-        zero_action = torch.zeros_like(data["action"][:, :1])
-        previous_actions = torch.cat([zero_action, data["action"][:, :-1]], dim=1)
         post_stoch, post_deter = self.jepa_world_model.observe(
             encoded,
-            previous_actions,
+            data["action"],
             initial,
             data["is_first"],
         )

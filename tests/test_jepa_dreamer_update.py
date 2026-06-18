@@ -82,3 +82,21 @@ def test_jepa_dreamer_update_trains_adapter_and_downstream_only(monkeypatch, tmp
     assert _changed(actor_before, agent.actor)
     assert _changed(value_before, agent.value)
     assert _unchanged(frozen_before, list(agent.jepa_world_model.parameters_frozen()))
+
+
+def test_jepa_cal_grad_uses_replay_provided_previous_actions_without_second_shift(monkeypatch, tmp_path):
+    agent = _make_agent(monkeypatch, tmp_path)
+    data = _synthetic_batch()
+    initial_td = agent.get_initial_state(data.shape[0])
+    initial = (initial_td["stoch"], initial_td["deter"])
+    captured = {}
+    original_observe = agent.jepa_world_model.observe
+
+    def wrapped_observe(encoded_sequence, action_sequence, initial_state, reset_sequence):
+        captured["actions"] = action_sequence.detach().clone()
+        return original_observe(encoded_sequence, action_sequence, initial_state, reset_sequence)
+
+    monkeypatch.setattr(agent.jepa_world_model, "observe", wrapped_observe)
+    agent._cal_grad(data, initial)
+    torch.testing.assert_close(captured["actions"], data["action"])
+    assert captured["actions"][:, 0].sum() > 0
