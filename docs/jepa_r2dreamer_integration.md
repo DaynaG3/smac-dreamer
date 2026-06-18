@@ -69,6 +69,14 @@ Losses from reward, continuation, availability, alive prediction and value
 learning may update the feature adapter. They must not update the JEPA encoder,
 predictor, presence head, decoder, projector, or recurrent memory.
 
+Synthetic unit and Dreamer-level tests now run a real backward pass and optimizer
+step to verify:
+
+- `JEPAFeatureAdapter` receives finite, nonzero gradients
+- at least one adapter parameter changes after an optimizer step
+- frozen JEPA parameters receive no gradients
+- frozen JEPA parameters remain bitwise unchanged
+
 ## State
 
 `stoch` is the current per-entity JEPA latent:
@@ -171,7 +179,9 @@ The restored checkout also lacks
 source-level numerical parity for the action-conditioned memory class cannot be
 claimed from this repository state. The compatibility class is tested against the
 documented masked-memory semantics; real source parity remains pending until the
-original class is available.
+original class is available. Optional installed-source parity tests exist in
+`tests/test_jepa_memory_source_parity.py`; they run only when the corresponding
+`smac_jepa` modules can be imported.
 
 ## Deliberate Backend Differences
 

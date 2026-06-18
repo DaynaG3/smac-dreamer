@@ -161,9 +161,16 @@ def test_feature_adapter_gets_gradients_and_frozen_core_stays_bitwise_unchanged(
     actions = torch.zeros(2, 6)
     actions[:, 0] = 1
     z, d = wm.obs_step(z0, d0, actions, enc, torch.zeros(2, dtype=torch.bool))
-    loss = wm.get_feat(z, d).square().mean()
+    feature = wm.get_feat(z, d)
+    assert feature.requires_grad
+    loss = feature.square().mean()
     loss.backward()
-    assert any(p.grad is not None and p.grad.abs().sum() > 0 for p in wm.feature_adapter.parameters())
+    assert any(
+        p.grad is not None
+        and torch.isfinite(p.grad).all()
+        and p.grad.abs().sum() > 0
+        for p in wm.feature_adapter.parameters()
+    )
     assert all(p.grad is None for p in wm.parameters_frozen())
     opt.step()
     assert any(not torch.equal(before, after) for before, after in zip(adapter_before, wm.feature_adapter.parameters()))

@@ -8,6 +8,8 @@
 - Fixed action-conditioned recurrent memory semantics so temporarily masked/invisible entities preserve prior memory instead of being reset.
 - Tightened JEPA checkpoint validation to require complete runtime metadata, including visibility, latent, memory, and action-conditioned settings.
 - Removed hardcoded local JEPA checkout paths from ordinary JEPA unit tests and replaced central safety tests with self-contained synthetic fixtures.
+- Added JEPA unit and Dreamer-level gradient/update tests proving the feature adapter trains while frozen JEPA parameters stay unchanged.
+- Added optional installed-source recurrent-memory parity tests for the original JEPA memory modules when those modules are available from `smac_jepa`.
 - Real JEPA source parity for `ActionConditionedEntityRolloutGRUMemory` remains blocked because the provided JEPA checkout still lacks `smac_jepa/modules/rollout_memory.py` and `train_markov_rollout_rnn_visibility_seqmem_experiments.py`.
 
 ## Frozen JEPA world-model backend
