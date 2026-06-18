@@ -114,6 +114,7 @@ def evaluate_episode(agent, env, seed, device, max_episode_steps) -> dict:
         "timeout": bool(is_last and not is_terminal),
         "final_ally_ehp_frac": float(last_info.get("log_final_ally_ehp_frac", 0.0)),
         "final_enemy_ehp_frac": float(last_info.get("log_final_enemy_ehp_frac", 0.0)),
+        "final_ally_alive_frac": float(last_info.get("log_final_ally_alive_frac", 0.0)),
     }
 
 
@@ -201,9 +202,11 @@ def evaluate_heldout(
         agg = {k: _mean([m[k] for m in ep_metrics]) for k in _METRICS}
         wins = int(sum(1 for m in ep_metrics if m["win"]))
         lo, hi = _wilson(wins, len(ep_metrics))
+        _win_eps = [m for m in ep_metrics if m["win"]]
         per_map[entry.name] = {
             "family": getattr(entry, "family", "uncategorised"),
             "n_episodes": len(ep_metrics),
+            "n_wins": wins,
             "win_rate": agg["win"],
             "win_rate_ci95": [lo, hi],
             "original_return": agg["original_return"],
@@ -211,6 +214,11 @@ def evaluate_heldout(
             "timeout_rate": agg["timeout"],
             "final_ally_ehp_frac": agg["final_ally_ehp_frac"],
             "final_enemy_ehp_frac": agg["final_enemy_ehp_frac"],
+            # win-only quality (0.0 when this map had no wins)
+            "win_final_ally_ehp_frac": (_mean([m["final_ally_ehp_frac"] for m in _win_eps])
+                                        if _win_eps else 0.0),
+            "win_alive_fraction": (_mean([m["final_ally_alive_frac"] for m in _win_eps])
+                                   if _win_eps else 0.0),
         }
         if progress:
             pm = per_map[entry.name]
@@ -239,6 +247,18 @@ def evaluate_heldout(
         "final_ally_ehp_frac":  _mean([m["final_ally_ehp_frac"] for m in pooled]),
         "final_enemy_ehp_frac": _mean([m["final_enemy_ehp_frac"] for m in pooled]),
     }
+
+    # Win-quality metrics over WINNING episodes only. No wins -> 0.0 sentinel (never NaN).
+    def _win_mean(metrics_list, key):
+        vals = [m[key] for m in metrics_list if m["win"]]
+        return _mean(vals) if vals else 0.0
+    micro["win_final_ally_ehp_frac"] = _win_mean(pooled, "final_ally_ehp_frac")
+    micro["win_alive_fraction"] = _win_mean(pooled, "final_ally_alive_frac")
+    # macro win-only: each MAP with >=1 win contributes its winning-episode mean.
+    _maps_ehp = [m["win_final_ally_ehp_frac"] for m in per_map.values() if m["n_wins"] > 0]
+    _maps_alive = [m["win_alive_fraction"] for m in per_map.values() if m["n_wins"] > 0]
+    macro["win_final_ally_ehp_frac"] = _mean(_maps_ehp) if _maps_ehp else 0.0
+    macro["win_alive_fraction"] = _mean(_maps_alive) if _maps_alive else 0.0
 
     return {
         "primary_metric": "macro_heldout_win_rate",

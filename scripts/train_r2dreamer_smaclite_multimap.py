@@ -95,6 +95,13 @@ def main():
     ap.add_argument("--wandb-mode", default=None, choices=("online", "offline", "disabled"),
                     help="override W&B mode")
     ap.add_argument("--resume", default=None, help="checkpoint path to resume model/training state")
+    ap.add_argument("--resume-mode", default=None,
+                    choices=("full", "weights_only", "transfer_reward"),
+                    help="full (default) | weights_only | transfer_reward (overrides cfg.resume.mode)")
+    ap.add_argument("--step-offset", type=int, default=None,
+                    help="global-step offset (overrides cfg.resume.step_offset)")
+    ap.add_argument("--actor-warmup-steps", type=int, default=None,
+                    help="local steps with no actor updates (overrides cfg.resume.actor_warmup_steps)")
     args = ap.parse_args()
 
     cfg = OmegaConf.load(str((ROOT / args.config) if not pathlib.Path(args.config).is_absolute() else args.config))
@@ -146,6 +153,15 @@ def main():
     config.model.mask_threshold = float(cfg.get("mask_threshold", 0.7))
     config.model.amp_dtype = resolve_amp_dtype(str(cfg.get("amp_dtype", "bfloat16")), str(cfg.device))
     run_cuda_preflight(str(cfg.device), str(config.model.amp_dtype))
+
+    # --- Continuation / resume settings (mode, global-step offset, actor warm-up) -----
+    resume_cfg = cfg.get("resume") or {}
+    resume_mode = str(args.resume_mode or resume_cfg.get("mode", "full"))
+    step_offset = int(args.step_offset if args.step_offset is not None else resume_cfg.get("step_offset", 0))
+    actor_warmup_steps = int(args.actor_warmup_steps if args.actor_warmup_steps is not None
+                             else resume_cfg.get("actor_warmup_steps", 0))
+    config.trainer.step_offset = step_offset
+    config.trainer.actor_warmup_steps = actor_warmup_steps
 
     # --- Validation cadence + fixed seeds (explicit seed list, NOT a worker count) -----
     val_cfg = cfg.get("validation") or {}
@@ -280,6 +296,7 @@ def main():
             project=str(wandb_project),
             run_name=run_name,
             config=run_config,
+            step_offset=step_offset,
             **wandb_kwargs,
         )
     else:
@@ -298,14 +315,22 @@ def main():
         agent = Dreamer(config.model, obs_space, act_space).to(config.device)
         print(f"  Parameters : {sum(p.numel() for p in agent.parameters()):,}")
         if args.resume:
-            ckpt = torch.load(args.resume, map_location=str(cfg.device))
-            agent.load_state_dict(ckpt["agent_state_dict"])
-            if ckpt.get("agent_training_state") and hasattr(agent, "load_training_state_dict"):
-                agent.load_training_state_dict(ckpt["agent_training_state"])
-                print(f"  [resume] restored model + optimizer/scheduler/scaler state from {args.resume}")
-            else:
-                print(f"  [resume] restored model weights only from {args.resume}")
-            print("  [resume] replay memmap restore is not implemented; replay will refill before updates.")
+            from smacdreamer.checkpoint_transfer import transfer_reward_load, load_weights_only
+            if resume_mode == "transfer_reward":
+                transfer_reward_load(agent, args.resume)
+            elif resume_mode == "weights_only":
+                load_weights_only(agent, args.resume)
+            else:  # full — existing behaviour preserved
+                ckpt = torch.load(args.resume, map_location=str(cfg.device))
+                agent.load_state_dict(ckpt["agent_state_dict"])
+                if ckpt.get("agent_training_state") and hasattr(agent, "load_training_state_dict"):
+                    agent.load_training_state_dict(ckpt["agent_training_state"])
+                    print(f"  [resume:full] restored model + optimizer/scheduler/scaler from {args.resume}")
+                else:
+                    print(f"  [resume:full] restored model weights only from {args.resume}")
+            print(f"  [resume] mode={resume_mode} step_offset={step_offset} "
+                  f"actor_warmup_steps={actor_warmup_steps}")
+            print("  [resume] replay restore not implemented; replay refills before updates.")
 
         # --- Checkpointing -----------------------------------------------------
         checkpointer = None
@@ -313,7 +338,8 @@ def main():
             checkpointer = PeriodicCheckpointer(
                 agent, logdir,
                 interval_seconds=float(cfg.checkpoint_every_minutes) * 60.0,
-                step_fn=lambda: replay_buffer.count() * config.trainer.action_repeat,
+                # GLOBAL step for checkpoint metadata/snapshot names (local replay count + offset).
+                step_fn=lambda: replay_buffer.count() * config.trainer.action_repeat + step_offset,
             )
             attach_checkpointing(agent, checkpointer)
             print(f"  Checkpoints : every {cfg.checkpoint_every_minutes:g} min -> {logdir/'latest.pt'}")
@@ -330,6 +356,7 @@ def main():
             max_episode_steps=int(cfg.max_episode_steps), obs_mode=obs_mode,
             run_at_start=val_run_at_start,
             shutdown_timeout_seconds=float(env_lifecycle.get("shutdown_timeout_seconds", 5.0)),
+            step_offset=step_offset,
         )
         trainer.begin(agent)
 

@@ -454,6 +454,7 @@ class SMACliteDreamerEnv(gym.Env):
         self._prev_ally_ehp_frac = 1.0
         self._prev_enemy_ehp_frac = 1.0
         self._cur_ally_ehp_frac = 1.0
+        self._cur_ally_alive_frac = 1.0
         self._cur_enemy_ehp_frac = 1.0
         self._ep_ally_ehp_shaping = 0.0
         self._ep_terminal_anchor = 0.0
@@ -635,6 +636,7 @@ class SMACliteDreamerEnv(gym.Env):
         cur_ally_alive_frac = (
             cur_n_allies / self._init_n_allies if self._init_n_allies > 0 else 0.0
         )
+        self._cur_ally_alive_frac = float(cur_ally_alive_frac)
         if self._reward_fn is not None:
             from smacdreamer.envs.reward_registry import RewardContext
             ctx = RewardContext(
@@ -971,7 +973,9 @@ class SMACliteDreamerEnv(gym.Env):
         # them and the trainer aggregates them. Keys are stable across maps/steps (the union
         # of canonical term names) so ParallelEnv can stack them across workers.
         canonical_terms = ("win", "hp", "ally", "positioning", "kill", "death",
-                           "survival", "step_penalty", "damage")
+                           "survival", "step_penalty", "damage",
+                           # win_quality_v5 components (logged via the same log_reward_term_* path)
+                           "ally_ehp_dense", "win_ehp_quality", "win_alive_quality", "timeout")
         rt = reward_terms or {}
         # Accumulate episode sums.
         for k, v in rt.items():
@@ -1018,6 +1022,7 @@ class SMACliteDreamerEnv(gym.Env):
             "log_episode_terminal_anchor":             _f(),
             "log_episode_timeout_penalty":             _f(),
             "log_final_ally_ehp_frac":                 _f(),
+            "log_final_ally_alive_frac":               _f(),
             "log_final_enemy_ehp_frac":                _f(),
             "log_episode_ally_ehp_lost":               _f(),
             "log_episode_enemy_ehp_lost":              _f(),
@@ -1064,6 +1069,7 @@ class SMACliteDreamerEnv(gym.Env):
             "log_episode_terminal_anchor":             _f(self._ep_terminal_anchor),
             "log_episode_timeout_penalty":             _f(self._ep_timeout_penalty),
             "log_final_ally_ehp_frac":                 _f(self._cur_ally_ehp_frac),
+            "log_final_ally_alive_frac":               _f(self._cur_ally_alive_frac),
             "log_final_enemy_ehp_frac":                _f(self._cur_enemy_ehp_frac),
             "log_episode_ally_ehp_lost":               _f(1.0 - self._cur_ally_ehp_frac),
             "log_episode_enemy_ehp_lost":              _f(1.0 - self._cur_enemy_ehp_frac),

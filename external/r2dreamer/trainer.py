@@ -25,6 +25,9 @@ class OnlineTrainer:
         self._action_repeat = config.action_repeat
         self.system_log_every = int(getattr(config, "system_log_every", 0) or 0)
         self._should_log_system = tools.Every(self.system_log_every) if self.system_log_every > 0 else None
+        # Continuation: actor warm-up (local env steps with no actor updates) + global-step offset.
+        self._actor_warmup_steps = int(getattr(config, "actor_warmup_steps", 0) or 0)
+        self._step_offset = int(getattr(config, "step_offset", 0) or 0)
 
     def eval(self, agent, train_step):
         """Run evaluation episodes.
@@ -185,6 +188,8 @@ class OnlineTrainer:
                 video_cache.append(trans["image"][0])
             self.replay_buffer.add_transition(trans.detach())
             returns += trans["reward"][:, 0]
+            # Continuation: enable actor updates only after the local warm-up threshold.
+            agent.actor_updates_enabled = (step >= self._actor_warmup_steps)
             # Update models after enough data has accumulated
             if step // (envs.env_num * self._action_repeat) > self.batch_length + 1:
                 if self._should_pretrain():
@@ -201,6 +206,10 @@ class OnlineTrainer:
                         value = tools.to_np(value) if isinstance(value, torch.Tensor) else value
                         self.logger.scalar(f"train/{name}", value)
                     self.logger.scalar("train/opt/updates", update_count)
+                    self.logger.scalar("train/actor_updates_enabled",
+                                       1.0 if agent.actor_updates_enabled else 0.0)
+                    self.logger.scalar("train/local_step", float(step))
+                    self.logger.scalar("train/global_step", float(step + self._step_offset))
                     if self.video_pred_log:
                         data, _, initial = self.replay_buffer.sample()
                         self.logger.video("open_loop", tools.to_np(agent.video_pred(data, initial)))

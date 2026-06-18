@@ -83,6 +83,10 @@ class Dreamer(nn.Module):
             alive_cfg.name = "alive_head"
             self.avail_head = networks.MLPHead(avail_cfg, self.rssm.feat_size)
             self.alive_head = networks.MLPHead(alive_cfg, self.rssm.feat_size)
+        # Actor warm-up: when False the policy loss is zeroed so the actor receives no gradient
+        # (it appears only in the policy loss). Used to recalibrate a transferred world model +
+        # fresh reward/critic before the actor starts moving. Does NOT freeze the world model.
+        self.actor_updates_enabled = True
         self.slow_target_update = int(config.slow_target_update)
         self.slow_target_fraction = float(config.slow_target_fraction)
         self._slow_value = copy.deepcopy(self.value)
@@ -606,7 +610,11 @@ class Dreamer(nn.Module):
         # (B*T, T_imag-1, 1)
         logpi = policy.log_prob(imag_action)[:, :-1].unsqueeze(-1)
         entropy = policy.entropy()[:, :-1].unsqueeze(-1)
-        losses["policy"] = torch.mean(weight[:, :-1].detach() * -(logpi * adv.detach() + self.act_entropy * entropy))
+        # Actor warm-up: zero the policy-loss contribution -> no actor gradient (the actor only
+        # appears here). World model + critic + heads still train normally.
+        _pol_scale = 1.0 if self.actor_updates_enabled else 0.0
+        losses["policy"] = _pol_scale * torch.mean(
+            weight[:, :-1].detach() * -(logpi * adv.detach() + self.act_entropy * entropy))
 
         imag_value_dist = self.value(imag_feat)
         # (B*T, T_imag, 1)

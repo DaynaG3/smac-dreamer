@@ -73,8 +73,9 @@ class ValidationTrainer(OnlineTrainer):
 
     def __init__(self, config, replay_buffer, logger, logdir, train_envs, *,
                  validation_entries, pad_dims, seeds, device, gamma, max_episode_steps, obs_mode,
-                 run_at_start=False, shutdown_timeout_seconds=5.0):
+                 run_at_start=False, shutdown_timeout_seconds=5.0, step_offset=0):
         super().__init__(config, replay_buffer, logger, logdir, train_envs, _VALIDATION_SENTINEL)
+        self._step_offset = int(step_offset)
         self._val_entries = list(validation_entries)
         self._val_pad = pad_dims
         self._val_seeds = [int(s) for s in seeds]
@@ -127,20 +128,27 @@ class ValidationTrainer(OnlineTrainer):
             self.logger.scalar(f"val/micro_{k}", float(micro[k]))
         self.logger.scalar("val/n_maps", float(report["n_maps"]))
         self.logger.scalar("val/n_episodes", float(report["n_episodes_total"]))
+        # Win-quality metrics (computed over winning episodes only; 0.0 sentinel when no wins).
+        self.logger.scalar("val/macro_win_final_ally_ehp_frac", float(macro["win_final_ally_ehp_frac"]))
+        self.logger.scalar("val/micro_win_final_ally_ehp_frac", float(micro["win_final_ally_ehp_frac"]))
+        self.logger.scalar("val/macro_win_alive_fraction", float(macro["win_alive_fraction"]))
+        self.logger.scalar("val/micro_win_alive_fraction", float(micro["win_alive_fraction"]))
 
+        global_step = int(train_step) + self._step_offset
         wr, ret = float(macro["win_rate"]), float(macro["original_return"])
         if is_validation_improvement(wr, ret, self._best_macro_wr, self._best_macro_ret):
             self._best_macro_wr, self._best_macro_ret = wr, ret
             torch.save(
                 {"agent_state_dict": agent.state_dict(),
                  "val_macro_win_rate": wr, "val_macro_original_return": ret,
-                 "step": int(train_step), "obs_mode": self._val_obs_mode},
+                 "step": int(train_step), "global_step": global_step,
+                 "obs_mode": self._val_obs_mode},
                 self._logdir / "best_val_macro_winrate.pt",
             )
-            print(f"  [val step {train_step}] NEW BEST macro win_rate={wr:.3f} "
+            print(f"  [val global_step {global_step}] NEW BEST macro win_rate={wr:.3f} "
                   f"(orig_return={ret:.3f}) -> best_val_macro_winrate.pt")
         else:
-            print(f"  [val step {train_step}] macro win_rate={wr:.3f} "
+            print(f"  [val global_step {global_step}] macro win_rate={wr:.3f} "
                   f"orig_return={ret:.3f} (best {self._best_macro_wr:.3f})")
         self.logger.write(train_step)
         agent.train()

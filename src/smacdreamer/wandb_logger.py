@@ -30,8 +30,11 @@ class WandbLogger(tools.Logger):
     wandb_kwargs: any extra keyword args forwarded to wandb.init()
     """
 
-    def __init__(self, logdir, project, run_name=None, config=None, **wandb_kwargs):
+    def __init__(self, logdir, project, run_name=None, config=None, step_offset=0, **wandb_kwargs):
         super().__init__(logdir)
+        # Continuation runs: global_step x-axis = local step + offset (e.g. 2,000,000) so a
+        # 2M->4M continuation plots on a continuous absolute axis.
+        self._step_offset = int(step_offset)
 
         import wandb
         self._wandb = wandb
@@ -89,7 +92,7 @@ class WandbLogger(tools.Logger):
         # (wandb auto-increments _step); the env step rides along as the
         # "global_step" x-axis metric.
         if wandb_scalars:
-            wandb_scalars["global_step"] = int(step)
+            wandb_scalars["global_step"] = int(step) + self._step_offset
             self._wandb.log(wandb_scalars)
 
         # Parent: TensorBoard + console print + metrics.jsonl (also clears buffers).
