@@ -14,10 +14,10 @@
 # while the new critic/reward recalibrate.
 
 maps:
-  train:               configs/maps/r2_650/configs/train
-  validation:          configs/maps/r2_650/configs/validation
-  blind_iid:           configs/maps/r2_650/configs/blind_iid
-  blind_compositional: configs/maps/r2_650/configs/blind_compositional
+  train:               configs/maps/r2_2100/configs/train
+  validation:          configs/maps/r2_2100/configs/validation
+  blind_iid:           configs/maps/r2_2100/configs/blind_iid
+  blind_compositional: configs/maps/r2_2100/configs/blind_compositional
 
 sampling_mode: shuffled_round_robin
 

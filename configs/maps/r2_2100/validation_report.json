@@ -1,0 +1,193 @@
+{
+  "seed": 18062026,
+  "total_configs": 2100,
+  "validation_errors": 0,
+  "unique_hashes": 2100,
+  "family_counts": {
+    "seen_total": 100,
+    "seen_legacy": 50,
+    "seen_new": 50,
+    "heldout_total": 40,
+    "heldout_legacy": 20,
+    "heldout_new": 20
+  },
+  "split_counts": {
+    "train": 1200,
+    "validation": 200,
+    "blind_iid": 300,
+    "blind_compositional": 400
+  },
+  "engagement_counts": {
+    "train": {
+      "immediate": 300,
+      "near": 400,
+      "medium": 300,
+      "far": 200
+    },
+    "validation": {
+      "immediate": 50,
+      "near": 67,
+      "medium": 50,
+      "far": 33
+    },
+    "blind_iid": {
+      "near": 100,
+      "medium": 75,
+      "immediate": 75,
+      "far": 50
+    },
+    "blind_compositional": {
+      "near": 133,
+      "far": 67,
+      "medium": 100,
+      "immediate": 100
+    }
+  },
+  "terrain_counts": {
+    "train": {
+      "NARROW": 400,
+      "OCTAGON": 400,
+      "SIMPLE": 400
+    },
+    "validation": {
+      "OCTAGON": 68,
+      "NARROW": 66,
+      "SIMPLE": 66
+    },
+    "blind_iid": {
+      "OCTAGON": 100,
+      "NARROW": 100,
+      "SIMPLE": 100
+    },
+    "blind_compositional": {
+      "SIMPLE": 135,
+      "NARROW": 133,
+      "OCTAGON": 132
+    }
+  },
+  "formation_counts": {
+    "train": {
+      "compact": 300,
+      "split": 300,
+      "staggered": 300,
+      "type_split": 300
+    },
+    "validation": {
+      "compact": 66,
+      "split": 50,
+      "staggered": 50,
+      "type_split": 34
+    },
+    "blind_iid": {
+      "compact": 100,
+      "split": 75,
+      "staggered": 75,
+      "type_split": 50
+    },
+    "blind_compositional": {
+      "type_split": 67,
+      "compact": 133,
+      "split": 100,
+      "staggered": 100
+    }
+  },
+  "layout_counts": {
+    "train": {
+      "narrow_same_side": 300,
+      "diag_up": 200,
+      "horizontal": 400,
+      "vertical": 100,
+      "diag_down": 100,
+      "narrow_cross_gate": 100
+    },
+    "validation": {
+      "horizontal": 50,
+      "narrow_same_side": 49,
+      "diag_up": 34,
+      "vertical": 17,
+      "narrow_cross_gate": 17,
+      "diag_down": 33
+    },
+    "blind_iid": {
+      "vertical": 25,
+      "narrow_cross_gate": 25,
+      "diag_down": 50,
+      "diag_up": 50,
+      "horizontal": 75,
+      "narrow_same_side": 75
+    },
+    "blind_compositional": {
+      "diag_up": 67,
+      "horizontal": 100,
+      "diag_down": 67,
+      "narrow_same_side": 100,
+      "vertical": 33,
+      "narrow_cross_gate": 33
+    }
+  },
+  "difficulty_proxy_counts": {
+    "train": {
+      "strong_advantage": 300,
+      "moderate_advantage": 636,
+      "balanced": 240,
+      "slight_disadvantage": 24
+    },
+    "validation": {
+      "strong_advantage": 50,
+      "moderate_advantage": 106,
+      "balanced": 40,
+      "slight_disadvantage": 4
+    },
+    "blind_iid": {
+      "strong_advantage": 75,
+      "moderate_advantage": 159,
+      "balanced": 60,
+      "slight_disadvantage": 6
+    },
+    "blind_compositional": {
+      "strong_advantage": 150,
+      "balanced": 70,
+      "moderate_advantage": 130,
+      "slight_disadvantage": 50
+    }
+  },
+  "ally_value_ratio": {
+    "min": 0.9231,
+    "max": 1.7857,
+    "mean": 1.2581092857142857,
+    "median": 1.25
+  },
+  "compatibility": {
+    "max_agents": 9,
+    "max_enemies": 10,
+    "max_actions": 16,
+    "unit_type_ids": {
+      "BANELING": 0,
+      "COLOSSUS": 1,
+      "MARAUDER": 2,
+      "MARINE": 3,
+      "MEDIVAC": 4,
+      "SPINE_CRAWLER": 5,
+      "STALKER": 6,
+      "ZEALOT": 7,
+      "ZERGLING": 8
+    }
+  },
+  "static_checks": [
+    "exact JSON schema",
+    "name/filename agreement",
+    "unit/count validity",
+    "team count agreement",
+    "global unit-type vocabulary",
+    "shield flag exactness",
+    "medivac targetability",
+    "group placement emulation",
+    "spawn bounds",
+    "terrain walkability",
+    "same-plane overlap rejection",
+    "attack-point bounds",
+    "engagement bucket",
+    "duplicate semantic map rejection"
+  ],
+  "dynamic_validation_required": true
+}
