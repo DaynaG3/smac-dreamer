@@ -100,7 +100,8 @@ class ActionConditionedEntityRolloutGRUMemory(nn.Module):
             memory.reshape(bsz * entities, self.memory_dim),
         ).reshape(bsz, entities, self.memory_dim)
         if entity_mask is not None:
-            new_mem = new_mem * entity_mask.unsqueeze(-1)
+            keep = entity_mask.unsqueeze(-1).bool()
+            new_mem = torch.where(keep, new_mem, memory)
         return new_mem
 
 

@@ -1,5 +1,15 @@
 # Changes
 
+## Frozen JEPA audit fixes
+
+- Fixed the JEPA runtime gradient boundary so the pretrained JEPA core remains frozen while the trainable `JEPAFeatureAdapter` receives gradients and optimizer updates.
+- Corrected JEPA structural slot masks: only real ally slots and real enemy slots are marked valid; padded ally/enemy slots cannot be reactivated by the presence head during imagination.
+- Added runtime enemy-visibility masking for JEPA tokens, matching the restored visibility dataset path: hidden enemy dynamic features are zeroed before online token construction.
+- Fixed action-conditioned recurrent memory semantics so temporarily masked/invisible entities preserve prior memory instead of being reset.
+- Tightened JEPA checkpoint validation to require complete runtime metadata, including visibility, latent, memory, and action-conditioned settings.
+- Removed hardcoded local JEPA checkout paths from ordinary JEPA unit tests and replaced central safety tests with self-contained synthetic fixtures.
+- Real JEPA source parity for `ActionConditionedEntityRolloutGRUMemory` remains blocked because the provided JEPA checkout still lacks `smac_jepa/modules/rollout_memory.py` and `train_markov_rollout_rnn_visibility_seqmem_experiments.py`.
+
 ## Frozen JEPA world-model backend
 
 - Added optional `world_model.backend: jepa` alongside the default RSSM backend.

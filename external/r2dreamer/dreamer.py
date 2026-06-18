@@ -78,6 +78,11 @@ class Dreamer(nn.Module):
                 "static_dim": int(static_dim),
                 "n_actions": max_actions,
             }
+            configured_live = getattr(jepa_cfg, "live_metadata", None)
+            if configured_live is not None:
+                configured = dict(configured_live)
+                configured.update(live_metadata)
+                live_metadata = configured
             core, memory, info = load_frozen_jepa_checkpoint(
                 str(jepa_cfg.checkpoint),
                 map_location=self.device,

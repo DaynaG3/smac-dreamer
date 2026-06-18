@@ -29,7 +29,9 @@ python scripts/evaluate_multimap.py --config configs/r2_650.yaml \
 
 Optional frozen-JEPA backend work lives behind `world_model.backend: jepa` and
 requires installing the local `smac-jepa-wm` package plus providing a real JEPA
-checkpoint. See [`docs/jepa_r2dreamer_integration.md`](docs/jepa_r2dreamer_integration.md).
+checkpoint. Synthetic safety tests run without those files, but long JEPA
+training should wait until the real token/action/checkpoint parity scripts pass.
+See [`docs/jepa_r2dreamer_integration.md`](docs/jepa_r2dreamer_integration.md).
 
 See [`docs/CHANGES.md`](docs/CHANGES.md) for the full feature changelog and
 [`docs/diagnostics/`](docs/diagnostics/) for diagnostic reports.

@@ -168,6 +168,7 @@ class SMACliteDreamerEnv(gym.Env):
         obs_mode: str = "flat",           # "flat" (legacy right-padded) | "structured" (P0.3)
         strict_actions: bool = False,     # raise on an invalid requested action (vs sanitise)
         include_jepa_obs: bool = False,
+        jepa_visibility_config=None,
     ):
         super().__init__()
         from smacdreamer.envs.reward_shaping import RewardShapingConfig as _RSC
@@ -179,6 +180,7 @@ class SMACliteDreamerEnv(gym.Env):
         # "structured" = the canonical per-entity layout (smacdreamer.envs.structured_obs).
         self._obs_mode = str(obs_mode)
         self._include_jepa_obs = bool(include_jepa_obs)
+        self._jepa_visibility_config = jepa_visibility_config
         if self._obs_mode not in ("flat", "structured"):
             raise ValueError(
                 f"unsupported obs_mode {self._obs_mode!r}; expected 'flat' or 'structured' "
@@ -911,7 +913,11 @@ class SMACliteDreamerEnv(gym.Env):
             obs = {**_so.flatten_for_model(blocks), **_is}
             if self._include_jepa_obs:
                 from smacdreamer.jepa.online_tokens import build_jepa_observation
-                jepa_obs, _ = build_jepa_observation(uw, self._structured_pad_dims())
+                jepa_obs, _ = build_jepa_observation(
+                    uw,
+                    self._structured_pad_dims(),
+                    visibility=self._jepa_visibility_config,
+                )
                 obs.update(jepa_obs)
         elif self._pad_dims is not None:
             from smacdreamer.envs.padding import (

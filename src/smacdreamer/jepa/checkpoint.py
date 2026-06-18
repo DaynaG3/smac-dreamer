@@ -98,9 +98,10 @@ def _arch_from(metadata: dict[str, Any], cfg: dict[str, Any]) -> dict[str, int |
     }
 
 
-def validate_metadata(metadata: dict[str, Any], live: dict[str, Any]) -> None:
-    fields = (
+VALIDATION_FIELDS = (
         "mode",
+        "n_agents",
+        "n_enemies",
         "max_agents",
         "max_enemies",
         "max_actions",
@@ -114,10 +115,44 @@ def validate_metadata(metadata: dict[str, Any], live: dict[str, Any]) -> None:
         "enemy_has_shields",
         "num_unit_types",
         "n_actions",
+        "latent_dim",
+        "memory_dim",
+        "action_conditioned_memory",
+        "enemy_visibility_mask",
+        "enemy_sight_range",
+        "visibility_xy_indices",
+        "latent_normalization",
     )
+
+
+def _checkpoint_contract(metadata: dict[str, Any], cfg: dict[str, Any], arch: dict[str, Any]) -> dict[str, Any]:
+    contract = dict(metadata)
+    contract.setdefault("latent_dim", int(arch["latent_dim"]))
+    contract.setdefault("memory_dim", int(cfg.get("rollout_memory_dim", cfg.get("memory_dim", 128))))
+    contract.setdefault("action_conditioned_memory", bool(cfg.get("action_conditioned_memory", False)))
+    contract.setdefault("enemy_visibility_mask", bool(cfg.get("enemy_visibility_mask", False)))
+    contract.setdefault("enemy_sight_range", float(cfg.get("enemy_sight_range", 9.0)))
+    contract.setdefault("visibility_xy_indices", tuple(cfg.get("xy_indices", cfg.get("visibility_xy_indices", (2, 3)))))
+    contract.setdefault("latent_normalization", cfg.get("latent_normalization", cfg.get("latent_normalize", "none")))
+    return contract
+
+
+def _same_value(a: Any, b: Any) -> bool:
+    if isinstance(a, (list, tuple)) or isinstance(b, (list, tuple)):
+        return tuple(a) == tuple(b)
+    return a == b
+
+
+def validate_metadata(metadata: dict[str, Any], live: dict[str, Any]) -> None:
     mismatches = []
-    for field in fields:
-        if field in live and field in metadata and metadata[field] != live[field]:
+    for field in VALIDATION_FIELDS:
+        if field not in metadata:
+            mismatches.append((field, "<missing in checkpoint>", live.get(field, "<missing in runtime>")))
+            continue
+        if field not in live:
+            mismatches.append((field, metadata[field], "<missing in runtime>"))
+            continue
+        if not _same_value(metadata[field], live[field]):
             mismatches.append((field, metadata[field], live[field]))
     if mismatches:
         lines = ["JEPA checkpoint is incompatible with the live R2 environment:"]
@@ -142,11 +177,11 @@ def load_frozen_jepa_checkpoint(
     memory_state = _required(checkpoint, "memory_module_state")
     metadata = dict(_required(checkpoint, "metadata"))
     cfg = dict(checkpoint.get("resolved_config", checkpoint.get("config", {})))
-    if live_metadata is not None:
-        validate_metadata(metadata, live_metadata)
-
     SMACJEPA, EntityRolloutGRUMemory = _import_jepa()
     arch = _arch_from(metadata, cfg)
+    contract = _checkpoint_contract(metadata, cfg, arch)
+    if live_metadata is not None:
+        validate_metadata(contract, live_metadata)
     model = SMACJEPA(**arch)
     missing, unexpected = model.load_state_dict(model_state, strict=False)
     if strict and (missing or unexpected):
@@ -187,7 +222,7 @@ def load_frozen_jepa_checkpoint(
     info = JEPACheckpointInfo(
         path=str(path),
         sha256=sha256_file(path),
-        metadata=metadata,
+        metadata=contract,
         resolved_config=cfg,
         training_regime=cfg.get("training_regime"),
         action_conditioned_memory=action_conditioned,

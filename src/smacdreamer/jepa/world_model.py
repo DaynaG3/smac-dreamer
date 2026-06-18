@@ -5,6 +5,7 @@ from torch import nn
 
 from .action_adapter import JEPAActionAdapter
 from .feature_adapter import JEPAFeatureAdapter
+from .online_tokens import JEPAVisibilityConfig
 from .state import JEPAStateSpec, pack_state, unpack_state
 
 
@@ -32,6 +33,11 @@ class FrozenJEPAWorldModel(nn.Module):
         self.max_agents = int(meta["max_agents"])
         self.max_actions = int(meta["max_actions"])
         self.presence_threshold = float(presence_threshold)
+        self.visibility_config = JEPAVisibilityConfig(
+            enemy_visibility_mask=bool(meta.get("enemy_visibility_mask", False)),
+            enemy_sight_range=float(meta.get("enemy_sight_range", 9.0)),
+            xy_indices=tuple(meta.get("visibility_xy_indices", (2, 3))),
+        )
         self.state_spec = JEPAStateSpec(self.entities, self.latent_dim, self.memory_dim, self.static_dim)
         self.action_adapter = JEPAActionAdapter(
             max_agents=self.max_agents,

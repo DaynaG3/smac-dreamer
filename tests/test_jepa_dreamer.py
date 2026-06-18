@@ -2,59 +2,92 @@ import argparse
 import pathlib
 import sys
 
-import pytest
 import torch
 from gymnasium import spaces
+from torch import nn
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 for p in (ROOT / "src", ROOT / "external" / "r2dreamer", ROOT / "scripts"):
     sys.path.insert(0, str(p))
-JEPA = pathlib.Path("/Users/kialok/Desktop/NUS Mods/smac-jepa-wm-main")
-if JEPA.exists():
-    sys.path.insert(0, str(JEPA))
 
 from dreamer import Dreamer
+from smacdreamer.jepa.checkpoint import JEPACheckpointInfo
 from smacdreamer.jepa.memory import EntityRolloutGRUMemory
 from train_r2dreamer_smaclite_debug import make_config
 
 
-def _checkpoint(path):
-    if not JEPA.exists():
-        pytest.skip("local smac-jepa-wm checkout is not available")
-    from smac_jepa.jepa import SMACJEPA
+class TinyCore(nn.Module):
+    def __init__(self):
+        super().__init__()
+        class Encoder(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.proj = nn.Linear(5, 6)
 
-    meta = {
-        "state_dim": 8, "n_agents": 2, "n_actions": 3, "n_enemies": 1,
-        "ally_state_feat_size": 3, "enemy_state_feat_size": 2,
-        "ally_has_shields": False, "enemy_has_shields": False, "num_unit_types": 0,
-        "max_agents": 2, "max_enemies": 1, "max_actions": 3,
-        "token_dim": 5, "dynamic_token_dim": 3, "static_dim": 4,
-        "entity_static_feat_size": 2, "mode": "entity",
+            def forward(self, entity, mask):
+                return self.proj(entity) * mask.unsqueeze(-1)
+
+        self.encoder = Encoder()
+        self.predictor = nn.Linear(9, 6)
+        self.presence = nn.Linear(6, 1)
+
+    def predict_presence(self, latents):
+        return self.presence(latents).squeeze(-1)
+
+
+def _metadata():
+    return {
+        "state_dim": 8,
+        "n_agents": 2,
+        "n_enemies": 1,
+        "n_actions": 3,
+        "ally_state_feat_size": 3,
+        "enemy_state_feat_size": 2,
+        "ally_has_shields": False,
+        "enemy_has_shields": False,
+        "num_unit_types": 0,
+        "max_agents": 2,
+        "max_enemies": 1,
+        "max_actions": 3,
+        "token_dim": 5,
+        "dynamic_token_dim": 3,
+        "static_dim": 4,
+        "entity_static_feat_size": 2,
+        "mode": "entity",
+        "latent_dim": 6,
+        "memory_dim": 7,
+        "action_conditioned_memory": False,
+        "enemy_visibility_mask": False,
+        "enemy_sight_range": 9.0,
+        "visibility_xy_indices": (2, 3),
+        "latent_normalization": "none",
     }
-    cfg = {"latent_dim": 6, "hidden_dim": 8, "action_dim": 4, "num_heads": 2, "rollout_memory_dim": 7}
-    model = SMACJEPA(
-        state_dim=8, n_agents=2, n_actions=3, latent_dim=6, hidden_dim=8, action_dim=4,
-        num_heads=2, mode="entity", max_agents=2, max_enemies=1, max_actions=3,
-        token_dim=5, static_dim=4,
-    )
-    memory = EntityRolloutGRUMemory(latent_dim=6, memory_dim=7)
-    torch.save({"model_state": model.state_dict(), "memory_module_state": memory.state_dict(),
-                "metadata": meta, "resolved_config": cfg}, path)
 
 
-def test_jepa_dreamer_constructs_and_keeps_core_eval(tmp_path):
-    ckpt = tmp_path / "jepa.pt"
-    _checkpoint(ckpt)
+def test_jepa_dreamer_constructs_and_keeps_core_eval(monkeypatch, tmp_path):
+    import smacdreamer.jepa.checkpoint as checkpoint_mod
+
+    meta = _metadata()
+
+    def fake_loader(*args, **kwargs):
+        return (
+            TinyCore(),
+            EntityRolloutGRUMemory(latent_dim=6, memory_dim=7),
+            JEPACheckpointInfo("synthetic", "0" * 64, meta, {}, "synthetic", False, 6, 7, 3),
+        )
+
+    monkeypatch.setattr(checkpoint_mod, "load_frozen_jepa_checkpoint", fake_loader)
     cfg = make_config(argparse.Namespace(steps=10, batch_size=1, batch_length=2, units=16, deter=32, imag_horizon=2))
     cfg.model.action_masking = True
     cfg.model.world_model = {
         "backend": "jepa",
         "jepa": {
-            "checkpoint": str(ckpt),
+            "checkpoint": str(tmp_path / "unused.pt"),
             "strict_checkpoint": True,
             "freeze_core": True,
             "presence_threshold": 0.5,
             "feature_dim": 64,
+            "live_metadata": meta,
         },
     }
     obs_space = spaces.Dict({

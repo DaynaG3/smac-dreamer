@@ -111,6 +111,7 @@ def make_smaclite_multimap_env(
     entries, pad_dims, sampling_mode, base_seed, worker_idx,
     reward_name, reward_params, gamma, max_episode_steps, obs_mode="flat",
     worker_generation=0, completed_episode_offset=0, include_jepa_obs=False,
+    jepa_visibility_config=None,
 ):
     """Construct one R2-Dreamer-compatible multimap SMAClite env (worker-side).
 
@@ -150,6 +151,7 @@ def make_smaclite_multimap_env(
         gamma=gamma,
         obs_mode=obs_mode,
         include_jepa_obs=include_jepa_obs,
+        jepa_visibility_config=jepa_visibility_config,
     )
     return SMACliteR2DreamerAdapter(env)
 
@@ -173,6 +175,7 @@ def make_smaclite_multimap_envs(
     pad_dims=None,
     env_lifecycle=None,
     include_jepa_obs=False,
+    jepa_visibility_config=None,
 ):
     """Create multimap train + held-out eval ParallelEnv pools.
 
@@ -217,6 +220,7 @@ def make_smaclite_multimap_envs(
             worker_generation=generation,
             completed_episode_offset=completed_episode_offset,
             include_jepa_obs=include_jepa_obs,
+            jepa_visibility_config=jepa_visibility_config,
         )
 
     # Eval pool: held-out TEST maps, SAME padding, ORIGINAL reward (smaclite_default).
@@ -227,6 +231,7 @@ def make_smaclite_multimap_envs(
             worker_generation=generation,
             completed_episode_offset=completed_episode_offset,
             include_jepa_obs=include_jepa_obs,
+            jepa_visibility_config=jepa_visibility_config,
         )
 
     train_envs = ParallelEnv(

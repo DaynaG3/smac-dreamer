@@ -44,12 +44,14 @@ _METRICS = ("win", "original_return", "length", "timeout",
 DEFAULT_FIXED_SEEDS = (0, 1, 2, 3, 4)
 
 
-def _call_env_factory(env_factory, args, *, include_jepa_obs, shutdown_timeout_seconds):
+def _call_env_factory(env_factory, args, *, include_jepa_obs, jepa_visibility_config, shutdown_timeout_seconds):
     sig = inspect.signature(env_factory)
     accepts_kwargs = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
     kwargs = {}
     if accepts_kwargs or "include_jepa_obs" in sig.parameters:
         kwargs["include_jepa_obs"] = include_jepa_obs
+    if accepts_kwargs or "jepa_visibility_config" in sig.parameters:
+        kwargs["jepa_visibility_config"] = jepa_visibility_config
     if accepts_kwargs or "shutdown_timeout_seconds" in sig.parameters:
         kwargs["shutdown_timeout_seconds"] = shutdown_timeout_seconds
     return env_factory(*args, **kwargs)
@@ -140,6 +142,7 @@ def evaluate_heldout(
     max_episode_steps: int = 200,
     obs_mode: str = "flat",
     include_jepa_obs: bool = False,
+    jepa_visibility_config=None,
     env_factory: Optional[Callable] = None,
     episode_fn: Optional[Callable] = None,
     shutdown_timeout_seconds: float = 5.0,
@@ -181,8 +184,9 @@ def evaluate_heldout(
         env = _call_env_factory(
             env_factory,
             ([entry], pad_dims, "fixed", 0, 0, "smaclite_default", {},
-             gamma, max_episode_steps, obs_mode),
+            gamma, max_episode_steps, obs_mode),
             include_jepa_obs=include_jepa_obs,
+            jepa_visibility_config=jepa_visibility_config,
             shutdown_timeout_seconds=shutdown_timeout_seconds,
         )
         try:

@@ -113,6 +113,7 @@ class ValidationTrainer(OnlineTrainer):
             seeds=self._val_seeds, device=self._val_device, gamma=self._val_gamma,
             max_episode_steps=self._val_max_steps, obs_mode=self._val_obs_mode,
             include_jepa_obs=(getattr(agent, "world_model_backend", "rssm") == "jepa"),
+            jepa_visibility_config=getattr(getattr(agent, "jepa_world_model", None), "visibility_config", None),
             shutdown_timeout_seconds=self._val_shutdown_timeout,
             progress=False,
         )

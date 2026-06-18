@@ -51,6 +51,24 @@ Trainable modules:
 
 The slow critic remains managed by the existing target-update path.
 
+The gradient boundary is intentional:
+
+```python
+with torch.no_grad():
+    conditioned = frozen_memory_module.condition(latent, memory, entity_mask)
+
+feature = trainable_feature_adapter(
+    conditioned.detach(),
+    memory.detach(),
+    entity_mask.detach(),
+    static_condition.detach(),
+)
+```
+
+Losses from reward, continuation, availability, alive prediction and value
+learning may update the feature adapter. They must not update the JEPA encoder,
+predictor, presence head, decoder, projector, or recurrent memory.
+
 ## State
 
 `stoch` is the current per-entity JEPA latent:
@@ -79,6 +97,51 @@ When JEPA mode is selected, structured SMAClite observations additionally includ
 
 RSSM runs do not receive these fields, preserving existing RSSM encoder behavior.
 
+`jepa_entity_slot_mask` is structural. It marks only entity slots that physically
+exist on the current map:
+
+```text
+allies:  [0, n_agents)
+enemies: [max_agents, max_agents + n_enemies)
+```
+
+Padded ally and enemy slots are zero. This is separate from:
+
+- `jepa_entity_mask`: currently visible/present entity tokens
+- `agent_alive_mask`: allied slots currently capable of acting
+- `avail_actions`: valid actions for each allied slot
+
+During JEPA imagination, predicted presence is always intersected with the
+structural slot mask, so padded entities cannot become active.
+
+## Visibility Masking
+
+The selected JEPA training path is visibility-aware. Online token construction
+therefore applies the same observation-side masking as
+`VisibilityMarkovRolloutSMACJEPADataset`: enemy dynamic features outside allied
+sight range are zeroed before tokenization. This never uses offline target/full
+state tensors during acting.
+
+Visibility settings are read from checkpoint metadata or resolved config and
+passed into training workers and isolated validation children. A checkpoint that
+requires visibility masking must match runtime metadata; the loader fails rather
+than silently disabling masking.
+
+The restored dataset code treats allied liveness as feature-column 0 > 0, and
+enemy presence as a nonzero enemy feature row. Synthetic tests match that source
+behavior. Real `.npz` parity is still a release gate.
+
+## Recurrent Memory
+
+Action-conditioned recurrent memory preserves prior memory for masked entities:
+
+```python
+new_memory = torch.where(entity_mask[..., None], proposed_new_memory, previous_memory)
+```
+
+This distinction matters for temporarily invisible entities. Structurally padded
+entities remain disabled through the slot mask and start from zero memory.
+
 ## Checkpoint Contract
 
 The source JEPA checkpoint must contain:
@@ -92,10 +155,23 @@ The loader validates metadata against the live R2 environment and fails on
 mismatches. It never loads the JEPA optimizer or scaler, and it never falls back
 to RSSM.
 
+Validated fields include mode, agent/enemy/action dimensions, token dimensions,
+dynamic/static feature dimensions, shield flags, unit-type vocabulary size,
+latent dimension, recurrent-memory dimension, action-conditioned-memory setting,
+visibility-mask setting, sight range, coordinate indices, and latent
+normalization mode. Missing live metadata is treated as an incompatibility.
+
 The specified local JEPA checkout currently lacks `smac_jepa.modules.rollout_memory`;
 this branch includes runtime-compatible memory implementations under
 `smacdreamer.jepa.memory` so checkpoints can still load without importing JEPA
 training entry points.
+
+The restored checkout also lacks
+`train_markov_rollout_rnn_visibility_seqmem_experiments.py`, so exact
+source-level numerical parity for the action-conditioned memory class cannot be
+claimed from this repository state. The compatibility class is tested against the
+documented masked-memory semantics; real source parity remains pending until the
+original class is available.
 
 ## Deliberate Backend Differences
 
@@ -114,6 +190,7 @@ These are backend differences, not missing loss terms.
 The real dataset episodes and checkpoint are absent, so these remain pending:
 
 - real `.npz` online/offline token parity
+- real visibility-mask parity
 - real action parity
 - real checkpoint reconstruction
 - original-runtime versus R2-wrapper parity

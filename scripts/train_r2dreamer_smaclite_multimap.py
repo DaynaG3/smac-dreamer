@@ -50,11 +50,32 @@ from smacdreamer.wandb_logger import WandbLogger
 from smacdreamer.checkpointing import PeriodicCheckpointer, attach_checkpointing
 from smacdreamer.envs.reward_registry import resolved_params
 from smacdreamer.cuda_preflight import resolve_amp_dtype, run_cuda_preflight
+from smacdreamer.jepa.online_tokens import JEPAVisibilityConfig
 
 # Reuse the exact Dreamer/buffer/trainer config from the debug script.
 from train_r2dreamer_smaclite_debug import make_config as _make_debug_config  # noqa: E402
 
 torch.set_float32_matmul_precision("high")
+
+
+def _read_jepa_checkpoint_runtime_config(path: pathlib.Path) -> tuple[dict, JEPAVisibilityConfig]:
+    checkpoint = torch.load(path, map_location="cpu")
+    if not isinstance(checkpoint, dict):
+        raise TypeError(f"JEPA checkpoint must be a dict: {path}")
+    metadata = dict(checkpoint.get("metadata", {}))
+    cfg = dict(checkpoint.get("resolved_config", checkpoint.get("config", {})))
+    visibility = JEPAVisibilityConfig(
+        enemy_visibility_mask=bool(cfg.get("enemy_visibility_mask", metadata.get("enemy_visibility_mask", False))),
+        enemy_sight_range=float(cfg.get("enemy_sight_range", metadata.get("enemy_sight_range", 9.0))),
+        xy_indices=tuple(cfg.get("xy_indices", metadata.get("visibility_xy_indices", (2, 3)))),
+    )
+    live_metadata = dict(metadata)
+    live_metadata.setdefault("latent_dim", cfg.get("latent_dim"))
+    live_metadata.setdefault("memory_dim", cfg.get("rollout_memory_dim", cfg.get("memory_dim")))
+    live_metadata.setdefault("action_conditioned_memory", bool(cfg.get("action_conditioned_memory", False)))
+    live_metadata.update(visibility.metadata())
+    live_metadata.setdefault("latent_normalization", cfg.get("latent_normalization", cfg.get("latent_normalize", "none")))
+    return live_metadata, visibility
 
 
 def _propagate_device(node, device: str) -> None:
@@ -151,6 +172,8 @@ def main():
         raise ValueError(f"world_model.backend must be 'rssm' or 'jepa', got {wm_backend!r}")
     config.model.world_model = OmegaConf.create(OmegaConf.to_container(wm_cfg, resolve=True) if wm_cfg else {})
     config.model.world_model.backend = wm_backend
+    jepa_visibility_config = None
+    jepa_live_metadata = None
     if wm_backend == "jepa":
         if obs_mode != "structured":
             raise ValueError("world_model.backend='jepa' requires observation.mode: structured")
@@ -163,6 +186,11 @@ def main():
             jepa_cfg.checkpoint = args.jepa_checkpoint
         if not jepa_cfg.get("checkpoint"):
             raise ValueError("world_model.backend='jepa' requires world_model.jepa.checkpoint or --jepa-checkpoint")
+        ckpt_path = pathlib.Path(str(jepa_cfg.checkpoint))
+        if not ckpt_path.exists():
+            raise FileNotFoundError(f"JEPA checkpoint not found: {ckpt_path}")
+        jepa_live_metadata, jepa_visibility_config = _read_jepa_checkpoint_runtime_config(ckpt_path)
+        jepa_cfg.live_metadata = OmegaConf.create(jepa_live_metadata)
         config.model.world_model.jepa = jepa_cfg
     config.model.amp_dtype = resolve_amp_dtype(str(cfg.get("amp_dtype", "bfloat16")), str(cfg.device))
     run_cuda_preflight(str(cfg.device), str(config.model.amp_dtype))
@@ -220,6 +248,7 @@ def main():
     print(f"  world_model: {wm_backend}")
     if wm_backend == "jepa":
         print(f"  jepa ckpt  : {config.model.world_model.jepa.checkpoint}")
+        print(f"  jepa vis   : {jepa_visibility_config}")
     print(f"  amp_dtype  : {config.model.amp_dtype}")
     print(f"  replay     : backend={config.buffer.storage_backend} capacity={config.buffer.max_size} "
           f"storage_device={config.buffer.storage_device} scratch={config.buffer.scratch_dir}")
@@ -248,6 +277,7 @@ def main():
         train_entries=train_entries, test_entries=val_entries, pad_dims=pad_dims,
         env_lifecycle=env_lifecycle,
         include_jepa_obs=(wm_backend == "jepa"),
+        jepa_visibility_config=jepa_visibility_config,
     )
     print(f"  obs keys : {sorted(obs_space.spaces)}")
 
@@ -289,6 +319,7 @@ def main():
         ckpt_path = pathlib.Path(str(config.model.world_model.jepa.checkpoint))
         run_meta["jepa_checkpoint"] = str(ckpt_path)
         run_meta["jepa_checkpoint_sha256"] = sha256_file(ckpt_path) if ckpt_path.exists() else None
+        run_meta["jepa_visibility"] = jepa_visibility_config.metadata() if jepa_visibility_config is not None else None
     (logdir / "run_meta.json").write_text(json.dumps(run_meta, indent=2), encoding="utf-8")
 
     wandb_cfg = cfg.get("wandb") or {}
