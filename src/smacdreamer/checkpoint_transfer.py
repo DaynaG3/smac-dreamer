@@ -31,6 +31,24 @@ def _top(key: str) -> str:
     return key.split(".", 1)[0]
 
 
+def validate_resume_args(resume_mode, step_offset, resume_path) -> None:
+    """Guard against silently starting a fresh run with continuation settings.
+
+    ``transfer_reward`` and ``weights_only`` load weights from a checkpoint, so they REQUIRE
+    ``--resume``. A non-zero ``step_offset`` only makes sense when continuing an existing run, so
+    it also requires ``--resume``. Raises ``ValueError`` (clear message) if either is violated.
+    """
+    if resume_mode in ("transfer_reward", "weights_only") and not resume_path:
+        raise ValueError(
+            f"resume_mode={resume_mode!r} requires --resume /absolute/path/to/checkpoint.pt"
+        )
+    if int(step_offset) > 0 and not resume_path:
+        raise ValueError(
+            f"step_offset={step_offset} was set, but --resume was not provided. "
+            "Refusing to start a continuation run from scratch."
+        )
+
+
 def read_agent_state_dict(checkpoint_path) -> dict:
     """Load a checkpoint (absolute path, possibly off-repo) and return its ``agent_state_dict``.
 
@@ -132,5 +150,5 @@ def load_weights_only(agent, checkpoint_path, *, verbose: bool = True) -> dict:
 
 __all__ = [
     "RETAIN_PREFIXES", "RESET_PREFIXES", "read_agent_state_dict",
-    "transfer_reward_load", "load_weights_only",
+    "transfer_reward_load", "load_weights_only", "validate_resume_args",
 ]

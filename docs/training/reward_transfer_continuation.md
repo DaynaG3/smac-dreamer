@@ -49,6 +49,20 @@ logged under `episode/reward_*`.
 
 ---
 
+## Safety: `--resume` is mandatory for a continuation
+
+The script refuses to silently start a fresh model while carrying continuation settings
+(`validate_resume_args` in [`checkpoint_transfer.py`](../../src/smacdreamer/checkpoint_transfer.py)):
+
+- `--resume-mode transfer_reward` or `weights_only` **requires** `--resume` — both load weights
+  from the checkpoint, so a missing path is a hard error.
+- A non-zero `step_offset` (e.g. the config's `2000000`) **requires** `--resume` — a continuation
+  offset is meaningless from scratch; running without `--resume` raises
+  *"Refusing to start a continuation run from scratch."*
+
+The resolved resume settings are printed before training:
+`[resume] mode=transfer_reward  step_offset=2000000  actor_warmup_steps=25000  resume_path='…'`.
+
 ## Resume modes
 
 `--resume-mode` (or `resume.mode` in config) selects how the checkpoint is loaded:
@@ -130,6 +144,12 @@ Two clocks are maintained:
 it is `local_step + offset`. Validation runs every 100k local steps, i.e. at global
 2.1M, 2.2M, … 4.0M; the **first validation lands at global_step 2,100,000**.
 
+**Checkpoint metadata uses the trainer's global step, not the replay count.** The training loop
+publishes `agent._smacdreamer_local_step` / `agent._smacdreamer_global_step` each iteration, and
+the periodic checkpointer reads `_smacdreamer_global_step` for snapshot naming and metadata.
+(Replay `count()` saturates at replay capacity and would understate the true step on a long run,
+so it is no longer used for the global checkpoint step.)
+
 ---
 
 ## Validation metrics
@@ -144,6 +164,25 @@ over **winning episodes only** (0.0 sentinel when a map/grid has no wins — nev
 original return — **never** the shaped return. `best_val_macro_winrate.pt` now also records
 `global_step`.
 
+## Episode reward components to monitor on W&B
+
+Logged per finished training episode (from the final transition's `log_*` info):
+
+| W&B scalar                          | source `log_*` key                          |
+|-------------------------------------|---------------------------------------------|
+| `episode/reward_original_return`    | `log_episode_original_env_return`           |
+| `episode/reward_shaped_return`      | `log_episode_shaped_return`                 |
+| `episode/reward_shaping_total`      | `log_episode_reward_shaping_bonus`          |
+| `episode/reward_ally_ehp_dense`     | `log_reward_term_ally_ehp_dense_ep_sum`     |
+| `episode/reward_win_ehp_quality`    | `log_reward_term_win_ehp_quality_ep_sum`    |
+| `episode/reward_win_alive_quality`  | `log_reward_term_win_alive_quality_ep_sum`  |
+| `episode/reward_timeout`            | `log_reward_term_timeout_ep_sum`            |
+| `episode/final_ally_ehp_frac`       | `log_final_ally_ehp_frac`                   |
+| `episode/final_ally_alive_frac`     | `log_final_ally_alive_frac`                 |
+| `episode/final_enemy_ehp_frac`      | `log_final_enemy_ehp_frac`                  |
+
+`episode/score` and `episode/length` continue to be logged unchanged.
+
 ---
 
 ## Run it (Kubeflow)
@@ -155,7 +194,19 @@ absolute, off-repo persistent-volume path:
 python scripts/train_r2dreamer_smaclite_multimap.py \
     --config configs/r2_650_win_quality_continuation.yaml \
     --resume /mnt/pvc/checkpoints/r2_650/best_val_macro_winrate.pt \
-    --resume-mode transfer_reward
+    --resume-mode transfer_reward \
+    --logdir /mnt/pvc/logs/r2_650_win_quality_2m_to_4m
+```
+
+Smoke test (short run to confirm the load + logging before committing to 2M steps):
+
+```bash
+python scripts/train_r2dreamer_smaclite_multimap.py \
+    --config configs/r2_650_win_quality_continuation.yaml \
+    --resume /mnt/pvc/checkpoints/r2_650/best_val_macro_winrate.pt \
+    --resume-mode transfer_reward \
+    --steps 1000 \
+    --logdir /mnt/pvc/logs/r2_650_win_quality_smoke
 ```
 
 `--resume-mode`, `--step-offset`, and `--actor-warmup-steps` override the `resume:` block in the
@@ -196,3 +247,5 @@ Then, around global_step 2,100,000:
 - [`tests/test_step_offset.py`](../../tests/test_step_offset.py) — global = local + offset.
 - [`tests/test_actor_warmup.py`](../../tests/test_actor_warmup.py) — actor frozen during warm-up,
   world model still trains, actor moves after threshold.
+- [`tests/test_continuation_fixes.py`](../../tests/test_continuation_fixes.py) — resume guard,
+  checkpointer global step (not replay count), episode reward-component log mapping.

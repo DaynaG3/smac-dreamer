@@ -214,10 +214,11 @@ def evaluate_heldout(
             "timeout_rate": agg["timeout"],
             "final_ally_ehp_frac": agg["final_ally_ehp_frac"],
             "final_enemy_ehp_frac": agg["final_enemy_ehp_frac"],
-            # win-only quality (0.0 when this map had no wins)
-            "win_final_ally_ehp_frac": (_mean([m["final_ally_ehp_frac"] for m in _win_eps])
+            # win-only quality (0.0 when this map had no wins). final_ally_alive_frac is not a
+            # core _METRICS field, so read it defensively (.get) for episode dicts that omit it.
+            "win_final_ally_ehp_frac": (_mean([m.get("final_ally_ehp_frac", 0.0) for m in _win_eps])
                                         if _win_eps else 0.0),
-            "win_alive_fraction": (_mean([m["final_ally_alive_frac"] for m in _win_eps])
+            "win_alive_fraction": (_mean([m.get("final_ally_alive_frac", 0.0) for m in _win_eps])
                                    if _win_eps else 0.0),
         }
         if progress:
@@ -249,8 +250,9 @@ def evaluate_heldout(
     }
 
     # Win-quality metrics over WINNING episodes only. No wins -> 0.0 sentinel (never NaN).
+    # Read defensively: final_ally_alive_frac may be absent from injected/fake episode dicts.
     def _win_mean(metrics_list, key):
-        vals = [m[key] for m in metrics_list if m["win"]]
+        vals = [m.get(key, 0.0) for m in metrics_list if m["win"]]
         return _mean(vals) if vals else 0.0
     micro["win_final_ally_ehp_frac"] = _win_mean(pooled, "final_ally_ehp_frac")
     micro["win_alive_fraction"] = _win_mean(pooled, "final_ally_alive_frac")

@@ -12,11 +12,18 @@ CHILD_PIDS = []
 
 
 def _alive(pid):
+    # NOTE: os.kill(pid, 0) is NOT a liveness probe on Windows — os.kill there maps any signal
+    # other than CTRL_C/CTRL_BREAK_EVENT to TerminateProcess, so signal 0 would *kill* the child.
+    # psutil.pid_exists is a non-destructive, cross-platform check.
     try:
-        os.kill(int(pid), 0)
-        return True
-    except OSError:
-        return False
+        import psutil
+        return psutil.pid_exists(int(pid))
+    except ImportError:
+        try:
+            os.kill(int(pid), 0)
+            return True
+        except OSError:
+            return False
 
 
 def _wait_dead(pid, timeout=5.0):

@@ -3,6 +3,31 @@ import torch
 import tools
 
 
+# Episode-completion reward components emitted by the SMAClite adapter (log_* info keys) mapped
+# to the W&B/TensorBoard scalar names monitored on a continuation run. Logged per finished
+# episode alongside episode/score and episode/length.
+EPISODE_REWARD_LOG_MAP = {
+    "log_episode_original_env_return":          "episode/reward_original_return",
+    "log_episode_shaped_return":                "episode/reward_shaped_return",
+    "log_episode_reward_shaping_bonus":         "episode/reward_shaping_total",
+    "log_reward_term_ally_ehp_dense_ep_sum":    "episode/reward_ally_ehp_dense",
+    "log_reward_term_win_ehp_quality_ep_sum":   "episode/reward_win_ehp_quality",
+    "log_reward_term_win_alive_quality_ep_sum": "episode/reward_win_alive_quality",
+    "log_reward_term_timeout_ep_sum":           "episode/reward_timeout",
+    "log_final_ally_ehp_frac":                  "episode/final_ally_ehp_frac",
+    "log_final_ally_alive_frac":                "episode/final_ally_alive_frac",
+    "log_final_enemy_ehp_frac":                 "episode/final_enemy_ehp_frac",
+}
+
+
+def _scalar_at_env(tensor, i):
+    """Extract env-index ``i``'s scalar from a ``[env_num, 1, *]`` log tensor."""
+    value = tensor[i]
+    if hasattr(value, "reshape"):
+        value = value.reshape(-1)[0]
+    return value
+
+
 class OnlineTrainer:
     def __init__(self, config, replay_buffer, logger, logdir, train_envs, eval_envs):
         self.replay_buffer = replay_buffer
@@ -115,6 +140,12 @@ class OnlineTrainer:
         video_cache = []
         step = self.replay_buffer.count() * self._action_repeat
         update_count = 0
+        # Publish the trainer's actual local/global step on the agent so the periodic
+        # checkpointer stamps metadata/snapshot names with the real step (not the replay
+        # count, which saturates at capacity). Initialised before the loop and refreshed
+        # every iteration after `step` advances, prior to any checkpointing inside update().
+        agent._smacdreamer_local_step = int(step)
+        agent._smacdreamer_global_step = int(step + self._step_offset)
         # (B,)
         done = torch.ones(envs.env_num, dtype=torch.bool, device=agent.device)
         returns = torch.zeros(envs.env_num, dtype=torch.float32, device=agent.device)
@@ -156,10 +187,19 @@ class OnlineTrainer:
                             video_cache = []
                         self.logger.scalar("episode/score", returns[i])
                         self.logger.scalar("episode/length", lengths[i])
+                        # Episode reward-component breakdown (from the final transition's log_*
+                        # info). `trans` holds env i's terminal step from the previous iteration.
+                        for src_key, dst_key in EPISODE_REWARD_LOG_MAP.items():
+                            if src_key in trans:
+                                self.logger.scalar(dst_key, _scalar_at_env(trans[src_key], i))
                         self.logger.write(step + i)  # to show all values on tensorboard
                         returns[i] = lengths[i] = 0
             step += int((~done).sum()) * self._action_repeat  # step is based on env side
             lengths += ~done
+            # Refresh the published local/global step now that `step` has advanced, before the
+            # update/checkpointing phase reads it.
+            agent._smacdreamer_local_step = int(step)
+            agent._smacdreamer_global_step = int(step + self._step_offset)
 
             # Step environments.  Each env backend handles device placement
             # internally (ParallelEnv converts to CPU, IsaacLabVecEnv keeps

@@ -163,6 +163,14 @@ def main():
     config.trainer.step_offset = step_offset
     config.trainer.actor_warmup_steps = actor_warmup_steps
 
+    # Guard: a continuation resume MUST carry a checkpoint. transfer_reward/weights_only load
+    # weights from --resume, and a non-zero step_offset only makes sense when continuing an
+    # existing run — refuse to silently start a fresh model with continuation settings.
+    from smacdreamer.checkpoint_transfer import validate_resume_args
+    validate_resume_args(resume_mode, step_offset, args.resume)
+    print(f"  [resume] mode={resume_mode}  step_offset={step_offset}  "
+          f"actor_warmup_steps={actor_warmup_steps}  resume_path={args.resume!r}")
+
     # --- Validation cadence + fixed seeds (explicit seed list, NOT a worker count) -----
     val_cfg = cfg.get("validation") or {}
     _eval_cfg = cfg.get("eval") or {}
@@ -338,8 +346,10 @@ def main():
             checkpointer = PeriodicCheckpointer(
                 agent, logdir,
                 interval_seconds=float(cfg.checkpoint_every_minutes) * 60.0,
-                # GLOBAL step for checkpoint metadata/snapshot names (local replay count + offset).
-                step_fn=lambda: replay_buffer.count() * config.trainer.action_repeat + step_offset,
+                # GLOBAL step for checkpoint metadata/snapshot names = trainer's actual local
+                # step + offset (NOT replay count, which saturates at capacity). The trainer
+                # publishes this on the agent each loop; fall back to step_offset pre-loop.
+                step_fn=lambda: int(getattr(agent, "_smacdreamer_global_step", step_offset)),
             )
             attach_checkpointing(agent, checkpointer)
             print(f"  Checkpoints : every {cfg.checkpoint_every_minutes:g} min -> {logdir/'latest.pt'}")

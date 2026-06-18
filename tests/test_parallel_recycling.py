@@ -239,7 +239,9 @@ def test_unexpected_worker_death_reports_context():
     envs = ParallelEnv(make_tiny, 1, "cpu", shutdown_timeout_seconds=1)
     try:
         _step(envs, [True])
-        os.kill(envs.worker_infos()[0]["pid"], signal.SIGKILL)
+        # SIGKILL is POSIX-only; on Windows fall back to SIGTERM to force the worker death.
+        _kill_sig = getattr(signal, "SIGKILL", signal.SIGTERM)
+        os.kill(envs.worker_infos()[0]["pid"], _kill_sig)
         with pytest.raises(RuntimeError, match="worker slot=0.*pid=.*phase=step"):
             _step(envs, [False])
     finally:
