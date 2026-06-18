@@ -150,6 +150,25 @@ new_memory = torch.where(entity_mask[..., None], proposed_new_memory, previous_m
 This distinction matters for temporarily invisible entities. Structurally padded
 entities remain disabled through the slot mask and start from zero memory.
 
+Observed rollout chronology follows the environment transition convention:
+
+```text
+states:  s0, s1, s2, ...
+actions: a0, a1, ...
+```
+
+`observe()` receives one previous action per observed state:
+
+```text
+s0 <- zero initial action
+s1 <- a0
+s2 <- a1
+```
+
+The validation tools construct this shifted sequence explicitly as
+`[zero, a0, a1, ...]`. Imagination uses only the transition actions and never
+uses oracle future entity masks.
+
 ## Checkpoint Contract
 
 The source JEPA checkpoint must contain:
@@ -168,6 +187,16 @@ dynamic/static feature dimensions, shield flags, unit-type vocabulary size,
 latent dimension, recurrent-memory dimension, action-conditioned-memory setting,
 visibility-mask setting, sight range, coordinate indices, and latent
 normalization mode. Missing live metadata is treated as an incompatibility.
+
+Preflight runtime metadata is derived independently from the supplied YAML config
+and real `.npz` episode. Config padding overrides are honored; otherwise the
+episode/map-derived dimensions are used. This prevents comparing the checkpoint
+metadata against itself and catches padding or feature-layout mismatches.
+
+Action parity distinguishes episode-local `n_actions` from checkpoint/global
+`max_actions`: episode actions are padded to global width, flattened into the R2
+joint-action representation, converted back through `JEPAActionAdapter`, and then
+compared with the original JEPA dataset action tensor and action mask.
 
 This branch includes runtime-compatible memory implementations under
 `smacdreamer.jepa.memory` so R2 runtime code does not import JEPA training entry
@@ -200,6 +229,8 @@ Real-checkpoint validated means:
 
 - `preflight_jepa_training.py` passes on the exact checkpoint and a matching
   real `.npz` episode
+- the validated rollout horizon matches `imag_horizon` from the training config,
+  unless an explicit override flag is used for diagnostic validation
 
 Smoke-test passed means:
 
@@ -263,7 +294,6 @@ python scripts/preflight_jepa_training.py \
   --episode-npz /path/to/episode.npz \
   --config configs/r2_650_jepa.yaml \
   --device cpu \
-  --rollout-horizon 10 \
   --report-json logs/jepa_preflight_report.json
 ```
 
@@ -272,6 +302,11 @@ The command must finish with:
 ```text
 JEPA R2-DREAMER PREFLIGHT: PASS
 ```
+
+By default the preflight validates the `imag_horizon` in the YAML config. Passing
+`--rollout-horizon` with a different value fails unless
+`--allow-rollout-horizon-override` is also provided. If the training horizon
+exceeds the checkpoint's trained rollout horizon, preflight fails.
 
 Short smoke after parity gates:
 

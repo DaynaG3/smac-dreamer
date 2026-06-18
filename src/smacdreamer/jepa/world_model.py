@@ -126,9 +126,20 @@ class FrozenJEPAWorldModel(nn.Module):
         return z, pack_state(next_memory.detach(), cur_mask, cur_slot, cur_static)
 
     def observe(self, encoded_sequence, action_sequence, initial_state, reset_sequence):
+        obs_len = int(encoded_sequence["z"].shape[1])
+        if int(action_sequence.shape[1]) != obs_len:
+            raise ValueError(
+                "JEPA observe requires one previous action per observation: "
+                f"got actions={int(action_sequence.shape[1])}, observations={obs_len}. "
+                "Use [zero_initial_action, a0, a1, ...] for states [s0, s1, s2, ...]."
+            )
+        if int(reset_sequence.shape[1]) != obs_len:
+            raise ValueError(
+                f"JEPA observe reset length {int(reset_sequence.shape[1])} != observation length {obs_len}"
+            )
         z_prev, deter_prev = initial_state
         zs, deters = [], []
-        for t in range(action_sequence.shape[1]):
+        for t in range(obs_len):
             encoded_t = {k: v[:, t] for k, v in encoded_sequence.items()}
             z_prev, deter_prev = self.obs_step(
                 z_prev, deter_prev, action_sequence[:, t], encoded_t, reset_sequence[:, t]

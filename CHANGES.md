@@ -11,6 +11,9 @@
 - Added JEPA unit and Dreamer-level gradient/update tests proving the feature adapter trains while frozen JEPA parameters stay unchanged.
 - Added optional installed-source recurrent-memory parity tests for the original JEPA memory modules when those modules are available from `smac_jepa`.
 - Added checkpoint-driven JEPA token/action parity, wrapper/reference rollout parity, and a combined `preflight_jepa_training.py` release-gate command.
+- Corrected JEPA observed-rollout chronology: states are processed with previous actions `[zero, a0, a1, ...]`, while autonomous imagination uses transition actions only.
+- Preflight now derives runtime metadata independently from the YAML config and supplied episode, enforces config/checkpoint horizon consistency, and records config/checkpoint/validated horizons in its JSON report.
+- Action parity now validates local episode action widths padded into checkpoint/global action width before R2 flat-action conversion.
 - JEPA implementation is prepared for real-checkpoint validation; real `.npz` parity, real checkpoint parity, and a 5,000-step smoke run remain required before full training.
 
 ## Frozen JEPA world-model backend

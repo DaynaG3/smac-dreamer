@@ -148,6 +148,33 @@ def _first_mismatch(name: str, actual: torch.Tensor, expected: torch.Tensor, *, 
     return max_err
 
 
+def pad_episode_action(
+    raw_action: np.ndarray,
+    *,
+    n_agents: int,
+    n_actions: int,
+    max_agents: int,
+    max_actions: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    raw = np.asarray(raw_action)
+    if raw.ndim == 1:
+        raw = np.eye(n_actions, dtype=np.float32)[raw.astype(np.int64)]
+    raw = raw.astype(np.float32)
+    expected = (n_agents, n_actions)
+    if raw.shape != expected:
+        raise ValueError(f"raw episode action shape {raw.shape} != expected local shape {expected}")
+    if n_agents > max_agents or n_actions > max_actions:
+        raise ValueError(
+            f"episode action dimensions exceed checkpoint padding: "
+            f"agents {n_agents}>{max_agents} or actions {n_actions}>{max_actions}"
+        )
+    padded = np.zeros((max_agents, max_actions), dtype=np.float32)
+    mask = np.zeros((max_agents,), dtype=np.float32)
+    padded[:n_agents, :n_actions] = raw
+    mask[:n_agents] = 1.0
+    return padded, mask
+
+
 def run_token_parity(checkpoint: str | pathlib.Path, episode_npz: str | pathlib.Path, step: int) -> ParityResult:
     ckpt = pathlib.Path(checkpoint)
     ep = pathlib.Path(episode_npz)
@@ -163,7 +190,7 @@ def run_token_parity(checkpoint: str | pathlib.Path, episode_npz: str | pathlib.
 
     with np.load(ep, allow_pickle=False) as data:
         states = np.asarray(data["states"], dtype=np.float32)
-        actions = np.asarray(data["action_onehot"] if "action_onehot" in data else np.eye(spec.max_actions)[data["actions"]], dtype=np.float32)
+        actions = np.asarray(data["action_onehot"] if "action_onehot" in data else data["actions"])
         state = states[0, int(step)] if states.ndim == 3 else states[int(step)]
         static = np.asarray(data["static_condition"], dtype=np.float32).reshape(-1)
         entity_static = pad_entity_static(np.asarray(data["entity_static"], dtype=np.float32), spec)
@@ -174,15 +201,25 @@ def run_token_parity(checkpoint: str | pathlib.Path, episode_npz: str | pathlib.
             static_condition=static,
             visibility=vis,
         )
-        raw_action = actions[0, int(step)] if actions.ndim == 4 else actions[int(step)]
+        raw_action = actions[0, int(step)] if actions.ndim >= 3 else actions[int(step)]
+        padded_action, padded_action_mask = pad_episode_action(
+            raw_action,
+            n_agents=episode_meta["n_agents"],
+            n_actions=episode_meta["n_actions"],
+            max_agents=spec.max_agents,
+            max_actions=spec.max_actions,
+        )
 
     adapter = JEPAActionAdapter(
         max_agents=spec.max_agents,
         max_actions=spec.max_actions,
         checkpoint_n_actions=int(meta["n_actions"]),
     )
-    flat = torch.from_numpy(item["action_seq"][0].numpy().reshape(1, -1))
-    action_from_adapter, action_mask_from_adapter = adapter.flat_to_jepa(flat, item["action_mask_seq"][0].unsqueeze(0))
+    flat = torch.from_numpy(padded_action.reshape(1, -1))
+    action_from_adapter, action_mask_from_adapter = adapter.flat_to_jepa(
+        flat,
+        torch.from_numpy(padded_action_mask).unsqueeze(0),
+    )
 
     comparisons = {
         "entity_tokens": _first_mismatch("entity_tokens", torch.from_numpy(online_entity), item["entity_seq"][0]),
@@ -192,6 +229,10 @@ def run_token_parity(checkpoint: str | pathlib.Path, episode_npz: str | pathlib.
             "static_condition",
             torch.from_numpy(static[: int(meta["static_dim"])]),
             item["static_condition"],
+        ),
+        "padded_episode_action": _first_mismatch("padded_episode_action", torch.from_numpy(padded_action), item["action_seq"][0]),
+        "padded_episode_action_mask": _first_mismatch(
+            "padded_episode_action_mask", torch.from_numpy(padded_action_mask), item["action_mask_seq"][0]
         ),
         "action_tensor": _first_mismatch("action_tensor", action_from_adapter[0], item["action_seq"][0]),
         "action_mask": _first_mismatch("action_mask", action_mask_from_adapter[0], item["action_mask_seq"][0]),

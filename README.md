@@ -38,7 +38,6 @@ python scripts/preflight_jepa_training.py \
   --episode-npz /path/to/episode.npz \
   --config configs/r2_650_jepa.yaml \
   --device cpu \
-  --rollout-horizon 10 \
   --report-json logs/jepa_preflight_report.json
 ```
 

@@ -30,13 +30,36 @@ def _flat(action_seq: torch.Tensor) -> torch.Tensor:
     return action_seq.reshape(action_seq.shape[0], -1)
 
 
+def previous_actions_for_states(action_seq: torch.Tensor) -> torch.Tensor:
+    """Return [zero, a0, a1, ...] for states [s0, s1, s2, ...]."""
+    if action_seq.ndim != 3:
+        raise ValueError(f"action_seq must have [ACTIONS,A,C], got {tuple(action_seq.shape)}")
+    flat = _flat(action_seq)
+    zero = torch.zeros(1, flat.shape[-1], dtype=flat.dtype, device=flat.device)
+    return torch.cat([zero, flat], dim=0)
+
+
+def previous_action_masks_for_states(action_mask_seq: torch.Tensor) -> torch.Tensor:
+    if action_mask_seq.ndim != 2:
+        raise ValueError(f"action_mask_seq must have [ACTIONS,A], got {tuple(action_mask_seq.shape)}")
+    zero = torch.zeros(1, action_mask_seq.shape[-1], dtype=action_mask_seq.dtype, device=action_mask_seq.device)
+    return torch.cat([zero, action_mask_seq], dim=0)
+
+
 def _reference_obs_rollout(wm: FrozenJEPAWorldModel, core, memory_module, item, device: torch.device):
     entity = item["entity_seq"].unsqueeze(0).to(device)
     mask = item["entity_mask_seq"].unsqueeze(0).to(device)
     slot = item["entity_slot_mask_seq"].unsqueeze(0).to(device)
     static = item["static_condition"].unsqueeze(0).to(device)
-    actions = item["action_seq"].to(device)
-    action_masks = item["action_mask_seq"].to(device)
+    actions = previous_actions_for_states(item["action_seq"].to(device))
+    action_masks = previous_action_masks_for_states(item["action_mask_seq"].to(device))
+    if entity.shape[1] != item["action_seq"].shape[0] + 1:
+        raise ValueError(
+            f"observed rollout expects states=actions+1, got states={entity.shape[1]} "
+            f"actions={item['action_seq'].shape[0]}"
+        )
+    if actions.shape[0] != entity.shape[1]:
+        raise ValueError(f"previous action length {actions.shape[0]} != state length {entity.shape[1]}")
     with torch.no_grad():
         z_seq = core.encoder(entity, mask)
         b, t, e, _ = z_seq.shape
@@ -50,7 +73,7 @@ def _reference_obs_rollout(wm: FrozenJEPAWorldModel, core, memory_module, item, 
                     prev_z,
                     mem,
                     prev_mask,
-                    action=actions[idx].unsqueeze(0),
+                    action=actions[idx].reshape(1, wm.max_agents, wm.max_actions),
                     action_mask=action_masks[idx].unsqueeze(0),
                 )
             else:
@@ -84,7 +107,7 @@ def _reference_img_step(wm: FrozenJEPAWorldModel, core, memory_module, z, deter,
             next_memory = memory_module.update(pred, memory, next_mask, action=action_jepa, action_mask=action_mask)
         else:
             next_memory = memory_module.update(pred, memory, next_mask)
-    return pred, pack_state(next_memory, next_mask, slot_mask, static), logits, next_mask
+    return pred, pack_state(next_memory, next_mask, slot_mask, static), conditioned, logits, next_mask
 
 
 def run_integration_parity(
@@ -121,7 +144,13 @@ def run_integration_parity(
     slot = item["entity_slot_mask_seq"].unsqueeze(0).to(device_t)
     static = item["static_condition"].unsqueeze(0).to(device_t)
     action_seq = item["action_seq"].to(device_t)
-    flat_actions = _flat(action_seq).unsqueeze(0)
+    transition_actions = _flat(action_seq).unsqueeze(0)
+    previous_actions = previous_actions_for_states(action_seq).unsqueeze(0)
+    if entity.shape[1] != transition_actions.shape[1] + 1:
+        raise ValueError(
+            f"JEPA integration parity requires state count == action count + 1, "
+            f"got states={entity.shape[1]} actions={transition_actions.shape[1]}"
+        )
     obs = {
         "jepa_entity": entity,
         "jepa_entity_mask": mask,
@@ -131,7 +160,8 @@ def run_integration_parity(
     encoded = wm.encode_obs(obs)
     ref_direct, ref_z_seq, ref_deter_seq = _reference_obs_rollout(wm, core, memory, item, device_t)
     z0, d0 = wm.initial(1, device=device_t)
-    wrapper_z, wrapper_deter = wm.observe(encoded, flat_actions, (z0, d0), torch.zeros(1, flat_actions.shape[1], dtype=torch.bool, device=device_t))
+    resets = torch.zeros(1, previous_actions.shape[1], dtype=torch.bool, device=device_t)
+    wrapper_z, wrapper_deter = wm.observe(encoded, previous_actions, (z0, d0), resets)
 
     comparisons = {
         "encoder_latents": _first_mismatch("encoder_latents", encoded["z"], ref_direct),
@@ -139,21 +169,26 @@ def run_integration_parity(
         "observe_deter": _first_mismatch("observe_deter", wrapper_deter, ref_deter_seq),
     }
 
-    action_jepa, action_mask = wm.action_adapter.flat_to_jepa(flat_actions[:, 0], slot[:, 0, : wm.max_agents])
+    action_jepa, action_mask = wm.action_adapter.flat_to_jepa(transition_actions[:, 0], slot[:, 0, : wm.max_agents])
     comparisons["action_tensor"] = _first_mismatch("action_tensor", action_jepa[0], item["action_seq"][0])
     comparisons["action_mask"] = _first_mismatch("action_mask", action_mask[0], item["action_mask_seq"][0])
 
     start_idx = min(1, wrapper_z.shape[1] - 1)
     z, deter = wrapper_z[:, start_idx], wrapper_deter[:, start_idx]
     ref_z, ref_deter = z.clone(), deter.clone()
-    max_steps = min(int(rollout_horizon), flat_actions.shape[1])
+    max_steps = min(int(rollout_horizon), transition_actions.shape[1])
     wrapper_zs, wrapper_ds = [], []
     ref_zs, ref_ds = [], []
     for idx in range(max_steps):
-        action = flat_actions[:, idx]
+        action = transition_actions[:, idx]
         wz, wd = wm.img_step(z, deter, action)
-        rz, rd, logits, next_mask = _reference_img_step(wm, core, memory, ref_z, ref_deter, action)
+        rz, rd, conditioned, logits, next_mask = _reference_img_step(wm, core, memory, ref_z, ref_deter, action)
+        wrapper_memory, wrapper_entity_mask, _, _ = unpack_state(deter, wm.state_spec)
+        wrapper_conditioned = memory.condition(z, wrapper_memory, wrapper_entity_mask)
+        comparisons[f"conditioned_step_{idx}"] = _first_mismatch(f"conditioned_step_{idx}", wrapper_conditioned, conditioned)
         comparisons[f"prediction_step_{idx}"] = _first_mismatch(f"prediction_step_{idx}", wz, rz)
+        wrapper_logits = core.predict_presence(rz)
+        comparisons[f"presence_logits_step_{idx}"] = _first_mismatch(f"presence_logits_step_{idx}", wrapper_logits, logits)
         comparisons[f"presence_mask_step_{idx}"] = _first_mismatch(
             f"presence_mask_step_{idx}",
             unpack_state(wd, wm.state_spec)[1],
@@ -167,14 +202,14 @@ def run_integration_parity(
         z, deter = wz, wd
         ref_z, ref_deter = rz, rd
 
-    seq_z, seq_d = wm.imagine_with_action(wrapper_z[:, start_idx], wrapper_deter[:, start_idx], flat_actions[:, :max_steps])
+    seq_z, seq_d = wm.imagine_with_action(wrapper_z[:, start_idx], wrapper_deter[:, start_idx], transition_actions[:, :max_steps])
     comparisons["imagine_with_action_latents"] = _first_mismatch(
         "imagine_with_action_latents", seq_z, torch.stack(wrapper_zs, 1)
     )
     comparisons["imagine_with_action_deter"] = _first_mismatch(
         "imagine_with_action_deter", seq_d, torch.stack(wrapper_ds, 1)
     )
-    repeated_z, repeated_d = wm.observe(encoded, flat_actions, (z0, d0), torch.zeros(1, flat_actions.shape[1], dtype=torch.bool, device=device_t))
+    repeated_z, repeated_d = wm.observe(encoded, previous_actions, (z0, d0), resets)
     comparisons["observe_repeated_latents"] = _first_mismatch("observe_repeated_latents", repeated_z, wrapper_z)
     comparisons["observe_repeated_deter"] = _first_mismatch("observe_repeated_deter", repeated_d, wrapper_deter)
     return IntegrationResult(max_error=max(comparisons.values()), comparisons=comparisons)

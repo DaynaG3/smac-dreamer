@@ -1,6 +1,7 @@
 import pathlib
 import sys
 
+import pytest
 import torch
 from torch import nn
 
@@ -127,6 +128,27 @@ def test_repeated_obs_step_equals_observe():
     zs, ds = [], []
     for t in range(3):
         z, d = wm.obs_step(z, d, actions[:, t], {k: v[:, t] for k, v in enc.items()}, resets[:, t])
+        zs.append(z)
+        ds.append(d)
+    torch.testing.assert_close(z_seq, torch.stack(zs, 1))
+    torch.testing.assert_close(d_seq, torch.stack(ds, 1))
+
+
+def test_observe_requires_shifted_previous_actions_for_all_states():
+    wm = _model()
+    z0, d0 = wm.initial(1)
+    enc = wm.encode_obs(_obs(batch=1, time=3))
+    transition_actions = torch.zeros(1, 2, 6)
+    transition_actions[..., 0] = 1
+    with pytest.raises(ValueError, match="one previous action per observation"):
+        wm.observe(enc, transition_actions, (z0, d0), torch.zeros(1, 3, dtype=torch.bool))
+    previous_actions = torch.cat([torch.zeros(1, 1, 6), transition_actions], dim=1)
+    resets = torch.tensor([[True, False, True]], dtype=torch.bool)
+    z_seq, d_seq = wm.observe(enc, previous_actions, (z0, d0), resets)
+    z, d = z0, d0
+    zs, ds = [], []
+    for t in range(3):
+        z, d = wm.obs_step(z, d, previous_actions[:, t], {k: v[:, t] for k, v in enc.items()}, resets[:, t])
         zs.append(z)
         ds.append(d)
     torch.testing.assert_close(z_seq, torch.stack(zs, 1))
