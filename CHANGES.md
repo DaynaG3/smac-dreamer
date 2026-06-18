@@ -10,7 +10,8 @@
 - Removed hardcoded local JEPA checkout paths from ordinary JEPA unit tests and replaced central safety tests with self-contained synthetic fixtures.
 - Added JEPA unit and Dreamer-level gradient/update tests proving the feature adapter trains while frozen JEPA parameters stay unchanged.
 - Added optional installed-source recurrent-memory parity tests for the original JEPA memory modules when those modules are available from `smac_jepa`.
-- Real JEPA source parity for `ActionConditionedEntityRolloutGRUMemory` remains blocked because the provided JEPA checkout still lacks `smac_jepa/modules/rollout_memory.py` and `train_markov_rollout_rnn_visibility_seqmem_experiments.py`.
+- Added checkpoint-driven JEPA token/action parity, wrapper/reference rollout parity, and a combined `preflight_jepa_training.py` release-gate command.
+- JEPA implementation is prepared for real-checkpoint validation; real `.npz` parity, real checkpoint parity, and a 5,000-step smoke run remain required before full training.
 
 ## Frozen JEPA world-model backend
 

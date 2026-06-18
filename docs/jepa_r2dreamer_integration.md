@@ -169,19 +169,11 @@ latent dimension, recurrent-memory dimension, action-conditioned-memory setting,
 visibility-mask setting, sight range, coordinate indices, and latent
 normalization mode. Missing live metadata is treated as an incompatibility.
 
-The specified local JEPA checkout currently lacks `smac_jepa.modules.rollout_memory`;
-this branch includes runtime-compatible memory implementations under
-`smacdreamer.jepa.memory` so checkpoints can still load without importing JEPA
-training entry points.
-
-The restored checkout also lacks
-`train_markov_rollout_rnn_visibility_seqmem_experiments.py`, so exact
-source-level numerical parity for the action-conditioned memory class cannot be
-claimed from this repository state. The compatibility class is tested against the
-documented masked-memory semantics; real source parity remains pending until the
-original class is available. Optional installed-source parity tests exist in
-`tests/test_jepa_memory_source_parity.py`; they run only when the corresponding
-`smac_jepa` modules can be imported.
+This branch includes runtime-compatible memory implementations under
+`smacdreamer.jepa.memory` so R2 runtime code does not import JEPA training entry
+points. Optional installed-source parity tests exist in
+`tests/test_jepa_memory_source_parity.py`; they run when the corresponding
+`smac_jepa` memory modules are importable.
 
 ## Deliberate Backend Differences
 
@@ -194,6 +186,30 @@ JEPA mode does not provide:
 - RSSM prior/posterior entropy metrics
 
 These are backend differences, not missing loss terms.
+
+## Readiness States
+
+Implementation-ready means:
+
+- synthetic JEPA unit tests pass
+- JEPA-mode Dreamer update tests pass
+- replay, worker recycling and validation-isolation regressions pass
+- preflight tooling exists
+
+Real-checkpoint validated means:
+
+- `preflight_jepa_training.py` passes on the exact checkpoint and a matching
+  real `.npz` episode
+
+Smoke-test passed means:
+
+- the 5,000-step JEPA training command completes with the real checkpoint
+
+Full training approved means:
+
+- real preflight passed
+- 5,000-step smoke passed
+- no parity or shape/device regressions were observed
 
 ## Pending Release Gates
 
@@ -237,6 +253,24 @@ python scripts/validate_jepa_r2_integration.py \
   --episode-npz /path/to/episode.npz \
   --config configs/r2_650_jepa.yaml \
   --device cpu
+```
+
+Combined preflight:
+
+```bash
+python scripts/preflight_jepa_training.py \
+  --checkpoint /path/to/checkpoint.pt \
+  --episode-npz /path/to/episode.npz \
+  --config configs/r2_650_jepa.yaml \
+  --device cpu \
+  --rollout-horizon 10 \
+  --report-json logs/jepa_preflight_report.json
+```
+
+The command must finish with:
+
+```text
+JEPA R2-DREAMER PREFLIGHT: PASS
 ```
 
 Short smoke after parity gates:

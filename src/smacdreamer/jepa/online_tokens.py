@@ -160,6 +160,24 @@ def entity_static_from_env(uw, spec: JEPATokenSpec) -> np.ndarray:
     return out
 
 
+def pad_entity_static(entity_static: np.ndarray, spec: JEPATokenSpec) -> np.ndarray:
+    """Map episode-local entity static rows into checkpoint-padded entity slots."""
+    value = np.asarray(entity_static, dtype=np.float32)
+    out = np.zeros((spec.entities, spec.entity_static_feat_size), dtype=np.float32)
+    ally_rows = min(spec.n_agents, spec.max_agents, value.shape[0])
+    if ally_rows:
+        out[:ally_rows, : spec.entity_static_feat_size] = value[:ally_rows, : spec.entity_static_feat_size]
+    src_enemy_start = spec.n_agents
+    enemy_rows = min(spec.n_enemies, spec.max_enemies, max(value.shape[0] - src_enemy_start, 0))
+    if enemy_rows:
+        dst_enemy_start = spec.max_agents
+        out[dst_enemy_start : dst_enemy_start + enemy_rows, : spec.entity_static_feat_size] = value[
+            src_enemy_start : src_enemy_start + enemy_rows,
+            : spec.entity_static_feat_size,
+        ]
+    return out
+
+
 def _split_state(state: np.ndarray, spec: JEPATokenSpec) -> tuple[np.ndarray, np.ndarray]:
     state = np.asarray(state, dtype=np.float32).reshape(-1)
     ally_rows = min(spec.n_agents, spec.max_agents)
