@@ -85,6 +85,19 @@ def _reward_hash(name: str, resolved: dict) -> str:
     return hashlib.sha256(blob).hexdigest()[:8]
 
 
+def _build_map_id_maps(entries):
+    """Replicate SMACliteDreamerEnv's map_id assignment so the tracker's id->name matches the
+    env's ``log_map_id``: stable map_id when all distinct (Phase 4), else sequential index."""
+    ids = [e.map_id for e in entries]
+    if len(set(ids)) == len(ids):
+        id_to_name = {int(e.map_id): e.name for e in entries}
+        id_to_family = {int(e.map_id): getattr(e, "family", "uncategorised") for e in entries}
+    else:
+        id_to_name = {i: e.name for i, e in enumerate(entries)}
+        id_to_family = {i: getattr(e, "family", "uncategorised") for i, e in enumerate(entries)}
+    return id_to_name, id_to_family
+
+
 def main():
     ap = argparse.ArgumentParser(description="R2-Dreamer × SMAClite multimap training")
     ap.add_argument("--config", default="configs/multimap.yaml", help="multimap YAML config")
@@ -171,6 +184,20 @@ def main():
     print(f"  [resume] mode={resume_mode}  step_offset={step_offset}  "
           f"actor_warmup_steps={actor_warmup_steps}  resume_path={args.resume!r}")
 
+    # --- Adaptive hard-map curriculum (prioritized_hard_maps) --------------------------
+    mp_cfg = cfg.get("map_priority") or {}
+    mp_enabled = bool(mp_cfg.get("enabled", False))
+    hard_map_probability = float(mp_cfg.get("hard_map_probability", 0.25))
+    if mp_enabled and str(cfg.sampling_mode) != "prioritized_hard_maps":
+        raise ValueError(
+            "map_priority.enabled=true requires sampling_mode: prioritized_hard_maps "
+            f"(got {str(cfg.sampling_mode)!r})")
+    if mp_enabled:
+        print(f"  [map_priority] enabled  hard_map_probability={hard_map_probability}  "
+              f"every={int(mp_cfg.get('every', 100000))}  warmup={int(mp_cfg.get('warmup', 100000))}  "
+              f"ema_decay={float(mp_cfg.get('ema_decay', 0.98))}  "
+              f"min_episodes={int(mp_cfg.get('min_episodes', 5))}")
+
     # --- Validation cadence + fixed seeds (explicit seed list, NOT a worker count) -----
     val_cfg = cfg.get("validation") or {}
     _eval_cfg = cfg.get("eval") or {}
@@ -248,6 +275,7 @@ def main():
         obs_mode=obs_mode,
         train_entries=train_entries, test_entries=val_entries, pad_dims=pad_dims,
         env_lifecycle=env_lifecycle,
+        hard_map_probability=hard_map_probability,
     )
     print(f"  obs keys : {sorted(obs_space.spaces)}")
 
@@ -353,6 +381,21 @@ def main():
             )
             attach_checkpointing(agent, checkpointer)
             print(f"  Checkpoints : every {cfg.checkpoint_every_minutes:g} min -> {logdir/'latest.pt'}")
+
+        # --- Adaptive hard-map curriculum tracker (attached to the agent) ------
+        if mp_enabled:
+            from smacdreamer.map_priority import MapPriorityTracker
+            _id_to_name, _id_to_family = _build_map_id_maps(train_entries)
+            agent._map_priority_tracker = MapPriorityTracker(
+                id_to_name=_id_to_name,
+                id_to_family=_id_to_family,
+                every=int(mp_cfg.get("every", 100000)),
+                warmup=int(mp_cfg.get("warmup", 100000)),
+                ema_decay=float(mp_cfg.get("ema_decay", 0.98)),
+                min_episodes=int(mp_cfg.get("min_episodes", 5)),
+                hard_map_probability=hard_map_probability,
+            )
+            print(f"  [map_priority] tracker attached over {len(_id_to_name)} train maps")
 
         # --- Train -------------------------------------------------------------
         print(f"\nStarting multimap training ({steps} env steps)...\n")

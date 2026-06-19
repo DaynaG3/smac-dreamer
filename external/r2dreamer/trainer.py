@@ -192,6 +192,21 @@ class OnlineTrainer:
                         for src_key, dst_key in EPISODE_REWARD_LOG_MAP.items():
                             if src_key in trans:
                                 self.logger.scalar(dst_key, _scalar_at_env(trans[src_key], i))
+                        # Adaptive hard-map curriculum: fold this finished episode's per-map
+                        # outcome into the tracker (no-op if no tracker attached).
+                        _tracker = getattr(agent, "_map_priority_tracker", None)
+                        if _tracker is not None and "log_map_id" in trans:
+                            _g = lambda k, default=0.0: (
+                                float(_scalar_at_env(trans[k], i)) if k in trans else default)
+                            _is_last = bool(_g("is_last", 1.0))
+                            _is_term = bool(_g("is_terminal", 0.0))
+                            _tracker.record(
+                                int(_g("log_map_id")),
+                                battle_won=bool(_g("log_battle_won") > 0.5),
+                                final_enemy_ehp_frac=_g("log_final_enemy_ehp_frac"),
+                                timeout=bool(_is_last and not _is_term),
+                                original_return=_g("log_episode_original_env_return"),
+                            )
                         self.logger.write(step + i)  # to show all values on tensorboard
                         returns[i] = lengths[i] = 0
             step += int((~done).sum()) * self._action_repeat  # step is based on env side
@@ -200,6 +215,20 @@ class OnlineTrainer:
             # update/checkpointing phase reads it.
             agent._smacdreamer_local_step = int(step)
             agent._smacdreamer_global_step = int(step + self._step_offset)
+
+            # Adaptive hard-map curriculum: on cadence, recompute hard-scores from training
+            # rollouts and broadcast them to the env workers (workers are idle between steps).
+            _tracker = getattr(agent, "_map_priority_tracker", None)
+            if _tracker is not None and hasattr(envs, "set_map_hard_scores"):
+                _new_scores = _tracker.maybe_compute(step)
+                if _new_scores is not None:
+                    try:
+                        envs.set_map_hard_scores(_new_scores)
+                    except Exception as exc:
+                        print(f"[map_priority] broadcast failed at step {step}: {exc}", flush=True)
+                    for _k, _v in _tracker.logging_metrics().items():
+                        self.logger.scalar(_k, float(_v))
+                    self.logger.write(step)
 
             # Step environments.  Each env backend handles device placement
             # internally (ParallelEnv converts to CPU, IsaacLabVecEnv keeps

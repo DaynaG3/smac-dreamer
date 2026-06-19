@@ -150,10 +150,14 @@ class MapSampler:
     MODES = (
         'fixed', 'round_robin', 'seeded_random',
         'shuffled_round_robin', 'uniform_map', 'uniform_family',
-        'weighted', 'curriculum',
+        'weighted', 'curriculum', 'prioritized_hard_maps',
     )
 
-    def __init__(self, maps: List[MapEntry], mode: str = 'round_robin', seed: int = 0):
+    # Modes that use the shuffled_round_robin cycle as their (baseline) coverage stream.
+    _SHUFFLE_MODES = ('shuffled_round_robin', 'curriculum', 'prioritized_hard_maps')
+
+    def __init__(self, maps: List[MapEntry], mode: str = 'round_robin', seed: int = 0,
+                 hard_map_probability: float = 0.25):
         if mode not in self.MODES:
             raise ValueError(
                 f"MapSampler mode must be one of {self.MODES}, got {mode!r}"
@@ -164,16 +168,24 @@ class MapSampler:
         self.mode = mode
         self._idx = 0
         self._rng = random.Random(seed)
+        self._name_to_entry = {m.name: m for m in self.maps}
+
+        # prioritized_hard_maps state: mixture of baseline shuffled_round_robin coverage and
+        # hard-map oversampling. Hard scores are pushed in at runtime via set_hard_scores();
+        # until then it behaves as pure shuffled_round_robin (baseline only).
+        self._hard_map_probability = float(hard_map_probability)
+        self._hard_scores: Dict[str, float] = {}
+        self._peek_is_baseline: bool = True
 
         # seeded_random: pre-generate the first choice so peek() is stable
         self._next_random: Optional[MapEntry] = (
             self._rng.choice(self.maps) if mode == 'seeded_random' else None
         )
 
-        # shuffled_round_robin state
+        # shuffled_round_robin / prioritized_hard_maps baseline state
         self._shuffled_order: List[MapEntry] = []
         self._shuffled_idx: int = 0
-        if mode in ('shuffled_round_robin', 'curriculum'):
+        if mode in self._SHUFFLE_MODES:
             self._shuffled_order = list(self.maps)
             self._rng.shuffle(self._shuffled_order)
 
@@ -208,6 +220,8 @@ class MapSampler:
             return self.maps[self._idx]
         if mode == 'seeded_random':
             return self._next_random
+        if mode == 'prioritized_hard_maps':
+            return self._peek_prioritized()
         if mode in ('shuffled_round_robin', 'curriculum'):
             if not self._shuffled_order:
                 return self.maps[0]
@@ -220,6 +234,50 @@ class MapSampler:
         if mode == 'weighted':
             return self._rng.choices(self.maps, weights=self._weights, k=1)[0]
         return self.maps[0]
+
+    def _hard_choice(self) -> Optional[MapEntry]:
+        """Sample a map ∝ hard_score among maps with a positive score; None if none available."""
+        items = [
+            (self._name_to_entry[n], max(float(s), 0.0))
+            for n, s in self._hard_scores.items() if n in self._name_to_entry
+        ]
+        items = [(e, w) for e, w in items if w > 0.0]
+        if not items:
+            return None
+        entries, weights = zip(*items)
+        return self._rng.choices(list(entries), weights=list(weights), k=1)[0]
+
+    def _peek_prioritized(self) -> MapEntry:
+        """Decide the next prioritized_hard_maps draw WITHOUT advancing the baseline cycle.
+
+        Mixture: with probability ``hard_map_probability`` (and only once hard scores exist) draw
+        ∝ hard_score; otherwise take the current baseline shuffled_round_robin slot. Sets
+        ``_peek_is_baseline`` so next() knows whether to advance the baseline index.
+        """
+        coin = self._rng.random()  # always consume one draw to keep the stream stable
+        if self._hard_scores and coin < self._hard_map_probability:
+            entry = self._hard_choice()
+            if entry is not None:
+                self._peek_is_baseline = False
+                return entry
+        self._peek_is_baseline = True
+        if not self._shuffled_order:
+            return self.maps[0]
+        return self._shuffled_order[self._shuffled_idx]
+
+    def set_hard_scores(self, scores: Dict[str, float]) -> None:
+        """Runtime update of per-map hard scores (prioritized_hard_maps only).
+
+        Names not present in this sampler's map set are ignored. Recomputes the peek so the next
+        draw reflects the new scores. No-op for other modes.
+        """
+        if self.mode != 'prioritized_hard_maps':
+            return
+        self._hard_scores = {
+            str(n): float(s) for n, s in (scores or {}).items()
+            if str(n) in self._name_to_entry
+        }
+        self._peek_cache = self._compute_peek()
 
     def _update_coverage(self, entry: MapEntry) -> None:
         mid = id(entry)
@@ -263,6 +321,15 @@ class MapSampler:
             entry = self._next_random
             self._next_random = self._rng.choice(self.maps)
             wrapped = False
+        elif mode == 'prioritized_hard_maps':
+            # Mixture draw was decided in _peek_*: advance the baseline cycle only if this draw
+            # came from the baseline stream (hard draws don't consume baseline coverage).
+            entry = self._peek_cache
+            if self._peek_is_baseline:
+                self._shuffled_idx += 1
+                wrapped = self._shuffled_idx >= len(self._shuffled_order)
+            else:
+                wrapped = False
         elif mode in ('shuffled_round_robin', 'curriculum'):
             entry = self._shuffled_order[self._shuffled_idx]
             self._shuffled_idx += 1
@@ -284,7 +351,7 @@ class MapSampler:
         if wrapped:
             self.sampling_cycle += 1
             self.maps_seen_this_cycle = 0
-            if mode in ('shuffled_round_robin', 'curriculum'):
+            if mode in self._SHUFFLE_MODES:
                 self._shuffled_order = list(self.maps)
                 self._rng.shuffle(self._shuffled_order)
                 self._shuffled_idx = 0
@@ -313,6 +380,8 @@ class MapSampler:
             return self.maps[self._idx]
         if mode == 'seeded_random':
             return self._next_random
+        if mode == 'prioritized_hard_maps':
+            return self._peek_prioritized()
         if mode in ('shuffled_round_robin', 'curriculum'):
             return self._shuffled_order[self._shuffled_idx]
         if mode == 'uniform_map':
@@ -334,6 +403,7 @@ class MapSampler:
         entries: List[MapEntry],
         mode: str = 'shuffled_round_robin',
         seed: int = 0,
+        hard_map_probability: float = 0.25,
     ) -> 'MapSampler':
         """Build a sampler directly from a list of MapEntry (no manifest file).
 
@@ -341,7 +411,8 @@ class MapSampler:
         own sampler from the discovered entries + a worker-offset seed. Thin convenience
         over ``MapSampler(maps=entries, mode=mode, seed=seed)``.
         """
-        return cls(maps=list(entries), mode=mode, seed=seed)
+        return cls(maps=list(entries), mode=mode, seed=seed,
+                   hard_map_probability=hard_map_probability)
 
     @classmethod
     def from_manifest(

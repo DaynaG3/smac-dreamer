@@ -36,6 +36,9 @@ class ParallelEnv:
         self._episodes_since_restart = [0 for _ in range(env_num)]
         self._completed_episodes = [0 for _ in range(env_num)]
         self._restart_count = 0
+        # Latest adaptive map hard-scores (prioritized_hard_maps curriculum), re-pushed to any
+        # worker reconstructed by recycling so priorities survive restarts. None = not in use.
+        self._map_hard_scores = None
         for idx in range(env_num):
             self.envs.append(self._make_env(idx))
 
@@ -65,7 +68,35 @@ class ParallelEnv:
         )
 
     def _make_env(self, idx):
-        return Parallel(self._constructor_for(idx, self._generations[idx]), "process", slot=idx)
+        env = Parallel(self._constructor_for(idx, self._generations[idx]), "process", slot=idx)
+        # Re-apply the latest adaptive hard-scores so a freshly (re)constructed worker continues
+        # the curriculum instead of reverting to uniform baseline sampling.
+        if self._map_hard_scores:
+            try:
+                env.set_map_hard_scores(self._map_hard_scores)()
+            except Exception as exc:
+                print(f"[map_priority] failed to seed worker slot={idx} with hard-scores: {exc}",
+                      flush=True)
+        return env
+
+    def set_map_hard_scores(self, scores):
+        """Broadcast adaptive map hard-scores to every worker and cache for future restarts.
+
+        Safe to call between steps (workers are idle). Caches ``scores`` so recycled workers are
+        re-seeded in ``_make_env``. ``scores`` is ``map_name -> hard_score``.
+        """
+        self._map_hard_scores = dict(scores) if scores else None
+        promises = []
+        for idx, env in enumerate(self.envs):
+            try:
+                promises.append((idx, env.set_map_hard_scores(self._map_hard_scores or {})))
+            except Exception as exc:
+                print(f"[map_priority] broadcast submit failed slot={idx}: {exc}", flush=True)
+        for idx, p in promises:
+            try:
+                p()
+            except Exception as exc:
+                print(f"[map_priority] broadcast resolve failed slot={idx}: {exc}", flush=True)
 
     def _worker_context(self, idx, phase):
         worker = self.envs[idx].worker.impl
