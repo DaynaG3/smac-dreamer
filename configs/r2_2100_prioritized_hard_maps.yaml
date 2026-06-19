@@ -1,8 +1,6 @@
 # R2-2100 — train FROM SCRATCH, 4M steps, with the adaptive HARD-MAP curriculum (Kubeflow GPU).
 #
-#   python scripts/train_r2dreamer_smaclite_multimap.py \
-#       --config configs/r2_2100_prioritized_hard_maps.yaml \
-#       --logdir /mnt/pvc/logs/r2_2100_prioritized_hard_maps
+#   python scripts/train_r2dreamer_smaclite_multimap.py --config configs/r2_2100_prioritized_hard_maps.yaml
 #
 # Discovers ONLY the `train` folder (1200 maps). `validation` (200) is held out for checkpoint
 # selection (macro held-out win rate); `blind_iid`/`blind_compositional` are never touched in
@@ -85,5 +83,5 @@ wandb:
   mode: online
   tags: [r2_2100, smaclite, multimap, prioritized_hard_maps, from_scratch, 4M]
   run_name: null                          # auto: <dataset>-<reward>-<resolved-params-hash>
-logdir: /mnt/pvc/logs/r2_2100_prioritized_hard_maps
+logdir: logs/r2dreamer/r2_2100_prioritized_hard_maps
 checkpoint_every_minutes: 15.0
