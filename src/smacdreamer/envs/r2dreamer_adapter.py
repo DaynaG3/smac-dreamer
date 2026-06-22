@@ -110,3 +110,9 @@ class SMACliteR2DreamerAdapter(gym.Wrapper):
     def get_debug_context(self):
         fn = getattr(self.env, "get_debug_context", None)
         return fn() if callable(fn) else {}
+
+    def set_map_hard_scores(self, scores):
+        """Forward adaptive hard-map scores to the wrapped env (gym.Wrapper does not auto-forward
+        arbitrary methods; ParallelEnv dispatches this call to the adapter, not the inner env)."""
+        fn = getattr(self.env, "set_map_hard_scores", None)
+        return fn(scores) if callable(fn) else False
