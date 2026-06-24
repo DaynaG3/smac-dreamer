@@ -60,7 +60,10 @@ def read_agent_state_dict(checkpoint_path) -> dict:
         raise FileNotFoundError(
             f"checkpoint not found: {path} (transfer needs an existing checkpoint; on Kubeflow "
             "this is the persistent-volume path, e.g. /mnt/pvc/checkpoints/r2_650/best_val_macro_winrate.pt)")
-    ckpt = torch.load(str(path), map_location="cpu")
+    # weights_only=False: checkpoints carry RNG/optimizer state (numpy/torch objects) that
+    # PyTorch>=2.6's default safe loader (weights_only=True) refuses to unpickle. These are our
+    # own trusted checkpoints.
+    ckpt = torch.load(str(path), map_location="cpu", weights_only=False)
     if "agent_state_dict" not in ckpt:
         raise KeyError(f"{path} has no 'agent_state_dict' (keys: {sorted(ckpt)[:8]})")
     return ckpt["agent_state_dict"]

@@ -107,6 +107,9 @@ def main():
     ap.add_argument("--wandb-entity", default=None, help="override W&B entity/user/team")
     ap.add_argument("--wandb-mode", default=None, choices=("online", "offline", "disabled"),
                     help="override W&B mode")
+    ap.add_argument("--wandb-run-id", default=None,
+                    help="resume logging to an EXISTING W&B run id (continues that run's history). "
+                         "Pair with --step-offset so the global_step x-axis continues, not restarts.")
     ap.add_argument("--resume", default=None, help="checkpoint path to resume model/training state")
     ap.add_argument("--resume-mode", default=None,
                     choices=("full", "weights_only", "transfer_reward"),
@@ -316,6 +319,7 @@ def main():
     wandb_project = args.wandb_project or os.environ.get("WANDB_PROJECT") or wandb_cfg.get("project")
     wandb_entity = args.wandb_entity or os.environ.get("WANDB_ENTITY") or wandb_cfg.get("entity")
     wandb_mode = args.wandb_mode or os.environ.get("WANDB_MODE") or wandb_cfg.get("mode")
+    wandb_run_id = args.wandb_run_id or os.environ.get("WANDB_RUN_ID") or wandb_cfg.get("id")
     wandb_tags = wandb_cfg.get("tags")
     if wandb_tags is not None:
         wandb_tags = list(OmegaConf.to_container(wandb_tags, resolve=True))
@@ -327,6 +331,12 @@ def main():
             wandb_kwargs["mode"] = str(wandb_mode)
         if wandb_tags:
             wandb_kwargs["tags"] = wandb_tags
+        if wandb_run_id:
+            # Resume logging to an existing run; its history continues. Pair with --step-offset so
+            # the global_step x-axis continues forward instead of restarting at 0.
+            wandb_kwargs["id"] = str(wandb_run_id)
+            wandb_kwargs["resume"] = "allow"
+            print(f"  [wandb] resuming existing run id={wandb_run_id} (global_step offset={step_offset})")
         logger = WandbLogger(
             logdir,
             project=str(wandb_project),
@@ -357,7 +367,9 @@ def main():
             elif resume_mode == "weights_only":
                 load_weights_only(agent, args.resume)
             else:  # full — existing behaviour preserved
-                ckpt = torch.load(args.resume, map_location=str(cfg.device))
+                # weights_only=False: our own checkpoints carry RNG state (numpy/torch generators),
+                # which PyTorch>=2.6's safe loader (weights_only=True default) refuses to unpickle.
+                ckpt = torch.load(args.resume, map_location=str(cfg.device), weights_only=False)
                 agent.load_state_dict(ckpt["agent_state_dict"])
                 if ckpt.get("agent_training_state") and hasattr(agent, "load_training_state_dict"):
                     agent.load_training_state_dict(ckpt["agent_training_state"])
