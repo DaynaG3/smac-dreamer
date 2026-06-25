@@ -37,8 +37,12 @@ mask_threshold: 0.7
 
 # ---- Reward (unshaped baseline; selection uses ORIGINAL return only) -------
 reward:
-  name: smaclite_default
-  params: {}
+  name: win_quality_v5
+  params:
+    w_ally_ehp_dense: 0.25
+    w_win_ehp: 0.50
+    w_win_alive: 0.25
+    w_timeout: 0.10
 
 # ---- Run / model knobs (GPU production) -----------------------------------
 device: cuda:0
@@ -82,6 +86,6 @@ wandb:
   entity: null
   mode: online
   tags: [r2_2100, smaclite, multimap, prioritized_hard_maps, from_scratch, 4M]
-  run_name: null                          # auto: <dataset>-<reward>-<resolved-params-hash>
+  run_name: r2_2100_PER_rewardShaping                         # auto: <dataset>-<reward>-<resolved-params-hash>
 logdir: logs/r2dreamer/r2_2100_prioritized_hard_maps
 checkpoint_every_minutes: 15.0
