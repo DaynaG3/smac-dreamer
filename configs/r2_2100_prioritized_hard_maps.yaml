@@ -87,5 +87,5 @@ wandb:
   mode: online
   tags: [r2_2100, smaclite, multimap, prioritized_hard_maps, from_scratch, 4M]
   run_name: r2_2100_PER_rewardShaping                         # auto: <dataset>-<reward>-<resolved-params-hash>
-logdir: logs/r2dreamer/r2_2100_prioritized_hard_maps
+logdir: logs/r2dreamer/r2_2100_PER_rewardShaping
 checkpoint_every_minutes: 15.0
