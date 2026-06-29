@@ -85,6 +85,19 @@ def _reward_hash(name: str, resolved: dict) -> str:
     return hashlib.sha256(blob).hexdigest()[:8]
 
 
+def _build_map_id_maps(entries):
+    """Replicate SMACliteDreamerEnv's map_id assignment so the tracker's id->name matches the
+    env's ``log_map_id``: stable map_id when all distinct (Phase 4), else sequential index."""
+    ids = [e.map_id for e in entries]
+    if len(set(ids)) == len(ids):
+        id_to_name = {int(e.map_id): e.name for e in entries}
+        id_to_family = {int(e.map_id): getattr(e, "family", "uncategorised") for e in entries}
+    else:
+        id_to_name = {i: e.name for i, e in enumerate(entries)}
+        id_to_family = {i: getattr(e, "family", "uncategorised") for i, e in enumerate(entries)}
+    return id_to_name, id_to_family
+
+
 def main():
     ap = argparse.ArgumentParser(description="R2-Dreamer × SMAClite multimap training")
     ap.add_argument("--config", default="configs/multimap.yaml", help="multimap YAML config")
@@ -94,6 +107,9 @@ def main():
     ap.add_argument("--wandb-entity", default=None, help="override W&B entity/user/team")
     ap.add_argument("--wandb-mode", default=None, choices=("online", "offline", "disabled"),
                     help="override W&B mode")
+    ap.add_argument("--wandb-run-id", default=None,
+                    help="resume logging to an EXISTING W&B run id (continues that run's history). "
+                         "Pair with --step-offset so the global_step x-axis continues, not restarts.")
     ap.add_argument("--resume", default=None, help="checkpoint path to resume model/training state")
     ap.add_argument("--resume-mode", default=None,
                     choices=("full", "weights_only", "transfer_reward"),
@@ -170,6 +186,20 @@ def main():
     validate_resume_args(resume_mode, step_offset, args.resume)
     print(f"  [resume] mode={resume_mode}  step_offset={step_offset}  "
           f"actor_warmup_steps={actor_warmup_steps}  resume_path={args.resume!r}")
+
+    # --- Adaptive hard-map curriculum (prioritized_hard_maps) --------------------------
+    mp_cfg = cfg.get("map_priority") or {}
+    mp_enabled = bool(mp_cfg.get("enabled", False))
+    hard_map_probability = float(mp_cfg.get("hard_map_probability", 0.25))
+    if mp_enabled and str(cfg.sampling_mode) != "prioritized_hard_maps":
+        raise ValueError(
+            "map_priority.enabled=true requires sampling_mode: prioritized_hard_maps "
+            f"(got {str(cfg.sampling_mode)!r})")
+    if mp_enabled:
+        print(f"  [map_priority] enabled  hard_map_probability={hard_map_probability}  "
+              f"every={int(mp_cfg.get('every', 100000))}  warmup={int(mp_cfg.get('warmup', 100000))}  "
+              f"ema_decay={float(mp_cfg.get('ema_decay', 0.98))}  "
+              f"min_episodes={int(mp_cfg.get('min_episodes', 5))}")
 
     # --- Validation cadence + fixed seeds (explicit seed list, NOT a worker count) -----
     val_cfg = cfg.get("validation") or {}
@@ -248,6 +278,7 @@ def main():
         obs_mode=obs_mode,
         train_entries=train_entries, test_entries=val_entries, pad_dims=pad_dims,
         env_lifecycle=env_lifecycle,
+        hard_map_probability=hard_map_probability,
     )
     print(f"  obs keys : {sorted(obs_space.spaces)}")
 
@@ -288,6 +319,7 @@ def main():
     wandb_project = args.wandb_project or os.environ.get("WANDB_PROJECT") or wandb_cfg.get("project")
     wandb_entity = args.wandb_entity or os.environ.get("WANDB_ENTITY") or wandb_cfg.get("entity")
     wandb_mode = args.wandb_mode or os.environ.get("WANDB_MODE") or wandb_cfg.get("mode")
+    wandb_run_id = args.wandb_run_id or os.environ.get("WANDB_RUN_ID") or wandb_cfg.get("id")
     wandb_tags = wandb_cfg.get("tags")
     if wandb_tags is not None:
         wandb_tags = list(OmegaConf.to_container(wandb_tags, resolve=True))
@@ -299,6 +331,12 @@ def main():
             wandb_kwargs["mode"] = str(wandb_mode)
         if wandb_tags:
             wandb_kwargs["tags"] = wandb_tags
+        if wandb_run_id:
+            # Resume logging to an existing run; its history continues. Pair with --step-offset so
+            # the global_step x-axis continues forward instead of restarting at 0.
+            wandb_kwargs["id"] = str(wandb_run_id)
+            wandb_kwargs["resume"] = "allow"
+            print(f"  [wandb] resuming existing run id={wandb_run_id} (global_step offset={step_offset})")
         logger = WandbLogger(
             logdir,
             project=str(wandb_project),
@@ -329,7 +367,9 @@ def main():
             elif resume_mode == "weights_only":
                 load_weights_only(agent, args.resume)
             else:  # full — existing behaviour preserved
-                ckpt = torch.load(args.resume, map_location=str(cfg.device))
+                # weights_only=False: our own checkpoints carry RNG state (numpy/torch generators),
+                # which PyTorch>=2.6's safe loader (weights_only=True default) refuses to unpickle.
+                ckpt = torch.load(args.resume, map_location=str(cfg.device), weights_only=False)
                 agent.load_state_dict(ckpt["agent_state_dict"])
                 if ckpt.get("agent_training_state") and hasattr(agent, "load_training_state_dict"):
                     agent.load_training_state_dict(ckpt["agent_training_state"])
@@ -353,6 +393,21 @@ def main():
             )
             attach_checkpointing(agent, checkpointer)
             print(f"  Checkpoints : every {cfg.checkpoint_every_minutes:g} min -> {logdir/'latest.pt'}")
+
+        # --- Adaptive hard-map curriculum tracker (attached to the agent) ------
+        if mp_enabled:
+            from smacdreamer.map_priority import MapPriorityTracker
+            _id_to_name, _id_to_family = _build_map_id_maps(train_entries)
+            agent._map_priority_tracker = MapPriorityTracker(
+                id_to_name=_id_to_name,
+                id_to_family=_id_to_family,
+                every=int(mp_cfg.get("every", 100000)),
+                warmup=int(mp_cfg.get("warmup", 100000)),
+                ema_decay=float(mp_cfg.get("ema_decay", 0.98)),
+                min_episodes=int(mp_cfg.get("min_episodes", 5)),
+                hard_map_probability=hard_map_probability,
+            )
+            print(f"  [map_priority] tracker attached over {len(_id_to_name)} train maps")
 
         # --- Train -------------------------------------------------------------
         print(f"\nStarting multimap training ({steps} env steps)...\n")

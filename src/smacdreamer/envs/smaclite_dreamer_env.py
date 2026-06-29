@@ -734,6 +734,20 @@ class SMACliteDreamerEnv(gym.Env):
             out_info["battle_won"] = info["battle_won"]
         return obs, np.float32(shaped_reward), is_terminal, truncated, out_info
 
+    def set_map_hard_scores(self, scores) -> bool:
+        """Push adaptive hard-map scores into this worker's map sampler (no-op without one).
+
+        Used by the adaptive ``prioritized_hard_maps`` curriculum: the main process aggregates
+        per-map difficulty from training rollouts and broadcasts ``name -> hard_score`` here.
+        Returns True if the sampler accepted the update.
+        """
+        sampler = getattr(self, "_map_sampler", None)
+        setter = getattr(sampler, "set_hard_scores", None) if sampler is not None else None
+        if not callable(setter):
+            return False
+        setter(dict(scores or {}))
+        return True
+
     def close(self):
         self._env.close()
 

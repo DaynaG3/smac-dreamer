@@ -1,0 +1,99 @@
+# R2-2100 — train FROM SCRATCH, 4M steps, with the adaptive HARD-MAP curriculum (Kubeflow GPU).
+#
+#   python scripts/train_r2dreamer_smaclite_multimap.py --config configs/r2_2100_prioritized_hard_maps.yaml
+#
+# Discovers ONLY the `train` folder (1200 maps). `validation` (200) is held out for checkpoint
+# selection (macro held-out win rate); `blind_iid`/`blind_compositional` are never touched in
+# training. Sampling = 75% shuffled_round_robin baseline + 25% hard-map oversampling, with
+# per-map difficulty measured from TRAINING rollouts. Validation stays fixed and UNBIASED.
+#
+# NOTE: requires a BF16-capable GPU (A40 / A100 / L4). On T4/V100 set amp_dtype: float16.
+# Put logdir on the persistent volume (PVC) so checkpoints/replay survive pod restarts.
+
+maps:
+  train:               configs/maps/r2_2100/configs/train
+  validation:          configs/maps/r2_2100/configs/validation
+  blind_iid:           configs/maps/r2_2100/configs/blind_iid
+  blind_compositional: configs/maps/r2_2100/configs/blind_compositional
+
+sampling_mode: prioritized_hard_maps    # 75% shuffled_round_robin + 25% hard-map oversampling
+
+# ---- Adaptive hard-map curriculum -----------------------------------------
+# map_priority:
+#   enabled: true
+#   hard_map_probability: 0.25            # mixture weight on the hard-map component
+#   every: 100000                         # env steps between hard-score recomputes/broadcasts
+#   warmup: 200000                        # baseline-only until the policy + per-map stats settle
+#   ema_decay: 0.95                        # faster adaptation than 0.98 (sparse per-map visits over 1200 maps)
+#   min_episodes: 3                        # episodes a map needs before it joins the hard component
+
+map_priority: #Config to continue from 3M PERrewardShaping
+  enabled: true
+  hard_map_probability: 0.35
+  every: 50000
+  warmup: 200000
+  ema_decay: 0.95
+  min_episodes: 5
+
+# ---- Observation representation -------------------------------------------
+observation:
+  mode: structured
+
+# ---- Action masking (P0.1 real; P0.2 imagined) ----------------------------
+action_masking: true
+mask_threshold: 0.7
+
+# ---- Reward (unshaped baseline; selection uses ORIGINAL return only) -------
+reward:
+  name: win_quality_v5
+  params:
+    w_ally_ehp_dense: 0.25
+    w_win_ehp: 0.50
+    w_win_alive: 0.25
+    w_timeout: 0.10
+
+# ---- Run / model knobs (GPU production) -----------------------------------
+device: cuda:0
+amp_dtype: bfloat16                     # A40/A100/L4. Use float16 on T4/V100.
+seed: 0
+gamma: 0.997
+steps: 4000000                          # 4M env steps, from scratch (no resume)
+env_num: 8
+max_episode_steps: 200
+
+batch_size: 16
+batch_length: 64
+units: 256
+deter: 2048
+imag_horizon: 15
+
+# ---- Validation (checkpoint selection): map × fixed seeds — UNBIASED -------
+validation:
+  every: 250000                         # ~16 validation passes over the 4M run
+  run_at_start: false
+  seeds: [0, 1, 2]                      # 200 val maps × 3 seeds = 600 episodes / pass
+
+# ---- Replay buffer: large capacity, CPU storage (model computes on cuda) ---
+buffer:
+  max_size: 1000000                     # 4M-step run; larger replay than the 2M default
+  storage_device: cpu
+  storage_backend: memmap
+  scratch_dir: replay                   # created under logdir — keep logdir on fast PVC storage
+
+# ---- Environment worker lifecycle / memory telemetry ----------------------
+env_lifecycle:
+  max_episodes_per_worker: 25
+  shutdown_timeout_seconds: 5
+  log_worker_memory: true
+
+system_log_every: 10000
+
+# ---- Logging --------------------------------------------------------------
+wandb:
+  project: smac-r2dreamer                 # override with --wandb-project or WANDB_PROJECT
+  entity: null
+  mode: online
+  tags: [r2_2100, smaclite, multimap, prioritized_hard_maps, from_scratch, 4M]
+  run_name: r2_2100_PER_rewardShaping                         # auto: <dataset>-<reward>-<resolved-params-hash>
+logdir: logs/r2dreamer/r2_2100_PER_rewardShaping
+checkpoint_every_minutes: 15.0
