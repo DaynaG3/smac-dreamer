@@ -19,13 +19,21 @@ maps:
 sampling_mode: prioritized_hard_maps    # 75% shuffled_round_robin + 25% hard-map oversampling
 
 # ---- Adaptive hard-map curriculum -----------------------------------------
-map_priority:
+# map_priority:
+#   enabled: true
+#   hard_map_probability: 0.25            # mixture weight on the hard-map component
+#   every: 100000                         # env steps between hard-score recomputes/broadcasts
+#   warmup: 200000                        # baseline-only until the policy + per-map stats settle
+#   ema_decay: 0.95                        # faster adaptation than 0.98 (sparse per-map visits over 1200 maps)
+#   min_episodes: 3                        # episodes a map needs before it joins the hard component
+
+map_priority: #Config to continue from 3M PERrewardShaping
   enabled: true
-  hard_map_probability: 0.25            # mixture weight on the hard-map component
-  every: 100000                         # env steps between hard-score recomputes/broadcasts
-  warmup: 200000                        # baseline-only until the policy + per-map stats settle
-  ema_decay: 0.95                        # faster adaptation than 0.98 (sparse per-map visits over 1200 maps)
-  min_episodes: 3                        # episodes a map needs before it joins the hard component
+  hard_map_probability: 0.35
+  every: 50000
+  warmup: 200000
+  ema_decay: 0.95
+  min_episodes: 5
 
 # ---- Observation representation -------------------------------------------
 observation:
