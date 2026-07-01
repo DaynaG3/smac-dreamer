@@ -17,6 +17,21 @@ EPISODE_REWARD_LOG_MAP = {
     "log_final_ally_ehp_frac":                  "episode/final_ally_ehp_frac",
     "log_final_ally_alive_frac":                "episode/final_ally_alive_frac",
     "log_final_enemy_ehp_frac":                 "episode/final_enemy_ehp_frac",
+    # finish_trade_v1 reward components (episode sums).
+    "log_reward_term_enemy_progress_ep_sum":            "episode/reward_enemy_progress",
+    "log_reward_term_ally_loss_ep_sum":                 "episode/reward_ally_loss",
+    "log_reward_term_stall_penalty_ep_sum":             "episode/reward_stall_penalty",
+    "log_reward_term_timeout_enemy_ep_sum":             "episode/reward_timeout_enemy",
+    "log_reward_term_timeout_alive_ep_sum":             "episode/reward_timeout_alive",
+    "log_reward_term_win_speed_ep_sum":                 "episode/reward_win_speed",
+    "log_reward_term_win_ally_ehp_ep_sum":              "episode/reward_win_ally_ehp",
+    "log_reward_term_all_dead_loss_ep_sum":             "episode/reward_all_dead_loss",
+    # finish_trade_v1 behaviour diagnostics (terminal-only; *_ep_sum == episode value).
+    "log_reward_term_no_damage_streak_max_ep_sum":      "episode/no_damage_streak_max",
+    "log_reward_term_no_damage_streak_mean_ep_sum":     "episode/no_damage_streak_mean",
+    "log_reward_term_timeout_with_allies_alive_ep_sum": "episode/timeout_with_allies_alive",
+    "log_reward_term_allies_dead_loss_ep_sum":          "episode/allies_dead_loss",
+    "log_reward_term_near_win_timeout_ep_sum":          "episode/near_win_timeout",
 }
 
 
