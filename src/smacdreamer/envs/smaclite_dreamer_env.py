@@ -963,7 +963,9 @@ class SMACliteDreamerEnv(gym.Env):
             "log_original_env_reward":                 _f(original_env_reward),
             "log_shaped_reward":                       _f(shaped_reward_val),
             "log_reward_shaping_bonus":                _f(reward_shaping_bonus),
-            "log_reward_shaping_enabled":              _f(1.0 if self._use_new_shaping else 0.0),
+            "log_reward_shaping_enabled":              _f(
+                1.0 if (self._reward_fn is not None or self._use_new_shaping) else 0.0
+            ),
             # Step-level metrics (old aliases)
             "log_step_invalid_count":                  _f(step_invalid),
             "log_step_invalid_was_prev_valid_count":   _f(step_timing_lag),

@@ -77,6 +77,7 @@ def run_episode(env, raw_env, max_steps):
     invalid = float(np.asarray(last_info.get("log_post_mask_invalid_action_count", 0.0)))
     return {
         "steps": steps,
+        "shaping_enabled": float(np.asarray(last_info.get("log_reward_shaping_enabled", 0.0))),
         "orig_return": orig_return,
         "shaped_return": shaped_return,
         "shaping_bonus": float(np.asarray(last_info.get("log_episode_reward_shaping_bonus", 0.0))),
@@ -90,14 +91,28 @@ def run_episode(env, raw_env, max_steps):
 
 def main():
     ap = argparse.ArgumentParser(description="finish_trade_v1 reward smoke test")
+    ap.add_argument("--config", default="configs/r2_2100_finish_trade_v1.yaml",
+                    help="YAML config whose reward block is loaded and resolved")
     ap.add_argument("--scenario", default="2s3z")
     ap.add_argument("--episodes", type=int, default=2)
     ap.add_argument("--max-steps", type=int, default=60)
     args = ap.parse_args()
 
-    # 1. Resolves from the registry (and mirrors a YAML reward block).
-    print(f"[smoke] resolved_params: {resolved_params('finish_trade_v1', {})}")
-    reward_fn = resolve("finish_trade_v1", {})
+    # 1. Load the reward straight from the YAML config (proves YAML -> registry wiring).
+    from omegaconf import OmegaConf
+
+    cfg_path = pathlib.Path(args.config)
+    if not cfg_path.is_absolute():
+        cfg_path = ROOT / args.config
+    cfg = OmegaConf.load(str(cfg_path))
+    assert cfg.reward.name == "finish_trade_v1", (
+        f"config reward.name is {cfg.reward.name!r}, expected 'finish_trade_v1'")
+    params = OmegaConf.to_container(cfg.reward.get("params", {}), resolve=True) or {}
+    print(f"[smoke] config: {cfg_path}")
+    print(f"[smoke] reward.name: {cfg.reward.name}")
+    print(f"[smoke] config reward params: {params}")
+    print(f"[smoke] resolved_params: {resolved_params(cfg.reward.name, params)}")
+    reward_fn = resolve(cfg.reward.name, params)
 
     from smacdreamer.envs.smaclite_dreamer_env import SMACliteDreamerEnv
 
@@ -113,7 +128,8 @@ def main():
         results.append(r)
         print(f"[smoke] ep{ep}: steps={r['steps']} won={r['battle_won']} "
               f"orig_return={r['orig_return']:.4f} shaped_return={r['shaped_return']:.4f} "
-              f"shaping_bonus={r['shaping_bonus']:.4f} invalid={r['invalid']:.0f} "
+              f"shaping_bonus={r['shaping_bonus']:.4f} shaping_enabled={r['shaping_enabled']:.0f} "
+              f"invalid={r['invalid']:.0f} "
               f"streak_max={r['streak_max']:.0f} final_enemy_ehp={r['final_enemy_ehp']:.3f} "
               f"components={sorted(r['seen_component'])}")
     env.close()
@@ -126,6 +142,9 @@ def main():
         ok = False
     if any(r["invalid"] > 0 for r in results):
         print("[smoke] FAIL: post-mask invalid-action count was non-zero")
+        ok = False
+    if any(r["shaping_enabled"] != 1.0 for r in results):
+        print("[smoke] FAIL: log_reward_shaping_enabled was not 1.0 on the reward_fn path")
         ok = False
     all_seen = set().union(*[r["seen_component"] for r in results]) if results else set()
     if not all_seen:
