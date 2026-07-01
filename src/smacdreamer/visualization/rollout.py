@@ -182,6 +182,17 @@ def load_agent(config_path, checkpoint, run_meta=None, device=None,
     ))
     _propagate_device(config, device)
 
+    # Rebuild the P0.2 predicted-mask heads (avail_head/alive_head + frozen copies) when the
+    # checkpoint was trained with action masking, so the reconstructed model matches the saved
+    # state_dict. Mirrors the injection in train_r2dreamer_smaclite_multimap.py; run_meta wins
+    # over --config so an arbitrary checkpoint folder reconstructs correctly.
+    action_masking = bool(run_meta_dict.get("action_masking", cfg.get("action_masking", False)))
+    if action_masking and obs_mode != "structured":
+        raise ValueError("action_masking requires observation.mode: structured")
+    config.model.action_masking = action_masking
+    config.model.mask_threshold = float(
+        run_meta_dict.get("mask_threshold", cfg.get("mask_threshold", 0.7)))
+
     agent = Dreamer(config.model, obs_space, act_space).to(device)
     ckpt = torch.load(str(ckpt_path), map_location=device, weights_only=False)
     agent.load_state_dict(ckpt["agent_state_dict"])
