@@ -46,14 +46,7 @@ def _import_jepa():
             from smac_jepa.modules.rollout_memory import EntityRolloutGRUMemory
         except ImportError:
             EntityRolloutGRUMemory = CompatEntityRolloutGRUMemory
-        from smac_jepa.anchored_belief_memory import (
-            AnchoredActionConditionedEntityRolloutGRUMemory,
-        )
-        return (
-            SMACJEPA,
-            EntityRolloutGRUMemory,
-            AnchoredActionConditionedEntityRolloutGRUMemory,
-        )
+        return SMACJEPA, EntityRolloutGRUMemory
     except ImportError as exc:
         raise JEPADependencyError(
             "world_model.backend='jepa' requires the external smac-jepa-wm package. "
@@ -324,7 +317,7 @@ def load_frozen_jepa_checkpoint(
     memory_state = _required(checkpoint, "memory_module_state")
     metadata = dict(_required(checkpoint, "metadata"))
     cfg = dict(checkpoint.get("resolved_config", checkpoint.get("config", {})))
-    (SMACJEPA, EntityRolloutGRUMemory, AnchoredActionConditionedEntityRolloutGRUMemory) = _import_jepa()
+    SMACJEPA, EntityRolloutGRUMemory = _import_jepa()
     arch = _arch_from(metadata, cfg)
     contract = _checkpoint_contract(metadata, cfg, arch)
     if live_metadata is not None:
@@ -341,23 +334,7 @@ def load_frozen_jepa_checkpoint(
     memory_dim = int(cfg.get("rollout_memory_dim", cfg.get("memory_dim", 128)))
     hidden = cfg.get("rollout_memory_hidden_dim", None)
     residual = not bool(cfg.get("rollout_memory_no_residual", False))
-    anchored = bool(cfg.get("anchored_belief_memory", False)) or any(
-        str(key).startswith("hidden_gate_net.") for key in memory_state
-    )
-    if anchored:
-        if not action_conditioned:
-            raise JEPACompatibilityError(
-                "Anchored Exp33 checkpoint must set action_conditioned_memory=True"
-            )
-        memory = AnchoredActionConditionedEntityRolloutGRUMemory(
-            latent_dim=int(arch["latent_dim"]),
-            memory_dim=memory_dim,
-            n_actions=int(metadata["n_actions"]),
-            max_agents=int(metadata["max_agents"]),
-            hidden_dim=hidden,
-            residual=residual,
-        )
-    elif action_conditioned:
+    if action_conditioned:
         memory = ActionConditionedEntityRolloutGRUMemory(
             latent_dim=int(arch["latent_dim"]),
             memory_dim=memory_dim,

@@ -33,16 +33,6 @@ class FrozenJEPAWorldModel(nn.Module):
         self.max_agents = int(meta["max_agents"])
         self.max_actions = int(meta["max_actions"])
         self.presence_threshold = float(presence_threshold)
-        anchored = bool(info.resolved_config.get("anchored_belief_memory", False))
-        default_presence_mode = "soft" if anchored else "hard"
-        self.presence_rollout_mode = str(
-            info.resolved_config.get("presence_rollout_mode", default_presence_mode)
-        ).strip().lower()
-        if self.presence_rollout_mode not in {"soft", "hard"}:
-            raise ValueError(
-                "Unsupported JEPA presence_rollout_mode: "
-                f"{self.presence_rollout_mode!r}"
-            )
         self.visibility_config = JEPAVisibilityConfig(
             enemy_visibility_mask=bool(meta.get("enemy_visibility_mask", False)),
             enemy_sight_range=float(meta.get("enemy_sight_range", 9.0)),
@@ -172,13 +162,7 @@ class FrozenJEPAWorldModel(nn.Module):
                 static,
             )[:, 0]
             logits = self.core.predict_presence(pred)
-            presence_probability = torch.sigmoid(logits).to(dtype=z.dtype)
-            if self.presence_rollout_mode == "soft":
-                next_mask = presence_probability * slot_mask
-            else:
-                next_mask = (
-                    presence_probability >= self.presence_threshold
-                ).to(dtype=z.dtype) * slot_mask
+            next_mask = (torch.sigmoid(logits) >= self.presence_threshold).to(dtype=z.dtype) * slot_mask
             pred = pred * next_mask.unsqueeze(-1)
             if getattr(self.memory_module, "uses_action", False):
                 next_memory = self.memory_module.update(pred, memory, next_mask, action=action_jepa, action_mask=action_mask)
