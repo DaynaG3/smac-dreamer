@@ -46,6 +46,24 @@ python scripts/visualize_episode.py \
 - `--no-overlay` disables the on-frame text overlay.
 - `--no-save-jsonl` / `--no-save-summary` disable those outputs (both on by default).
 
+### Making the video easier to follow
+
+Native SMAClite rendering is one frame per decision step and physically small, so raw video
+plays very fast. Pacing/readability knobs (both scripts):
+
+- `--fps` — playback frame rate. Default `8` (legible); pass `--fps 22.4` for realtime.
+- `--scale` — nearest-neighbour upscale factor. Default `2` (bigger units + overlay text).
+- `--hold-last-seconds` — freeze the final frame this long (default `1.5`) so the WIN/LOSS
+  outcome doesn't flash by.
+
+A slow, readable single episode:
+
+```bash
+python scripts/visualize_episode.py --config ... --checkpoint ... \
+  --map-name <map> --seed 0 --mode record --headless \
+  --fps 6 --scale 3 --hold-last-seconds 2.0 --output-dir results/replays
+```
+
 ## Batch usage
 
 ```bash

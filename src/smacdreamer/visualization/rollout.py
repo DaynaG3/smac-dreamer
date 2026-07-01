@@ -329,6 +329,7 @@ def run_episode(
     seed: int,
     capture_frames: bool = False,
     overlay: bool = True,
+    scale: int = 1,
     interactive_window=None,
     low_enemy_ehp_threshold: float = 0.75,
     poor_focus_threshold: float = 0.5,
@@ -349,7 +350,7 @@ def run_episode(
     def _frame(step, executed, info, is_last, battle_won):
         if not (capture_frames or interactive_window is not None):
             return
-        frame = _render.capture_frame(env)
+        frame = _render.capture_frame(env, scale=scale)
         if overlay:
             focus = _trace.target_focus_score([int(a) for a in executed]) if executed else None
             lines = _render.build_overlay_lines(

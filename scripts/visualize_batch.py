@@ -48,7 +48,12 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--max-videos", type=int, default=10)
     ap.add_argument("--headless", action="store_true")
     ap.add_argument("--output-dir", default="results/replays")
-    ap.add_argument("--fps", type=float, default=22.4)
+    ap.add_argument("--fps", type=float, default=8.0,
+                    help="playback fps (lower = easier to follow; 22.4 = realtime)")
+    ap.add_argument("--scale", type=int, default=2,
+                    help="nearest-neighbour upscale factor for readability (default: 2)")
+    ap.add_argument("--hold-last-seconds", type=float, default=1.5,
+                    help="freeze the final frame this long so the WIN/LOSS outcome is readable")
     ap.add_argument("--max-episode-steps", type=int, default=None)
     ap.add_argument("--no-overlay", action="store_true")
     ap.add_argument("--low-enemy-ehp-threshold", type=float, default=0.75)
@@ -136,7 +141,7 @@ def main():
         try:
             res = rollout.run_episode(ctx, env, map_name=entry.name, seed=seed,
                                       capture_frames=True, overlay=not args.no_overlay,
-                                      **cls_kwargs)
+                                      scale=args.scale, **cls_kwargs)
         finally:
             try:
                 env.close()
@@ -147,7 +152,8 @@ def main():
         mp4_path = out_dir / f"{stem}.mp4"
         jsonl_path = out_dir / f"{stem}.jsonl"
         summary_path = out_dir / f"{stem}_summary.json"
-        render.write_mp4(mp4_path, res.frames, fps=args.fps)
+        frames = render.with_hold(res.frames, args.fps, hold_last_seconds=args.hold_last_seconds)
+        render.write_mp4(mp4_path, frames, fps=args.fps)
         with jsonl_path.open("w", encoding="utf-8") as f:
             for rec in res.records:
                 f.write(json.dumps(rec) + "\n")

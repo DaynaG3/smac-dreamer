@@ -50,7 +50,12 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--headless", action="store_true",
                     help="set SDL dummy video/audio drivers; disables the interactive window")
     ap.add_argument("--output-dir", default="results/replays")
-    ap.add_argument("--fps", type=float, default=22.4)
+    ap.add_argument("--fps", type=float, default=8.0,
+                    help="playback fps (lower = easier to follow; 22.4 = realtime)")
+    ap.add_argument("--scale", type=int, default=2,
+                    help="nearest-neighbour upscale factor for readability (default: 2)")
+    ap.add_argument("--hold-last-seconds", type=float, default=1.5,
+                    help="freeze the final frame this long so the WIN/LOSS outcome is readable")
     ap.add_argument("--max-episode-steps", type=int, default=None,
                     help="override the per-episode step cap (default: from config)")
     ap.add_argument("--no-overlay", action="store_true", help="disable the on-frame text overlay")
@@ -98,7 +103,7 @@ def main():
         # Determine frame size for the interactive window from one capture if needed.
         if want_interactive:
             try:
-                probe_frame = render.capture_frame(env)
+                probe_frame = render.capture_frame(env, scale=args.scale)
                 h, w = probe_frame.shape[0], probe_frame.shape[1]
                 interactive_window = render.InteractiveWindow(w, h, args.fps,
                                                               title=f"{entry.name} seed={args.seed}")
@@ -109,7 +114,7 @@ def main():
 
         result = rollout.run_episode(
             ctx, env, map_name=entry.name, seed=args.seed,
-            capture_frames=want_record, overlay=not args.no_overlay,
+            capture_frames=want_record, overlay=not args.no_overlay, scale=args.scale,
             interactive_window=interactive_window,
         )
     finally:
@@ -132,8 +137,9 @@ def main():
 
     if want_record:
         mp4_path = out_dir / f"{stem}.mp4"
-        render.write_mp4(mp4_path, result.frames, fps=args.fps)
-        print(f"[visualize] wrote {mp4_path} ({len(result.frames)} frames)")
+        frames = render.with_hold(result.frames, args.fps, hold_last_seconds=args.hold_last_seconds)
+        render.write_mp4(mp4_path, frames, fps=args.fps)
+        print(f"[visualize] wrote {mp4_path} ({len(frames)} frames @ {args.fps} fps)")
 
     if args.save_jsonl:
         jsonl_path = out_dir / f"{stem}.jsonl"
