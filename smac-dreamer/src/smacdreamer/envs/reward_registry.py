@@ -317,6 +317,58 @@ def _make_ally_ehp_v4(params: dict):
     return fn
 
 
+@register("win_quality_v5")
+@_with_defaults({
+    "w_ally_ehp_dense": 0.25,
+    "w_win_ehp": 0.50,
+    "w_win_alive": 0.25,
+    "w_timeout": 0.10,
+})
+def _make_win_quality_v5(params: dict):
+    """Conservative win-quality reward (reward-transfer continuation, 2M -> 4M).
+
+    Original SMAClite reward + three quality terms + a small timeout penalty:
+      1. dense allied effective-HP preservation (shifted potential, as ally_ehp_v4);
+      2. terminal win bonus scaled by surviving allied EHP fraction (WINS ONLY);
+      3. terminal win bonus scaled by fraction of allies alive (WINS ONLY);
+      timeout safeguard penalises time-limit truncation.
+
+    The terminal quality bonuses fire ONLY on a true terminal WIN (not loss, not timeout).
+    Weights fixed for the whole run.
+    """
+    d = _make_win_quality_v5.defaults
+    p = {**d, **params}
+
+    def fn(ctx: RewardContext):
+        gamma = ctx.gamma
+        # Term 1: dense allied-EHP preservation (shifted potential; terminal Φ' = 0).
+        phi_prev = ctx.prev_ally_ehp_frac - 1.0
+        phi_next_raw = ctx.ally_ehp_frac - 1.0
+        phi_next = 0.0 if ctx.terminated else phi_next_raw
+        ally_ehp_dense = p["w_ally_ehp_dense"] * (gamma * phi_next - phi_prev)
+
+        # Terms 2 & 3: win-quality bonuses — ONLY on a true terminal win.
+        win = ctx.terminated and ctx.battle_won
+        win_ehp_quality = p["w_win_ehp"] * ctx.ally_ehp_frac if win else 0.0
+        win_alive_quality = p["w_win_alive"] * ctx.ally_alive_frac if win else 0.0
+
+        # Timeout safeguard — only on truncation.
+        timeout_penalty = -p["w_timeout"] if ctx.truncated else 0.0
+
+        shaping = ally_ehp_dense + win_ehp_quality + win_alive_quality + timeout_penalty
+        reward = float(ctx.base_reward) + float(shaping)
+        terms = {
+            "original": float(ctx.base_reward),
+            "ally_ehp_dense": float(ally_ehp_dense),
+            "win_ehp_quality": float(win_ehp_quality),
+            "win_alive_quality": float(win_alive_quality),
+            "timeout": float(timeout_penalty),
+            "shaping_total": float(shaping),
+        }
+        return reward, terms
+    return fn
+
+
 __all__ = [
     "RewardContext", "register", "resolve", "resolved_params", "available",
 ]
