@@ -1,0 +1,42 @@
+============================================================
+Exp33 7 epochs -> R2-Dreamer 2M
+ROOT:              /home/jovyan/workspace/dreamer/combined-upload
+JEPA manifest:     splits/r2_general_2100.json
+JEPA output:       /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/runs/rnn_seqmem_exp33_dreamer_7ep_v1
+Installed ckpt:    /home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/checkpoints/jepa/model.pt
+Dreamer config:    configs/r2_2100_jepa_reward_shaped.yaml
+Full Dreamer logs: /home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/exp33_7ep_2m_20260701_094924
+============================================================
+
+=== Python/CUDA/import check ===
+torch: 2.11.0+cu126
+compiled CUDA: 12.6
+smac_jepa: /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/smac_jepa/__init__.py
+smacdreamer: /home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/src/smacdreamer/__init__.py
+GPU: NVIDIA A40
+CUDA smoke test: PASS
+Exp33 anchored memory contract self-test: PASS
+
+=== Verify Dreamer CLI before expensive JEPA training ===
+Dreamer CLI check: PASS
+
+=== Train full Exp33 JEPA for 7 total epochs ===
+precision_policy policy=bf16(auto) autocast=True grad_scaler=False amp_init_scale=1024.0 amp_growth_interval=10000
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/smac_jepa/train_jepa_exp33_dreamer.py", line 212, in <module>
+    main()
+  File "/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/smac_jepa/train_jepa_exp33_dreamer.py", line 208, in main
+    _base.main()
+  File "/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/smac_jepa/train_jepa_exp31_exp33.py", line 3487, in main
+    validate_dataset_visibility(dataset)
+  File "/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/smac_jepa/train_jepa_exp31_exp33.py", line 3289, in validate_dataset_visibility
+    raise RuntimeError("Corrected visibility dataset was not installed.")
+RuntimeError: Corrected visibility dataset was not installed.
+
+FAILED at line 145: EPOCHS=7 MANIFEST="$JEPA_MANIFEST" OUT_DIR="$JEPA_OUT_DIR" WANDB="$JEPA_WANDB" WANDB_NAME="exp33-dreamer-compatible-7ep-v1" NUM_WORKERS="$NUM_WORKERS" BATCH_SIZE="$BATCH_SIZE" ./scripts/run_exp33_dreamer_pretrain.sh
+Log: /home/jovyan/workspace/dreamer/combined-upload/exp33_7ep_to_r2_2m_20260701_094924.log
+
+FAILED at line 153: ( cd "$JEPA_DIR"; EPOCHS=7 MANIFEST="$JEPA_MANIFEST" OUT_DIR="$JEPA_OUT_DIR" WANDB="$JEPA_WANDB" WANDB_NAME="exp33-dreamer-compatible-7ep-v1" NUM_WORKERS="$NUM_WORKERS" BATCH_SIZE="$BATCH_SIZE" ./scripts/run_exp33_dreamer_pretrain.sh )
+Log: /home/jovyan/workspace/dreamer/combined-upload/exp33_7ep_to_r2_2m_20260701_094924.log

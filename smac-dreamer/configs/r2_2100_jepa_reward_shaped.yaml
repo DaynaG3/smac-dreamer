@@ -51,7 +51,7 @@ deter: 2048
 imag_horizon: 5
 
 validation:
-  every: 100000
+  every: 250000
   run_at_start: false
   seeds: [0, 1, 2]
 
