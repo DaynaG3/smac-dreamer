@@ -94,6 +94,10 @@ class VizContext:
     max_episode_steps: int
     obs_space: object
     act_space: object
+    # Training reward from the config, so the replay's shaped reward matches what training saw
+    # (the ORIGINAL SMAClite return is always tracked separately as log_reward_original).
+    reward_name: str = "smaclite_default"
+    reward_params: dict = field(default_factory=dict)
 
 
 def load_agent(config_path, checkpoint, run_meta=None, device=None,
@@ -200,10 +204,17 @@ def load_agent(config_path, checkpoint, run_meta=None, device=None,
     print(f"[visualize] loaded checkpoint {ckpt_path} "
           f"(obs_mode={obs_mode} units={units} deter={deter} device={device})")
 
+    # Resolve the TRAINING reward from the config so the rollout's shaped reward matches what
+    # training optimised (the summary's total_shaped_reward is otherwise identical to the
+    # original return). The original SMAClite return stays tracked via log_reward_original.
+    reward_name, reward_params = resolve_reward(cfg)
+    print(f"[visualize] reward: {reward_name} (params={reward_params})")
+
     return VizContext(
         agent=agent, config=cfg, run_meta=run_meta_dict, obs_mode=obs_mode,
         pad_dims=pad_dims, device=device, gamma=gamma, max_episode_steps=mes,
         obs_space=obs_space, act_space=act_space,
+        reward_name=reward_name, reward_params=reward_params,
     )
 
 
@@ -245,6 +256,21 @@ def resolve_map_entries(cfg, split="validation", maps_dir=None, map_name=None) -
     return entries
 
 
+def resolve_reward(cfg):
+    """Resolve (reward_name, reward_params) from a config's ``reward`` block.
+
+    Defaults to ``smaclite_default`` (no shaping) when the config has no reward block.
+    """
+    from omegaconf import OmegaConf
+
+    r = cfg.get("reward") if cfg.get("reward") else None
+    if not r:
+        return "smaclite_default", {}
+    name = str(r.get("name", "smaclite_default"))
+    params = OmegaConf.to_container(r.get("params", {}), resolve=True) or {}
+    return name, params
+
+
 def resolve_seeds(cfg, seeds_arg=None) -> list:
     """Resolve eval seeds: ``--seeds`` CLI > cfg.eval/validation seeds > [0]."""
     if seeds_arg:
@@ -265,13 +291,22 @@ def resolve_seeds(cfg, seeds_arg=None) -> list:
 # ---------------------------------------------------------------------------
 
 def make_single_map_env(ctx: VizContext, entry, *, capture=False,
-                        reward_name="smaclite_default", reward_params=None):
+                        reward_name=None, reward_params=None):
     """Construct one direct (in-process) single-map SMAClite env compatible with R2-Dreamer.
 
     A ``fixed`` sampler over the single entry means the map never switches, so we can safely
     flip the underlying SMAClite renderer to ``rgb_array`` once for frame capture.
+
+    Defaults to the TRAINING reward resolved onto ``ctx`` (so the trace's shaped reward matches
+    what the policy trained under); pass ``reward_name`` explicitly to override (e.g.
+    ``"smaclite_default"`` for pure original-return inspection). The original SMAClite return is
+    always tracked separately by the env as ``log_reward_original``.
     """
     from smacdreamer.r2dreamer_factory import make_smaclite_multimap_env
+
+    if reward_name is None:
+        reward_name = ctx.reward_name
+        reward_params = ctx.reward_params if reward_params is None else reward_params
 
     env = make_smaclite_multimap_env(
         [entry], ctx.pad_dims, "fixed", 0, 0, reward_name, reward_params or {},
@@ -411,5 +446,5 @@ def run_episode(
 __all__ = [
     "ROOT", "VizContext", "EpisodeResult",
     "load_config", "resolve_checkpoint", "resolve_run_meta", "load_agent",
-    "resolve_map_entries", "resolve_seeds", "make_single_map_env", "run_episode",
+    "resolve_map_entries", "resolve_reward", "resolve_seeds", "make_single_map_env", "run_episode",
 ]

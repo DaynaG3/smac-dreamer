@@ -105,8 +105,8 @@ def main():
     if not cfg_path.is_absolute():
         cfg_path = ROOT / args.config
     cfg = OmegaConf.load(str(cfg_path))
-    assert cfg.reward.name == "finish_trade_v1", (
-        f"config reward.name is {cfg.reward.name!r}, expected 'finish_trade_v1'")
+    assert str(cfg.reward.name).startswith("finish_trade_"), (
+        f"config reward.name is {cfg.reward.name!r}, expected a finish_trade_* reward")
     params = OmegaConf.to_container(cfg.reward.get("params", {}), resolve=True) or {}
     print(f"[smoke] config: {cfg_path}")
     print(f"[smoke] reward.name: {cfg.reward.name}")

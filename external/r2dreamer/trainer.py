@@ -32,6 +32,9 @@ EPISODE_REWARD_LOG_MAP = {
     "log_reward_term_timeout_with_allies_alive_ep_sum": "episode/timeout_with_allies_alive",
     "log_reward_term_allies_dead_loss_ep_sum":          "episode/allies_dead_loss",
     "log_reward_term_near_win_timeout_ep_sum":          "episode/near_win_timeout",
+    # finish_trade_v2 additions (unfinished-close wipeout penalty + near-win loss diagnostic).
+    "log_reward_term_unfinished_close_loss_ep_sum":     "episode/reward_unfinished_close_loss",
+    "log_reward_term_near_win_loss_ep_sum":             "episode/near_win_loss",
 }
 
 
