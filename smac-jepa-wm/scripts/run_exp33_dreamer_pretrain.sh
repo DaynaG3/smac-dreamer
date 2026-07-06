@@ -2,41 +2,96 @@
 set -Eeuo pipefail
 
 # Dreamer-compatible full Exp33 pretraining.
-# Defaults are the original Exp33 settings, except EPOCHS defaults to 7 for
-# the integration run requested here.
 #
-# This script uses the already-active/shared UV-created environment. It does
-# not call uv sync, uv lock, uv add, or modify uv.lock.
+# Safety changes:
+#   - Never resumes automatically.
+#   - RESUME must be explicitly supplied.
+#   - A clean run refuses to use a non-empty OUT_DIR.
+#   - Prints the exact imported dataset file/version before training.
+#
+# This script uses the active UV-created virtual environment.
+# It does not call uv sync, uv lock, uv add, or modify uv.lock.
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 MANIFEST="${MANIFEST:-splits/r2_general_2100.json}"
-OUT_DIR="${OUT_DIR:-runs/rnn_seqmem_exp33_dreamer_7ep_v1}"
+OUT_DIR="${OUT_DIR:-runs/rnn_seqmem_exp33_dreamer_7ep_v2_clean}"
 EPOCHS="${EPOCHS:-7}"
 SAMPLES_PER_EPOCH="${SAMPLES_PER_EPOCH:-50000}"
 BATCH_SIZE="${BATCH_SIZE:-16}"
 NUM_WORKERS="${NUM_WORKERS:-4}"
 SEED="${SEED:-1}"
 WANDB_PROJECT="${WANDB_PROJECT:-SMAC-JEPA-losses}"
-WANDB_NAME="${WANDB_NAME:-exp33-dreamer-compatible-7ep-v1}"
+WANDB_NAME="${WANDB_NAME:-exp33-dreamer-compatible-7ep-v2-clean}"
 
-[[ -f "$MANIFEST" ]] || {
-  echo "ERROR: manifest not found: $MANIFEST" >&2
+fail() {
+  echo "ERROR: $*" >&2
   exit 1
 }
 
-mkdir -p "$OUT_DIR"
+[[ -f "$MANIFEST" ]] || fail "Manifest not found: $MANIFEST"
+
+python - <<'PY'
+import inspect
+import sys
+import torch
+import smac_jepa
+
+from smac_jepa import train_jepa_exp31_exp33 as trainer
+
+dataset_cls = trainer.VisibilityMarkovRolloutSMACJEPADataset
+version = int(
+    getattr(dataset_cls, "explicit_visibility_mask_version", 0)
+)
+
+print("Python executable:", sys.executable)
+print("Torch:", torch.__version__)
+print("Torch CUDA build:", torch.version.cuda)
+print("CUDA available:", torch.cuda.is_available())
+print("smac_jepa:", smac_jepa.__file__)
+print("visibility dataset:", inspect.getfile(dataset_cls))
+print("visibility dataset version:", version)
+
+if not torch.cuda.is_available():
+    raise SystemExit("CUDA is unavailable")
+if version < 1:
+    raise SystemExit(
+        "Corrected visibility dataset is not active"
+    )
+
+print("Exp33 launch diagnostics: PASS")
+PY
 
 resume_args=()
+
 if [[ -n "${RESUME:-}" ]]; then
+  [[ -f "$RESUME" ]] || fail \
+    "Requested resume checkpoint does not exist: $RESUME"
+
+  echo "Explicit resume requested:"
+  echo "  $RESUME"
   resume_args=(--resume "$RESUME")
-elif [[ -f "$OUT_DIR/checkpoint_recovery.pt" ]]; then
-  resume_args=(--resume "$OUT_DIR/checkpoint_recovery.pt")
-elif [[ -f "$OUT_DIR/checkpoint.pt" ]]; then
-  resume_args=(--resume "$OUT_DIR/checkpoint.pt")
+
+  mkdir -p "$OUT_DIR"
+else
+  if [[ -d "$OUT_DIR" ]] && find "$OUT_DIR" -mindepth 1 -print -quit | grep -q .; then
+    fail \
+      "OUT_DIR is not empty: $OUT_DIR
+Use a fresh OUT_DIR, move the old directory, or explicitly set:
+RESUME=/absolute/path/to/checkpoint.pt"
+  fi
+
+  mkdir -p "$OUT_DIR"
+  echo "Starting a clean training run:"
+  echo "  $OUT_DIR"
 fi
 
-wandb_args=(--wandb --wandb-project "$WANDB_PROJECT" --wandb-name "$WANDB_NAME")
+wandb_args=(
+  --wandb
+  --wandb-project "$WANDB_PROJECT"
+  --wandb-name "$WANDB_NAME"
+)
+
 if [[ "${WANDB:-1}" == "0" ]]; then
   wandb_args=(--no-wandb)
 fi
@@ -102,6 +157,9 @@ python -m smac_jepa.train_jepa_exp33_dreamer \
   --amp \
   "${wandb_args[@]}" \
   "${resume_args[@]}"
+
+[[ -s "$OUT_DIR/checkpoint.pt" ]] || fail \
+  "Training exited without producing $OUT_DIR/checkpoint.pt"
 
 python scripts/validate_exp33_dreamer_checkpoint.py \
   "$OUT_DIR/checkpoint.pt" \
