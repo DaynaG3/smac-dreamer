@@ -18,6 +18,49 @@ This project **fully migrated off JAX-DreamerV3**: there is no `external/dreamer
 suite is deliberately JAX-free (`tests/conftest.py` only puts `src` and `external/smaclite` on
 `sys.path`).
 
+## How to work in this repo
+
+The user is an RL/Dreamer expert; this is a research codebase driven by experiments, not a product.
+
+- **Minimal scope. Do not overbuild.** Implement exactly what was asked — no speculative
+  abstractions, helper layers, config flags for hypothetical needs, or defensive wrapping beyond
+  what the change requires. If a request could reasonably be read narrowly or broadly, **ask which
+  before writing code**; otherwise proceed. Mention (don't build) improvements you notice.
+- **Think experiment-first.** A request like "add reward variant X" is an experiment: state the
+  hypothesis and the metric it should move (held-out macro win rate, `log_reward_term_*`), name
+  things `vN` following the existing pattern (`finish_trade_v3`, `win_quality_v5`), and keep
+  variants comparable — change one thing relative to the baseline config.
+- **Communicate concisely, expert-to-expert.** No restating known context. When work ends in
+  something runnable, finish with the exact ready-to-paste command (config path, flags, logdir)
+  for the target machine.
+
+### Deliverable contract
+
+A finished piece of training-behaviour work includes:
+
+1. **A new versioned YAML in `configs/`** — never mutate an existing experiment config; copy the
+   closest baseline and change only the knobs under test (see `r2_2100_finish_trade_v*.yaml`).
+2. **A bullet in `CHANGES.md`** describing the change.
+3. **A docs writeup** under `docs/training/` (features/curricula/rewards) or `docs/diagnostics/`
+   (investigations) for anything substantial — follow `docs/training/prioritized_hard_maps.md` as
+   the model.
+
+**Tests are targeted, not blanket.** Write new tests only for changes that could *silently corrupt
+training* — action masking, padding, action codec, replay storage, checkpoint save/resume,
+samplers, reward-term wiring. Simple script/config/logging tweaks don't need new tests. Always run
+the pytest files relevant to what you touched before claiming done.
+
+### This machine vs the GPU boxes
+
+- **This Windows laptop is for development and tests only**: pytest and short CPU smoke scripts
+  (`scripts/smoke_*.py`, `scripts/debug_build_one_env.py`). **Never launch real training locally.**
+- **GPU runs (Kubeflow/A40, Kaggle) are launched manually by the user.** Your job is to prepare
+  the config/script and hand over the exact command — never attempt to trigger a remote run.
+- Use the `smac-r2` conda env's `python.exe` (Python 3.11, torch CPU build locally).
+- **All runtime `print()` strings must be ASCII-only.** wandb wraps stdout with a cp1252 shim on
+  Windows; any non-ASCII character (—, …, →, box-drawing) raises `UnicodeEncodeError` mid-write
+  and silently kills logging. Comments/docstrings are fine.
+
 ## Commands
 
 Everything runs in the `smac-r2` conda env (Python 3.11), from the repo root.
@@ -30,6 +73,7 @@ python -m pytest tests/test_map_priority.py -v                       # one file
 python -m pytest tests/test_map_priority.py::test_hard_score_components -v   # one test
 
 # Train (one YAML drives everything). Set memory/headless env vars first (README Quick start).
+# GPU-box command only — do not run real training on this laptop.
 python scripts/train_r2dreamer_smaclite_multimap.py --config configs/r2_650.yaml
 
 # Evaluate a checkpoint on a blind split (rebuilds the model from run_meta.json)
@@ -41,8 +85,7 @@ python scripts/train_r2dreamer_smaclite_multimap.py --config <cfg> \
     --resume logs/.../latest.pt --resume-mode full --logdir logs/.../<new_run>
 ```
 
-There is no configured linter/formatter and no build step (pure-Python package). On Windows use the
-`smac-r2` env's `python.exe`; the training path is normally Linux GPU (Kubeflow/A40).
+There is no configured linter/formatter and no build step (pure-Python package).
 
 ## Architecture you can't see from one file
 
