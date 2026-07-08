@@ -1,0 +1,8 @@
+Preflight JEPA generated files and eval discovery	OK	rc=0
+Train Exp34 JEPA	OK	rc=0
+Ordinary rollout metrics Exp34	OK	rc=0
+Hidden belief metrics Exp34	FAIL	rc=2; see /home/jovyan/workspace/dreamer/combined-upload/overnight_logs/exp34_exp35_true_metrics_r2_20260707_100311/eval_exp34_hidden.log
+Train Exp35 JEPA	OK	rc=0
+Ordinary rollout metrics Exp35	OK	rc=0
+Hidden belief metrics Exp35	FAIL	rc=2; see /home/jovyan/workspace/dreamer/combined-upload/overnight_logs/exp34_exp35_true_metrics_r2_20260707_100311/eval_exp35_hidden.log
+R2-Dreamer 2M with original Exp33 JEPA checkpoint	FAIL	rc=1; see /home/jovyan/workspace/dreamer/combined-upload/overnight_logs/exp34_exp35_true_metrics_r2_20260707_100311/r2dreamer_2m.log

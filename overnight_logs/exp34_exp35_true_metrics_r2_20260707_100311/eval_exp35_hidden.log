@@ -1,0 +1,23 @@
+[eval] ORDINARY_EVAL=/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33_anchored.py
+[eval] HIDDEN_EVAL=/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py
+[eval-cmd] python /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py --checkpoint /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/runs/rnn_seqmem_exp35_two_mask_simple_loss_5ep_20260707_100311/checkpoint.pt --manifest splits/r2_general_2100.json --split eval --device cuda --batch-size 16 --num-workers 4 --out-dir /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp35_two_mask_simple_loss_5ep/hidden_belief --out /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp35_two_mask_simple_loss_5ep/hidden_belief/eval_metrics.json --eval-rollout-horizon 5 --target-mode full
+usage: eval_jepa_hidden_belief_exp31_exp33.py [-h] --manifest MANIFEST [--split SPLIT] --checkpoint
+                                              CHECKPOINT --out-dir OUT_DIR --probe-dir PROBE_DIR
+                                              [--batch-size BATCH_SIZE] [--num-workers NUM_WORKERS]
+                                              [--device {auto,cpu,cuda,mps}] [--amp | --no-amp]
+                                              [--eval-rollout-horizon EVAL_ROLLOUT_HORIZON]
+                                              [--target-mode {full}]
+                                              [--thresholds THRESHOLDS [THRESHOLDS ...]]
+                                              [--presence-threshold PRESENCE_THRESHOLD]
+                                              [--change-threshold CHANGE_THRESHOLD]
+                                              [--natural-hidden-eval | --no-natural-hidden-eval]
+                                              [--natural-hidden-target-entity-times NATURAL_HIDDEN_TARGET_ENTITY_TIMES]
+                                              [--natural-hidden-max-scan-batches NATURAL_HIDDEN_MAX_SCAN_BATCHES]
+                                              [--controlled-occlusion-eval | --no-controlled-occlusion-eval]
+                                              [--controlled-occlusion-max-batches CONTROLLED_OCCLUSION_MAX_BATCHES]
+                                              [--controlled-occlusion-target-entity-times CONTROLLED_OCCLUSION_TARGET_ENTITY_TIMES]
+                                              [--controlled-occlusion-spans CONTROLLED_OCCLUSION_SPANS [CONTROLLED_OCCLUSION_SPANS ...]]
+                                              [--controlled-occlusion-seed CONTROLLED_OCCLUSION_SEED]
+                                              [--controlled-prefer-reappearance | --no-controlled-prefer-reappearance]
+                                              [--controlled-include-death-spans | --no-controlled-include-death-spans]
+eval_jepa_hidden_belief_exp31_exp33.py: error: the following arguments are required: --probe-dir

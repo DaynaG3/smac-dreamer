@@ -5,7 +5,16 @@ from torch import nn
 
 
 class JEPAFeatureAdapter(nn.Module):
-    """Pool per-entity JEPA state into one R2-Dreamer global feature."""
+    """
+    Convert frozen JEPA per-entity state into one R2-Dreamer feature.
+
+    Old behavior:
+        masked mean over all entities.
+
+    New behavior when max_agents is provided:
+        preserve ally slots explicitly, then append enemy/global summaries.
+        This keeps per-agent control information available to the actor.
+    """
 
     def __init__(
         self,
@@ -15,20 +24,57 @@ class JEPAFeatureAdapter(nn.Module):
         static_dim: int,
         out_dim: int,
         hidden_dim: int | None = None,
+        max_agents: int | None = None,
+        slot_dim: int | None = None,
     ):
         super().__init__()
+
         hidden = int(hidden_dim or max(out_dim, latent_dim + memory_dim))
+
+        self.max_agents = None if max_agents is None else int(max_agents)
+        if self.max_agents is not None and self.max_agents <= 0:
+            raise ValueError(f"max_agents must be positive, got {self.max_agents}")
+
         self.entity_mlp = nn.Sequential(
             nn.Linear(latent_dim + memory_dim, hidden),
             nn.SiLU(),
             nn.Linear(hidden, hidden),
             nn.SiLU(),
         )
+
+        # Backward-compatible old mean-pooling path.
+        if self.max_agents is None:
+            self.proj = nn.Sequential(
+                nn.Linear(hidden + static_dim, hidden),
+                nn.SiLU(),
+                nn.Linear(hidden, out_dim),
+            )
+            self.slot_mlp = None
+            self.slot_dim = None
+            return
+
+        # Keep this smaller than hidden so slot-preserving flattening does not explode params.
+        self.slot_dim = int(slot_dim or min(256, hidden))
+        self.slot_mlp = nn.Sequential(
+            nn.Linear(hidden, self.slot_dim),
+            nn.SiLU(),
+            nn.Linear(self.slot_dim, self.slot_dim),
+            nn.SiLU(),
+        )
+
+        # ally slots + enemy summary + global summary + static condition
+        in_dim = self.slot_dim * (self.max_agents + 2) + static_dim
         self.proj = nn.Sequential(
-            nn.Linear(hidden + static_dim, hidden),
+            nn.Linear(in_dim, hidden),
             nn.SiLU(),
             nn.Linear(hidden, out_dim),
         )
+
+    @staticmethod
+    def _masked_mean(x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        # x: [B, E, D], mask: [B, E, 1]
+        denom = mask.sum(dim=-2).clamp_min(1.0)
+        return (x * mask).sum(dim=-2) / denom
 
     def forward(
         self,
@@ -39,9 +85,53 @@ class JEPAFeatureAdapter(nn.Module):
     ) -> torch.Tensor:
         x = torch.cat([conditioned_z, memory], dim=-1)
         x = self.entity_mlp(x)
+
         mask = entity_mask.to(dtype=x.dtype).unsqueeze(-1)
-        pooled = (x * mask).sum(dim=-2) / mask.sum(dim=-2).clamp_min(1.0)
-        feat = self.proj(torch.cat([pooled, static_condition.to(dtype=x.dtype)], dim=-1))
+        static = static_condition.to(dtype=x.dtype)
+
+        # Old behavior if max_agents was not provided.
+        if self.max_agents is None:
+            pooled = self._masked_mean(x, mask)
+            feat = self.proj(torch.cat([pooled, static], dim=-1))
+            if not torch.isfinite(feat).all():
+                raise FloatingPointError("non-finite JEPA feature adapter output")
+            return feat
+
+        slot = self.slot_mlp(x)
+
+        # First max_agents entity slots are ally slots in this backend.
+        allies = slot[:, : self.max_agents]
+        ally_mask = mask[:, : self.max_agents]
+
+        # Defensive padding in case a weird env exposes fewer ally slots.
+        if allies.shape[-2] < self.max_agents:
+            pad_n = self.max_agents - allies.shape[-2]
+            allies = torch.cat(
+                [allies, torch.zeros(*allies.shape[:-2], pad_n, allies.shape[-1], device=allies.device, dtype=allies.dtype)],
+                dim=-2,
+            )
+            ally_mask = torch.cat(
+                [ally_mask, torch.zeros(*ally_mask.shape[:-2], pad_n, ally_mask.shape[-1], device=ally_mask.device, dtype=ally_mask.dtype)],
+                dim=-2,
+            )
+
+        allies_flat = (allies * ally_mask).flatten(start_dim=-2)
+
+        enemies = slot[:, self.max_agents :]
+        enemy_mask = mask[:, self.max_agents :]
+        if enemies.shape[-2] == 0:
+            enemy_summary = torch.zeros_like(slot[:, 0])
+        else:
+            enemy_summary = self._masked_mean(enemies, enemy_mask)
+
+        global_summary = self._masked_mean(slot, mask)
+
+        feat_in = torch.cat(
+            [allies_flat, enemy_summary, global_summary, static],
+            dim=-1,
+        )
+        feat = self.proj(feat_in)
+
         if not torch.isfinite(feat).all():
             raise FloatingPointError("non-finite JEPA feature adapter output")
         return feat

@@ -1,0 +1,53 @@
+{
+  "label": "train",
+  "source_npz": "data/r2_general_2100_full/train/shard_02/r2g_train_0083.npz",
+  "output_dir": "sanity_outputs/exp33_decode_rollout_v3/train/r2g_train_0083",
+  "slice_info": {
+    "source": "data/r2_general_2100_full/train/shard_02/r2g_train_0083.npz",
+    "sliced": "sanity_outputs/exp33_decode_rollout_v3/train/r2g_train_0083/_tmp/r2g_train_0083_episode_0.npz",
+    "n_episodes_in_source": 4,
+    "episode_index": 0,
+    "valid_transitions": 46,
+    "source_metadata": {
+      "state_dim": 131,
+      "n_agents": 4,
+      "n_enemies": 3,
+      "n_actions": 9,
+      "ally_state_feat_size": 14,
+      "enemy_state_feat_size": 13,
+      "static_dim": 1036,
+      "entity_static_feat_size": 12,
+      "scenario": "r2g_train_0083",
+      "terrain_preset": "SIMPLE",
+      "map_width": 32,
+      "map_height": 32
+    }
+  },
+  "checkpoint_caps_used_for_tensorization": {
+    "state_dim": 356,
+    "n_agents": 9,
+    "n_enemies": 10,
+    "n_actions": 16,
+    "max_agents": 9,
+    "max_enemies": 10,
+    "max_actions": 16,
+    "token_dim": 26,
+    "dynamic_token_dim": 14,
+    "static_dim": 1036,
+    "entity_static_feat_size": 12
+  },
+  "rollout_window": 20,
+  "rollout_horizon": 5,
+  "max_transitions": 46,
+  "metrics": {
+    "timesteps_evaluated": 25,
+    "reconstruction_mse": 0.0007444245275110006,
+    "reconstruction_mae": 0.014632457867264748,
+    "one_step_mse": 0.0010111707961186767,
+    "one_step_mae": 0.015869952738285065,
+    "open_loop_mse": 0.003921553026884794,
+    "open_loop_mae": 0.021683869883418083,
+    "open_loop_last_step_mse": 0.0056250873021781445,
+    "one_step_last_step_mse": 0.001224470091983676
+  }
+}

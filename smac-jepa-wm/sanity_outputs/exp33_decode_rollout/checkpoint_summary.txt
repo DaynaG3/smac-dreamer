@@ -1,0 +1,21 @@
+Checkpoint object type: <class 'dict'>
+Top-level keys (19): ['model_state', 'memory_module_state', 'r2_projector_state', 'memory_projector_state', 'action_fusion_module_state', 'inverse_dynamics_head_state', 'target_encoder_state', 'metadata', 'config', 'resolved_config', 'optimizer_state', 'scheduler_state', 'scaler_state', 'epoch', 'epoch_complete', 'batches_completed_in_epoch', 'global_step', 'successful_optimizer_steps', 'total_nonfinite_grad_steps']
+  - model_state: dict with 183 keys; first keys=['encoder.input.weight', 'encoder.input.bias', 'encoder.type_embedding.weight', 'encoder.ally_slot_embedding.weight', 'encoder.enemy_slot_embedding.weight', 'encoder.blocks.0.norm_attn.weight', 'encoder.blocks.0.norm_attn.bias', 'encoder.blocks.0.attn.in_proj_weight', 'encoder.blocks.0.attn.in_proj_bias', 'encoder.blocks.0.attn.out_proj.weight', 'encoder.blocks.0.attn.out_proj.bias', 'encoder.blocks.0.norm_ff.weight', 'encoder.blocks.0.norm_ff.bias', 'encoder.blocks.0.ff.0.weight', 'encoder.blocks.0.ff.0.bias', 'encoder.blocks.0.ff.3.weight', 'encoder.blocks.0.ff.3.bias', 'encoder.blocks.1.norm_attn.weight', 'encoder.blocks.1.norm_attn.bias', 'encoder.blocks.1.attn.in_proj_weight']
+  - memory_module_state: dict with 32 keys; first keys=['anchor_delta_scale', 'anchor_hidden_correction_scale', 'anchor_max_age', 'own_action_embedding.weight', 'joint_action_net.0.weight', 'joint_action_net.0.bias', 'joint_action_net.2.weight', 'joint_action_net.2.bias', 'action_fuse.0.weight', 'action_fuse.0.bias', 'action_fuse.2.weight', 'action_fuse.2.bias', 'gru.weight_ih', 'gru.weight_hh', 'gru.bias_ih', 'gru.bias_hh', 'visible_condition_net.0.weight', 'visible_condition_net.0.bias', 'visible_condition_net.2.weight', 'visible_condition_net.2.bias']
+  - r2_projector_state: dict with 1 keys; first keys=['linear.weight']
+  - memory_projector_state: dict with 1 keys; first keys=['linear.weight']
+  - action_fusion_module_state: <class 'NoneType'>
+  - inverse_dynamics_head_state: <class 'NoneType'>
+  - target_encoder_state: dict with 55 keys; first keys=['input.weight', 'input.bias', 'type_embedding.weight', 'ally_slot_embedding.weight', 'enemy_slot_embedding.weight', 'blocks.0.norm_attn.weight', 'blocks.0.norm_attn.bias', 'blocks.0.attn.in_proj_weight', 'blocks.0.attn.in_proj_bias', 'blocks.0.attn.out_proj.weight', 'blocks.0.attn.out_proj.bias', 'blocks.0.norm_ff.weight', 'blocks.0.norm_ff.bias', 'blocks.0.ff.0.weight', 'blocks.0.ff.0.bias', 'blocks.0.ff.3.weight', 'blocks.0.ff.3.bias', 'blocks.1.norm_attn.weight', 'blocks.1.norm_attn.bias', 'blocks.1.attn.in_proj_weight']
+  - metadata: dict with 21 keys; first keys=['state_dim', 'n_agents', 'n_actions', 'n_enemies', 'ally_state_feat_size', 'enemy_state_feat_size', 'ally_has_shields', 'enemy_has_shields', 'num_unit_types', 'max_agents', 'max_enemies', 'max_actions', 'token_dim', 'dynamic_token_dim', 'static_dim', 'entity_static_feat_size', 'mode', 'memory_architecture', 'anchored_belief_memory', 'anchored_belief_version']
+  - config: dict with 110 keys; first keys=['manifest', 'data_dir', 'eval_fraction', 'split', 'model_size', 'out_dir', 'epochs', 'batch_size', 'lr', 'latent_dim', 'hidden_dim', 'action_dim', 'num_heads', 'encoder_layers', 'action_layers', 'predictor_layers', 'max_context_len', 'rollout_window', 'rollout_horizon', 'window_mode']
+  - resolved_config: dict with 146 keys; first keys=['manifest', 'data_dir', 'eval_fraction', 'split', 'model_size', 'out_dir', 'epochs', 'batch_size', 'lr', 'latent_dim', 'hidden_dim', 'action_dim', 'num_heads', 'encoder_layers', 'action_layers', 'predictor_layers', 'max_context_len', 'rollout_window', 'rollout_horizon', 'window_mode']
+  - optimizer_state: dict with 2 keys; first keys=['state', 'param_groups']
+  - scheduler_state: dict with 7 keys; first keys=['base_lrs', 'last_epoch', '_step_count', '_is_initial', '_get_lr_called_within_step', '_last_lr', 'lr_lambdas']
+  - scaler_state: dict with 0 keys; first keys=[]
+  - epoch: <class 'int'>
+  - epoch_complete: <class 'bool'>
+  - batches_completed_in_epoch: <class 'int'>
+  - global_step: <class 'int'>
+  - successful_optimizer_steps: <class 'int'>
+  - total_nonfinite_grad_steps: <class 'int'>

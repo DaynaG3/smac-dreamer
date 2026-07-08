@@ -1,0 +1,39 @@
+[eval] ORDINARY_EVAL=/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33_anchored.py
+[eval] HIDDEN_EVAL=/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py
+[eval-cmd] python /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33_anchored.py --checkpoint /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/runs/rnn_seqmem_exp35_two_mask_simple_loss_5ep_20260707_100311/checkpoint.pt --manifest splits/r2_general_2100.json --split eval --device cuda --batch-size 16 --num-workers 4 --out-dir /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp35_two_mask_simple_loss_5ep/ordinary_rollout --out /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp35_two_mask_simple_loss_5ep/ordinary_rollout/eval_metrics.json --summary-out /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp35_two_mask_simple_loss_5ep/ordinary_rollout/summary.csv --eval-rollout-horizon 5 --target-mode full --window-mode sequential --enemy-visibility-mask --diagnostics --probe-decoder --probe-epochs 20 --probe-max-batches-per-epoch 300 --probe-samples-per-epoch 20000 --thresholds 0.01 0.05 0.10
+Evaluating 1 checkpoint(s) split=eval device=cuda
+evaluating /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/runs/rnn_seqmem_exp35_two_mask_simple_loss_5ep_20260707_100311/checkpoint.pt
+/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33.py:1131: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  scaler = torch.cuda.amp.GradScaler(enabled=amp_enabled)
+training independent probe decoder module=decoder signature=[(192, 512), (512, 26)] epochs=20 max_batches_per_epoch=300
+/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33.py:1161: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  torch.cuda.amp.autocast(enabled=amp_enabled)
+probe epoch=1/20 updates=300 train_mse=0.009807
+probe epoch=2/20 updates=600 train_mse=0.003150
+probe epoch=3/20 updates=900 train_mse=0.002369
+probe epoch=4/20 updates=1200 train_mse=0.001982
+probe epoch=5/20 updates=1500 train_mse=0.001728
+probe epoch=6/20 updates=1800 train_mse=0.001538
+probe epoch=7/20 updates=2100 train_mse=0.001391
+probe epoch=8/20 updates=2400 train_mse=0.001273
+probe epoch=9/20 updates=2700 train_mse=0.001178
+probe epoch=10/20 updates=3000 train_mse=0.001103
+probe epoch=11/20 updates=3300 train_mse=0.001041
+probe epoch=12/20 updates=3600 train_mse=0.000989
+probe epoch=13/20 updates=3900 train_mse=0.000945
+probe epoch=14/20 updates=4200 train_mse=0.000906
+probe epoch=15/20 updates=4500 train_mse=0.000871
+probe epoch=16/20 updates=4800 train_mse=0.000839
+probe epoch=17/20 updates=5100 train_mse=0.000810
+probe epoch=18/20 updates=5400 train_mse=0.000782
+probe epoch=19/20 updates=5700 train_mse=0.000755
+probe epoch=20/20 updates=6000 train_mse=0.000731
+saved probe decoder /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp35_two_mask_simple_loss_5ep/ordinary_rollout/eval_metrics.json/probe_decoders/rnn_seqmem_exp35_two_mask_simple_loss_5ep_20260707_100311_checkpoint_meaningful_features_v2_probe_decoder.pt
+/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33.py:2009: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  torch.cuda.amp.autocast(enabled=amp_enabled)
+WARNING: no hidden target entities occurred in the evaluated subset. Overall, probe, action, memory, presence, and rollout metrics remain valid; hidden-only metrics are unavailable.
+done saved_epoch=5 global_step=15625 eval_metric_latent_mse=0.377172 eval_metric_latent_error_growth_ratio=1.834578 eval_corrected_native_dynamic_mae=0.051867 eval_corrected_native_dynamic_target_std_normalized_rmse=0.237336 eval_corrected_native_dynamic_coord_acc_0p05=0.667961 eval_corrected_native_dynamic_entity_acc_0p05=0.006428 eval_corrected_native_static_mae=0.016371 eval_corrected_native_vs_persistence_dynamic_mae_relative_improvement=-4.687802 eval_corrected_native_enemy_dynamic_mae=0.046047 eval_metric_presence_f1=0.984646 eval_metric_variance_normalized_latent_mse=0.506899 eval_metric_target_latent_std_mean=0.845518 eval_metric_pred_to_target_std_ratio=1.008358 eval_probe_reconstruction_mse=0.001757 eval_probe_rollout_mse=0.008137 eval_probe_rollout_gap_mse=0.006380 eval_probe_rollout_acc_0p05=0.699869 eval_probe_accuracy_drop_0p05=0.180821 eval_diagnostic_wrong_action_latent_penalty=0.009763 eval_diagnostic_memory_latent_gain=0.010590 eval_diagnostic_oracle_mask_latent_advantage=0.002481
+wrote /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp35_two_mask_simple_loss_5ep/ordinary_rollout/eval_metrics.json/eval_rnn_seqmem_exp35_two_mask_simple_loss_5ep_20260707_100311_checkpoint.json
+wrote /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp35_two_mask_simple_loss_5ep/ordinary_rollout/eval_metrics.json/eval_rnn_seqmem_exp35_two_mask_simple_loss_5ep_20260707_100311_checkpoint.csv
+wrote summary /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp35_two_mask_simple_loss_5ep/ordinary_rollout/summary.csv
+wrote summary /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp35_two_mask_simple_loss_5ep/ordinary_rollout/summary.jsonl

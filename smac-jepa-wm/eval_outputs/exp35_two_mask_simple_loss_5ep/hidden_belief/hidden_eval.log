@@ -1,0 +1,10 @@
+hidden_belief_eval device=cuda amp=True checkpoints=1
+======================================================================== 
+Evaluating hidden belief: runs/rnn_seqmem_exp35_two_mask_simple_loss_5ep_20260707_100311/checkpoint.pt
+/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py:146: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  return torch.cuda.amp.autocast(enabled=enabled)
+/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py:146: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  return torch.cuda.amp.autocast(enabled=enabled)
+wrote eval_outputs/exp35_two_mask_simple_loss_5ep/hidden_belief/hidden_belief_rnn_seqmem_exp35_two_mask_simple_loss_5ep_20260707_100311_checkpoint.json
+wrote eval_outputs/exp35_two_mask_simple_loss_5ep/hidden_belief/hidden_belief_summary.jsonl
+wrote eval_outputs/exp35_two_mask_simple_loss_5ep/hidden_belief/hidden_belief_summary.csv

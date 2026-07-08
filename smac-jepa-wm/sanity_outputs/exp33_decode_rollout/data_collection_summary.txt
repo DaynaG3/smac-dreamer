@@ -1,0 +1,271 @@
+===== TRAIN EPISODE: data/r2_general_2100_full/train/shard_02/r2g_train_0043.npz =====
+File: data/r2_general_2100_full/train/shard_02/r2g_train_0043.npz
+Keys (29): ['states', 'actions', 'action_onehot', 'rewards', 'dones', 'valid', 'avail_actions', 'scenario', 'env_key', 'map_file', 'terrain_preset', 'map_width', 'map_height', 'attack_point', 'state_dim', 'n_agents', 'n_enemies', 'n_actions', 'ally_state_feat_size', 'enemy_state_feat_size', 'ally_has_shields', 'enemy_has_shields', 'num_unit_types', 'static_condition', 'static_dim', 'entity_static', 'entity_static_feat_size', 'max_steps', 'step_errors']
+
+Array summary:
+  - states
+      shape: (4, 201, 247)
+      dtype: float32
+      stats: min=-0.467937, max=1, mean=0.00802896, std=0.0961078, nan=0, inf=0
+  - actions
+      shape: (4, 200, 7)
+      dtype: int64
+      stats: min=0, max=11, mean=0.203214, std=1.06291, nan=0, inf=0
+  - action_onehot
+      shape: (4, 200, 7, 12)
+      dtype: float32
+      stats: min=0, max=1, mean=0.00697917, std=0.0832494, nan=0, inf=0
+  - rewards
+      shape: (4, 200)
+      dtype: float32
+      stats: min=0, max=0.679245, mean=0.0133019, std=0.0670886, nan=0, inf=0
+  - dones
+      shape: (4, 200)
+      dtype: bool
+      stats: min=0, max=1, mean=0.005, std=0.0705337, nan=0, inf=0
+  - valid
+      shape: (4, 200)
+      dtype: bool
+      stats: min=0, max=1, mean=0.08375, std=0.277013, nan=0, inf=0
+  - avail_actions
+      shape: (4, 200, 7, 12)
+      dtype: float32
+      stats: min=0, max=1, mean=0.030253, std=0.171283, nan=0, inf=0
+  - scenario
+      shape: ()
+      dtype: <U14
+      scalar_preview: 'r2g_train_0043'
+      preview: 'r2g_train_0043'
+  - env_key
+      shape: ()
+      dtype: <U27
+      scalar_preview: 'smaclite:smaclite/custom-v0'
+      preview: 'smaclite:smaclite/custom-v0'
+  - map_file
+      shape: ()
+      dtype: <U70
+      scalar_preview: 'local_assets/r2_general_2100_shards/train/shard_02/r2g_train_0043.json'
+      preview: 'local_assets/r2_general_2100_shards/train/shard_02/r2g_train_0043.json'
+  - terrain_preset
+      shape: ()
+      dtype: <U6
+      scalar_preview: 'NARROW'
+      preview: 'NARROW'
+  - map_width
+      shape: ()
+      dtype: int64
+      stats: min=32, max=32, mean=32, std=0, nan=0, inf=0
+      preview: 32
+  - map_height
+      shape: ()
+      dtype: int64
+      stats: min=32, max=32, mean=32, std=0, nan=0, inf=0
+      preview: 32
+  - attack_point
+      shape: (2,)
+      dtype: float32
+      stats: min=7.067, max=11.232, mean=9.1495, std=2.0825, nan=0, inf=0
+  - state_dim
+      shape: ()
+      dtype: int64
+      stats: min=247, max=247, mean=247, std=0, nan=0, inf=0
+  - n_agents
+      shape: ()
+      dtype: int64
+      stats: min=7, max=7, mean=7, std=0, nan=0, inf=0
+  - n_enemies
+      shape: ()
+      dtype: int64
+      stats: min=6, max=6, mean=6, std=0, nan=0, inf=0
+  - n_actions
+      shape: ()
+      dtype: int64
+      stats: min=12, max=12, mean=12, std=0, nan=0, inf=0
+  - ally_state_feat_size
+      shape: ()
+      dtype: int64
+      stats: min=13, max=13, mean=13, std=0, nan=0, inf=0
+  - enemy_state_feat_size
+      shape: ()
+      dtype: int64
+      stats: min=12, max=12, mean=12, std=0, nan=0, inf=0
+  - ally_has_shields
+      shape: ()
+      dtype: bool
+      stats: min=0, max=0, mean=0, std=0, nan=0, inf=0
+  - enemy_has_shields
+      shape: ()
+      dtype: bool
+      stats: min=0, max=0, mean=0, std=0, nan=0, inf=0
+  - num_unit_types
+      shape: ()
+      dtype: int64
+      stats: min=9, max=9, mean=9, std=0, nan=0, inf=0
+  - static_condition
+      shape: (1036,)
+      dtype: float32
+      stats: min=0, max=1, mean=0.524389, std=0.497696, nan=0, inf=0
+  - static_dim
+      shape: ()
+      dtype: int64
+      stats: min=1036, max=1036, mean=1036, std=0, nan=0, inf=0
+  - entity_static
+      shape: (13, 12)
+      dtype: float32
+      stats: min=0, max=0.315, mean=0.070925, std=0.101097, nan=0, inf=0
+  - entity_static_feat_size
+      shape: ()
+      dtype: int64
+      stats: min=12, max=12, mean=12, std=0, nan=0, inf=0
+  - max_steps
+      shape: ()
+      dtype: int64
+      stats: min=200, max=200, mean=200, std=0, nan=0, inf=0
+  - step_errors
+      shape: ()
+      dtype: int64
+      stats: min=0, max=0, mean=0, std=0, nan=0, inf=0
+
+Likely collection/metadata fields:
+  - scenario: 'r2g_train_0043'
+  - env_key: 'smaclite:smaclite/custom-v0'
+  - map_file: 'local_assets/r2_general_2100_shards/train/shard_02/r2g_train_0043.json'
+  - map_width: 32
+  - map_height: 32
+
+
+===== VALIDATION EPISODE: data/r2_general_2100_full/validation/shard_03/r2g_validation_1284.npz =====
+File: data/r2_general_2100_full/validation/shard_03/r2g_validation_1284.npz
+Keys (29): ['states', 'actions', 'action_onehot', 'rewards', 'dones', 'valid', 'avail_actions', 'scenario', 'env_key', 'map_file', 'terrain_preset', 'map_width', 'map_height', 'attack_point', 'state_dim', 'n_agents', 'n_enemies', 'n_actions', 'ally_state_feat_size', 'enemy_state_feat_size', 'ally_has_shields', 'enemy_has_shields', 'num_unit_types', 'static_condition', 'static_dim', 'entity_static', 'entity_static_feat_size', 'max_steps', 'step_errors']
+
+Array summary:
+  - states
+      shape: (4, 201, 112)
+      dtype: float32
+      stats: min=-0.517843, max=1, mean=0.0302571, std=0.180847, nan=0, inf=0
+  - actions
+      shape: (4, 200, 4)
+      dtype: int64
+      stats: min=0, max=7, mean=0.50125, std=1.29542, nan=0, inf=0
+  - action_onehot
+      shape: (4, 200, 4, 8)
+      dtype: float32
+      stats: min=0, max=1, mean=0.0325, std=0.177324, nan=0, inf=0
+  - rewards
+      shape: (4, 200)
+      dtype: float32
+      stats: min=0, max=0.390244, mean=0.00487805, std=0.043357, nan=0, inf=0
+  - dones
+      shape: (4, 200)
+      dtype: bool
+      stats: min=0, max=1, mean=0.005, std=0.0705337, nan=0, inf=0
+  - valid
+      shape: (4, 200)
+      dtype: bool
+      stats: min=0, max=1, mean=0.26, std=0.438634, nan=0, inf=0
+  - avail_actions
+      shape: (4, 200, 4, 8)
+      dtype: float32
+      stats: min=0, max=1, mean=0.111172, std=0.314345, nan=0, inf=0
+  - scenario
+      shape: ()
+      dtype: <U19
+      scalar_preview: 'r2g_validation_1284'
+      preview: 'r2g_validation_1284'
+  - env_key
+      shape: ()
+      dtype: <U27
+      scalar_preview: 'smaclite:smaclite/custom-v0'
+      preview: 'smaclite:smaclite/custom-v0'
+  - map_file
+      shape: ()
+      dtype: <U80
+      scalar_preview: 'local_assets/r2_general_2100_shards/validation/shard_03/r2g_validation_1284.json'
+      preview: 'local_assets/r2_general_2100_shards/validation/shard_03/r2g_validation_1284.json'
+  - terrain_preset
+      shape: ()
+      dtype: <U6
+      scalar_preview: 'NARROW'
+      preview: 'NARROW'
+  - map_width
+      shape: ()
+      dtype: int64
+      stats: min=32, max=32, mean=32, std=0, nan=0, inf=0
+      preview: 32
+  - map_height
+      shape: ()
+      dtype: int64
+      stats: min=32, max=32, mean=32, std=0, nan=0, inf=0
+      preview: 32
+  - attack_point
+      shape: (2,)
+      dtype: float32
+      stats: min=7.281, max=11.287, mean=9.284, std=2.003, nan=0, inf=0
+  - state_dim
+      shape: ()
+      dtype: int64
+      stats: min=112, max=112, mean=112, std=0, nan=0, inf=0
+  - n_agents
+      shape: ()
+      dtype: int64
+      stats: min=4, max=4, mean=4, std=0, nan=0, inf=0
+  - n_enemies
+      shape: ()
+      dtype: int64
+      stats: min=2, max=2, mean=2, std=0, nan=0, inf=0
+  - n_actions
+      shape: ()
+      dtype: int64
+      stats: min=8, max=8, mean=8, std=0, nan=0, inf=0
+  - ally_state_feat_size
+      shape: ()
+      dtype: int64
+      stats: min=14, max=14, mean=14, std=0, nan=0, inf=0
+  - enemy_state_feat_size
+      shape: ()
+      dtype: int64
+      stats: min=12, max=12, mean=12, std=0, nan=0, inf=0
+  - ally_has_shields
+      shape: ()
+      dtype: bool
+      stats: min=1, max=1, mean=1, std=0, nan=0, inf=0
+  - enemy_has_shields
+      shape: ()
+      dtype: bool
+      stats: min=0, max=0, mean=0, std=0, nan=0, inf=0
+  - num_unit_types
+      shape: ()
+      dtype: int64
+      stats: min=9, max=9, mean=9, std=0, nan=0, inf=0
+  - static_condition
+      shape: (1036,)
+      dtype: float32
+      stats: min=0, max=1, mean=0.525302, std=0.497699, nan=0, inf=0
+  - static_dim
+      shape: ()
+      dtype: int64
+      stats: min=1036, max=1036, mean=1036, std=0, nan=0, inf=0
+  - entity_static
+      shape: (6, 12)
+      dtype: float32
+      stats: min=0, max=0.413, mean=0.111, std=0.122901, nan=0, inf=0
+  - entity_static_feat_size
+      shape: ()
+      dtype: int64
+      stats: min=12, max=12, mean=12, std=0, nan=0, inf=0
+  - max_steps
+      shape: ()
+      dtype: int64
+      stats: min=200, max=200, mean=200, std=0, nan=0, inf=0
+  - step_errors
+      shape: ()
+      dtype: int64
+      stats: min=0, max=0, mean=0, std=0, nan=0, inf=0
+
+Likely collection/metadata fields:
+  - scenario: 'r2g_validation_1284'
+  - env_key: 'smaclite:smaclite/custom-v0'
+  - map_file: 'local_assets/r2_general_2100_shards/validation/shard_03/r2g_validation_1284.json'
+  - map_width: 32
+  - map_height: 32
+
