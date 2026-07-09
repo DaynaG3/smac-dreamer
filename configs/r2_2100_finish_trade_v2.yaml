@@ -1,0 +1,108 @@
+# R2-2100 — finish_trade_v2 reward, continuation from the ~52% finish_trade_v1 checkpoint.
+#
+#   python scripts/train_r2dreamer_smaclite_multimap.py --config configs/r2_2100_finish_trade_v2.yaml \
+#       --resume logs/r2dreamer/r2_2100_finish_trade_v1_from_best51/best_val_macro_winrate.pt \
+#       --resume-mode transfer_reward --steps 1000000 \
+#       --logdir logs/r2dreamer/r2_2100_finish_trade_v2_from_best52
+#
+# Reward change only vs finish_trade_v1: "survive-to-finish" — the remaining failure mode was
+# all-allies-dead WIPEOUTS (not timeouts / poor focus), so v2 weights ally-EHP loss and win
+# QUALITY higher, and adds an unfinished-close wipeout penalty. Dataset / model / map-priority /
+# validation / W&B project are identical to r2_2100_finish_trade_v1.yaml. Checkpoint selection
+# still uses ORIGINAL (unshaped) macro win rate — shaping cannot bias the selected model.
+#
+# NOTE: because the reward (and thus the value/reward heads' target) changed, resume with
+# --resume-mode transfer_reward (NOT full): load the world model + actor weights but re-fit the
+# reward/value heads under the new reward. Run a 1M-step pilot first.
+
+maps:
+  train:               configs/maps/r2_2100/configs/train
+  validation:          configs/maps/r2_2100/configs/validation
+  blind_iid:           configs/maps/r2_2100/configs/blind_iid
+  blind_compositional: configs/maps/r2_2100/configs/blind_compositional
+
+sampling_mode: prioritized_hard_maps    # 75% shuffled_round_robin + 25% hard-map oversampling
+
+# ---- Adaptive hard-map curriculum -----------------------------------------
+map_priority:
+  enabled: true
+  hard_map_probability: 0.30
+  every: 50000
+  warmup: 200000
+  ema_decay: 0.95
+  min_episodes: 5
+
+# ---- Observation representation -------------------------------------------
+observation:
+  mode: structured
+
+# ---- Action masking (P0.1 real; P0.2 imagined) ----------------------------
+action_masking: true
+mask_threshold: 0.7
+
+# ---- Reward: finish_trade_v2 (selection still uses ORIGINAL return only) ----
+reward:
+  name: finish_trade_v2
+  params:
+    w_enemy_progress: 0.22
+    w_ally_loss: 0.32
+
+    progress_eps: 0.0005
+    stall_grace: 12
+    stall_cap: 50
+    w_stall: 0.015
+
+    w_timeout_enemy: 1.00
+    w_timeout_alive: 0.30
+
+    w_win_speed: 0.25
+    w_win_ally_ehp: 0.80
+
+    w_all_dead_loss: 1.25
+    w_unfinished_close_loss: 0.35
+
+# ---- Run / model knobs (GPU production) -----------------------------------
+device: cuda:0
+amp_dtype: bfloat16                     # A40/A100/L4. Use float16 on T4/V100.
+seed: 0
+gamma: 0.997
+steps: 4000000                          # override with --steps for the 1M pilot
+env_num: 8
+max_episode_steps: 200
+
+batch_size: 16
+batch_length: 64
+units: 256
+deter: 2048
+imag_horizon: 15
+
+# ---- Validation (checkpoint selection): map × fixed seeds — UNBIASED -------
+validation:
+  every: 250000
+  run_at_start: false
+  seeds: [0, 1, 2]
+
+# ---- Replay buffer: large capacity, CPU storage (model computes on cuda) ---
+buffer:
+  max_size: 1000000
+  storage_device: cpu
+  storage_backend: memmap
+  scratch_dir: replay
+
+# ---- Environment worker lifecycle / memory telemetry ----------------------
+env_lifecycle:
+  max_episodes_per_worker: 25
+  shutdown_timeout_seconds: 5
+  log_worker_memory: true
+
+system_log_every: 10000
+
+# ---- Logging --------------------------------------------------------------
+wandb:
+  project: smac-r2dreamer
+  entity: null
+  mode: online
+  tags: [r2_2100, smaclite, multimap, prioritized_hard_maps, finish_trade_v2]
+  run_name: r2_2100_finish_trade_v2_from_best52
+logdir: logs/r2dreamer/r2_2100_finish_trade_v2_from_best52
+checkpoint_every_minutes: 15.0

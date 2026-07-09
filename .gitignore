@@ -19,8 +19,8 @@ build/
 logs/
 
 # Large result files (trajectories can be MB each)
-results/*.jsonl
-results/trajectories_*.json
+# results/*.jsonl
+# results/trajectories_*.json
 
 # External repositories — tracked as plain directories (no submodules)
 # .git dirs inside external/ must be removed before committing

@@ -42,6 +42,29 @@ def test_construction_and_spaces(fixed_env):
 
 
 @requires_smaclite
+def test_shaping_enabled_flag_true_with_swappable_reward():
+    """log_reward_shaping_enabled must be 1.0 when a swappable reward_fn is active.
+
+    Regression guard for the fix: the flag previously only tracked self._use_new_shaping and
+    read 0.0 on the reward_fn path (e.g. finish_trade_v1). Logging fix only — reward math
+    unchanged.
+    """
+    from smacdreamer.envs.smaclite_dreamer_env import SMACliteDreamerEnv
+    from smacdreamer.envs.reward_registry import resolve
+
+    env = SMACliteDreamerEnv(
+        scenario=FIXED_SCENARIO, max_episode_steps=20, seed=0,
+        reward_fn=resolve("finish_trade_v1"), gamma=0.997,
+    )
+    try:
+        env.reset(seed=0)
+        _, _, terminated, truncated, info = env.step(_random_valid_onehot(env))
+        assert float(np.asarray(info["log_reward_shaping_enabled"])) == 1.0
+    finally:
+        env.close()
+
+
+@requires_smaclite
 def test_no_jax_imports_after_env_use(fixed_env):
     import sys
     fixed_env.reset()

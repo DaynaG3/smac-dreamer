@@ -963,7 +963,9 @@ class SMACliteDreamerEnv(gym.Env):
             "log_original_env_reward":                 _f(original_env_reward),
             "log_shaped_reward":                       _f(shaped_reward_val),
             "log_reward_shaping_bonus":                _f(reward_shaping_bonus),
-            "log_reward_shaping_enabled":              _f(1.0 if self._use_new_shaping else 0.0),
+            "log_reward_shaping_enabled":              _f(
+                1.0 if (self._reward_fn is not None or self._use_new_shaping) else 0.0
+            ),
             # Step-level metrics (old aliases)
             "log_step_invalid_count":                  _f(step_invalid),
             "log_step_invalid_was_prev_valid_count":   _f(step_timing_lag),
@@ -989,7 +991,15 @@ class SMACliteDreamerEnv(gym.Env):
         canonical_terms = ("win", "hp", "ally", "positioning", "kill", "death",
                            "survival", "step_penalty", "damage",
                            # win_quality_v5 components (logged via the same log_reward_term_* path)
-                           "ally_ehp_dense", "win_ehp_quality", "win_alive_quality", "timeout")
+                           "ally_ehp_dense", "win_ehp_quality", "win_alive_quality", "timeout",
+                           # finish_trade_v1 components + behaviour diagnostics (terminal-only
+                           # diagnostics ride the same *_ep_sum path; 0 except at episode end).
+                           "enemy_progress", "ally_loss", "stall_penalty",
+                           "timeout_enemy", "timeout_alive", "win_speed", "win_ally_ehp",
+                           "all_dead_loss", "no_damage_streak_max", "no_damage_streak_mean",
+                           "timeout_with_allies_alive", "allies_dead_loss", "near_win_timeout",
+                           # finish_trade_v2 additions
+                           "unfinished_close_loss", "near_win_loss")
         rt = reward_terms or {}
         # Accumulate episode sums.
         for k, v in rt.items():
