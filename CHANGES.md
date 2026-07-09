@@ -26,3 +26,11 @@
 - Replacement workers receive the slot's completed-episode offset and advance the sampler cursor before the first reset.
 - `MapSampler.advance(count)` restores deterministic cursor and coverage state for round-robin, shuffled-round-robin, and RNG-based modes.
 - `ParallelEnv` constructor compatibility now uses signature inspection instead of broad `TypeError` fallback.
+
+## finish_trade_v4 reward
+
+- Added `finish_trade_v4` reward (registry only; v1/v2/v3 untouched), iterating on v3 to reduce two failure modes: post-contact timeout/disengagement and high-enemy-EHP all-allies-dead wipeouts.
+- Stall penalty is now gated on **first contact** (`has_dealt_damage_before`) so pre-contact positioning is never punished, and is scaled by remaining enemy EHP (`0.5 + 0.5*enemy_ehp_frac`).
+- Timeout penalty split into `timeout_base` + `timeout_enemy` + `timeout_alive` (firmer than v3); all-dead penalty split into `all_dead_base` + `all_dead_enemy` (large remaining-enemy term so healthy-enemy wipeouts hurt most). Win reward kept modest (`w_win_ally_ehp 0.50`) so low-ally-EHP wins aren't discouraged.
+- New per-episode W&B logs: `episode/reward_{timeout_base,all_dead_base,all_dead_enemy}` and `episode/has_dealt_damage_before` (env `canonical_terms` + trainer `EPISODE_REWARD_LOG_MAP` extended; existing v1-v3 terms unchanged).
+- New config `configs/r2_2100_finish_trade_v4.yaml` (reward-only change vs v3); tests in `tests/test_finish_trade_v4.py`.

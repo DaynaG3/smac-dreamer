@@ -35,6 +35,11 @@ EPISODE_REWARD_LOG_MAP = {
     # finish_trade_v2 additions (unfinished-close wipeout penalty + near-win loss diagnostic).
     "log_reward_term_unfinished_close_loss_ep_sum":     "episode/reward_unfinished_close_loss",
     "log_reward_term_near_win_loss_ep_sum":             "episode/near_win_loss",
+    # finish_trade_v4 additions (split timeout/all-dead terms + first-contact diagnostic).
+    "log_reward_term_timeout_base_ep_sum":              "episode/reward_timeout_base",
+    "log_reward_term_all_dead_base_ep_sum":             "episode/reward_all_dead_base",
+    "log_reward_term_all_dead_enemy_ep_sum":            "episode/reward_all_dead_enemy",
+    "log_reward_term_has_dealt_damage_before_ep_sum":   "episode/has_dealt_damage_before",
 }
 
 

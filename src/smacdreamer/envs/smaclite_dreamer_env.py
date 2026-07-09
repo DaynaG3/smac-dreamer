@@ -999,7 +999,10 @@ class SMACliteDreamerEnv(gym.Env):
                            "all_dead_loss", "no_damage_streak_max", "no_damage_streak_mean",
                            "timeout_with_allies_alive", "allies_dead_loss", "near_win_timeout",
                            # finish_trade_v2 additions
-                           "unfinished_close_loss", "near_win_loss")
+                           "unfinished_close_loss", "near_win_loss",
+                           # finish_trade_v4 additions (split timeout/all-dead terms + first-contact)
+                           "timeout_base", "all_dead_base", "all_dead_enemy",
+                           "has_dealt_damage_before")
         rt = reward_terms or {}
         # Accumulate episode sums.
         for k, v in rt.items():

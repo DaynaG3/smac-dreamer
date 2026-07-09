@@ -788,6 +788,163 @@ def _make_finish_trade_v3(params: dict):
     return fn
 
 
+@register("finish_trade_v4")
+@_with_defaults({
+    # per-step trade shaping (v3's proven weights kept)
+    "w_enemy_progress": 0.22,
+    "w_ally_loss": 0.32,
+    # POST-CONTACT no-progress stall (only after first damage dealt; scaled by remaining enemy)
+    "progress_eps": 0.0005,
+    "stall_grace": 8,
+    "stall_cap": 40,
+    "w_stall": 0.035,
+    # terminal timeout penalty — flat base + remaining-enemy + wasted-surviving-allies (firmer)
+    "w_timeout_base": 1.25,
+    "w_timeout_enemy": 1.50,
+    "w_timeout_alive": 0.75,
+    # terminal win bonuses (modest; do NOT over-reward ally survival — low-ally-EHP wins are valid)
+    "w_win_speed": 0.25,
+    "w_win_ally_ehp": 0.50,
+    # terminal all-dead loss — flat base + remaining-enemy (punish HIGH-enemy-EHP wipeouts hardest)
+    "w_all_dead_base": 0.75,
+    "w_all_dead_enemy": 1.40,
+})
+def _make_finish_trade_v4(params: dict):
+    """Finish-the-fight reward (iteration on finish_trade_v3), targeting two failure modes.
+
+    Observed on the v3 policy:
+      1. Timeout/disengagement AFTER first contact — a long no-damage stall then a 200-step loss
+         with allies + enemies still alive (e.g. r2g_validation_1258_seed0).
+      2. High-enemy-EHP all-allies-dead wipeouts — allies die fast while the enemy is barely
+         scratched (e.g. r2g_validation_1222_seed0).
+
+    v4 keeps v3's dense trade weights (0.22 / 0.32) but changes three things:
+      * POST-CONTACT stall: the no-damage streak only starts counting once the agent has dealt
+        enemy damage at least once this episode (``has_dealt_damage_before``), so early positioning
+        before first contact is never punished; the penalty is scaled by remaining enemy EHP
+        (``0.5 + 0.5*enemy_ehp_frac``) so stalling with a nearly-dead enemy hurts less. Firmer than
+        v3 (w_stall 0.035, grace 8).
+      * TIMEOUT: a flat base penalty PLUS remaining-enemy PLUS wasted-surviving-allies, all heavier
+        than v3, so running out the clock after contact is strongly discouraged.
+      * ALL-DEAD: a flat base PLUS a large remaining-enemy term (w_all_dead_enemy 1.40), so a
+        wipeout with the enemy still healthy is penalised far more than a near-win wipeout — the
+        inverse emphasis of v2/v3's unfinished-close term.
+    Win reward stays modest (w_win_ally_ehp 0.50) so decisive low-ally-EHP wins aren't discouraged.
+
+    Map-size invariant: all EHP/alive quantities are env fractions of the per-episode initial
+    totals over REAL units. Per-episode stall + first-contact + diagnostic state lives in the
+    closure and resets on the first step (``ctx.step_idx <= 1``). All reads go through ``_finite``
+    so missing/NaN/inf fields never produce NaNs. NO raw noop/stop penalty and NO target-focus term
+    (failure logs show target focus is already high).
+    """
+    d = _make_finish_trade_v4.defaults
+    p = {**d, **params}
+    # Per-episode accumulators (reset at each episode's first step). ``dealt`` = first-contact flag.
+    st = {"streak": 0, "streak_max": 0, "streak_sum": 0.0, "n_steps": 0, "dealt": False}
+    NEAR_WIN_EPS = 0.15   # a loss counts as "near win" when the enemy was <=15% EHP at the end
+
+    def fn(ctx: RewardContext):
+        if ctx.step_idx <= 1:
+            st["streak"] = 0
+            st["streak_max"] = 0
+            st["streak_sum"] = 0.0
+            st["n_steps"] = 0
+            st["dealt"] = False
+
+        prev_enemy = _finite(ctx.prev_enemy_ehp_frac, 1.0)
+        cur_enemy = _finite(ctx.enemy_ehp_frac, 1.0)
+        prev_ally = _finite(ctx.prev_ally_ehp_frac, 1.0)
+        cur_ally = _finite(ctx.ally_ehp_frac, 1.0)
+        ally_alive = _finite(ctx.ally_alive_frac, 0.0)
+
+        # --- Per-step trade terms (both clamped to >= 0; map-size invariant) ----------------
+        enemy_progress = max(0.0, prev_enemy - cur_enemy)
+        ally_loss = max(0.0, prev_ally - cur_ally)
+        enemy_progress_term = p["w_enemy_progress"] * enemy_progress
+        ally_loss_term = -p["w_ally_loss"] * ally_loss
+
+        # --- POST-CONTACT no-progress stall (only after the first damage of the episode) ----
+        stall_term = 0.0
+        if ctx.enemies_alive > 0 and ctx.allies_alive > 0:
+            if enemy_progress > p["progress_eps"]:
+                st["dealt"] = True
+                st["streak"] = 0
+            elif st["dealt"]:
+                st["streak"] += 1
+            else:
+                st["streak"] = 0
+            if st["dealt"] and st["streak"] > p["stall_grace"]:
+                scale = min((st["streak"] - p["stall_grace"]) / max(1.0, float(p["stall_cap"])), 1.0)
+                # Scale by remaining enemy EHP: stalling with a healthy enemy hurts most.
+                stall_term = -p["w_stall"] * scale * (0.5 + 0.5 * cur_enemy)
+        else:
+            st["streak"] = 0
+        streak = st["streak"]
+        st["streak_max"] = max(st["streak_max"], streak)
+        st["streak_sum"] += streak
+        st["n_steps"] += 1
+
+        # --- Terminal timeout penalty (time-limit truncation, non-win): base + enemy + allies ---
+        timeout = bool(ctx.truncated) and not ctx.battle_won
+        timeout_base_term = -p["w_timeout_base"] if timeout else 0.0
+        timeout_enemy_term = -p["w_timeout_enemy"] * cur_enemy if timeout else 0.0
+        timeout_alive_term = -p["w_timeout_alive"] * ally_alive if timeout else 0.0
+
+        # --- Terminal win bonuses (true terminal win only; modest ally-EHP weight) ----------
+        win = bool(ctx.terminated) and bool(ctx.battle_won)
+        win_speed_term = 0.0
+        win_ally_ehp_term = 0.0
+        if win:
+            frac_time = ctx.step_idx / max(1, int(ctx.max_episode_steps))
+            win_speed_term = p["w_win_speed"] * (1.0 - frac_time)
+            win_ally_ehp_term = p["w_win_ally_ehp"] * cur_ally
+
+        # --- Terminal all-dead loss: base + LARGE remaining-enemy (high-EHP wipeouts hurt most) ---
+        all_dead = bool(ctx.is_last) and not ctx.battle_won and ctx.allies_alive == 0
+        all_dead_base_term = 0.0
+        all_dead_enemy_term = 0.0
+        if all_dead:
+            all_dead_base_term = -p["w_all_dead_base"]
+            all_dead_enemy_term = -p["w_all_dead_enemy"] * cur_enemy
+
+        shaping = (enemy_progress_term + ally_loss_term + stall_term
+                   + timeout_base_term + timeout_enemy_term + timeout_alive_term
+                   + win_speed_term + win_ally_ehp_term
+                   + all_dead_base_term + all_dead_enemy_term)
+        reward = _finite(ctx.base_reward, 0.0) + float(shaping)
+
+        # --- Behaviour diagnostics (terminal-only so each *_ep_sum == the episode value) ---
+        terminal = bool(ctx.is_last)
+        timeout_with_allies_alive = 1.0 if (timeout and ctx.allies_alive > 0) else 0.0
+        near_win_loss = 1.0 if (terminal and not ctx.battle_won and cur_enemy <= NEAR_WIN_EPS) else 0.0
+        streak_mean = (st["streak_sum"] / st["n_steps"]) if st["n_steps"] > 0 else 0.0
+
+        terms = {
+            "original": _finite(ctx.base_reward, 0.0),
+            "shaping_total": float(shaping),
+            # reward components — episode ep_sum equals the total episode contribution
+            "enemy_progress": float(enemy_progress_term),
+            "ally_loss": float(ally_loss_term),
+            "stall_penalty": float(stall_term),
+            "timeout_base": float(timeout_base_term),
+            "timeout_enemy": float(timeout_enemy_term),
+            "timeout_alive": float(timeout_alive_term),
+            "win_speed": float(win_speed_term),
+            "win_ally_ehp": float(win_ally_ehp_term),
+            "all_dead_base": float(all_dead_base_term),
+            "all_dead_enemy": float(all_dead_enemy_term),
+            # diagnostics — non-zero only on the terminal step (ep_sum == terminal value)
+            "no_damage_streak_max": float(st["streak_max"]) if terminal else 0.0,
+            "no_damage_streak_mean": float(streak_mean) if terminal else 0.0,
+            "has_dealt_damage_before": float(1.0 if st["dealt"] else 0.0) if terminal else 0.0,
+            "timeout_with_allies_alive": float(timeout_with_allies_alive) if terminal else 0.0,
+            "allies_dead_loss": float(1.0 if all_dead else 0.0) if terminal else 0.0,
+            "near_win_loss": float(near_win_loss) if terminal else 0.0,
+        }
+        return reward, terms
+    return fn
+
+
 __all__ = [
     "RewardContext", "register", "resolve", "resolved_params", "available",
 ]
