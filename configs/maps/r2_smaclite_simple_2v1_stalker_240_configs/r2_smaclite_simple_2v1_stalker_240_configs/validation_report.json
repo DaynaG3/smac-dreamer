@@ -1,0 +1,130 @@
+{
+  "seed": 19062026,
+  "total_configs": 240,
+  "validation_errors": 0,
+  "unique_semantic_configs": 240,
+  "split_counts": {
+    "train": 160,
+    "validation": 40,
+    "blind_iid": 40
+  },
+  "engagement_counts": {
+    "train": {
+      "near": 72,
+      "immediate": 40,
+      "medium": 40,
+      "far": 8
+    },
+    "validation": {
+      "medium": 10,
+      "near": 18,
+      "immediate": 10,
+      "far": 2
+    },
+    "blind_iid": {
+      "medium": 10,
+      "near": 18,
+      "immediate": 10,
+      "far": 2
+    }
+  },
+  "terrain_counts": {
+    "train": {
+      "SIMPLE": 79,
+      "OCTAGON": 49,
+      "NARROW": 32
+    },
+    "validation": {
+      "OCTAGON": 10,
+      "SIMPLE": 21,
+      "NARROW": 9
+    },
+    "blind_iid": {
+      "SIMPLE": 21,
+      "NARROW": 10,
+      "OCTAGON": 9
+    }
+  },
+  "formation_counts": {
+    "train": {
+      "close_split": 41,
+      "staggered": 40,
+      "wide_split": 40,
+      "compact": 39
+    },
+    "validation": {
+      "close_split": 10,
+      "staggered": 10,
+      "wide_split": 10,
+      "compact": 10
+    },
+    "blind_iid": {
+      "close_split": 11,
+      "staggered": 10,
+      "wide_split": 10,
+      "compact": 9
+    }
+  },
+  "orientation_counts": {
+    "train": {
+      "opposing": 128,
+      "vertical_same_side": 32
+    },
+    "validation": {
+      "opposing": 31,
+      "vertical_same_side": 9
+    },
+    "blind_iid": {
+      "opposing": 30,
+      "vertical_same_side": 10
+    }
+  },
+  "composition": {
+    "ally": {
+      "STALKER": 2
+    },
+    "enemy": {
+      "STALKER": 1
+    }
+  },
+  "ally_value_ratio": {
+    "min": 2.0,
+    "max": 2.0,
+    "mean": 2.0,
+    "median": 2.0
+  },
+  "initial_min_cross_distance": {
+    "min": 4.447,
+    "max": 14.464,
+    "mean": 8.396960416666667,
+    "median": 8.13305
+  },
+  "global_unit_type_ids": {
+    "BANELING": 0,
+    "COLOSSUS": 1,
+    "MARAUDER": 2,
+    "MARINE": 3,
+    "MEDIVAC": 4,
+    "SPINE_CRAWLER": 5,
+    "STALKER": 6,
+    "ZEALOT": 7,
+    "ZERGLING": 8
+  },
+  "static_checks": [
+    "exact JSON schema",
+    "name/filename agreement",
+    "only STALKER units",
+    "exact 2v1 composition",
+    "unit-count field agreement",
+    "global unit-type vocabulary",
+    "shield flags enabled for both factions",
+    "group placement emulation",
+    "spawn bounds",
+    "terrain walkability",
+    "same-plane overlap rejection",
+    "attack-point bounds",
+    "engagement bucket",
+    "duplicate semantic map rejection"
+  ],
+  "dynamic_validation_required": true
+}

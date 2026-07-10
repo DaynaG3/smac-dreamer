@@ -1,0 +1,16 @@
+{
+  "families": [
+    {
+      "family_id": "stalker_2v1_mirror_only",
+      "archetype": "stalker_2v1_mirror",
+      "ally": {
+        "STALKER": 2
+      },
+      "enemy": {
+        "STALKER": 1
+      },
+      "heldout_compositional": false,
+      "static_value_ratio": 2.0
+    }
+  ]
+}
