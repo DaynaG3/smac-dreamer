@@ -27,6 +27,22 @@
 - `MapSampler.advance(count)` restores deterministic cursor and coverage state for round-robin, shuffled-round-robin, and RNG-based modes.
 - `ParallelEnv` constructor compatibility now uses signature inspection instead of broad `TypeError` fallback.
 
+## 2v1-stalker distribution-isolation experiment (finish_trade_v3)
+
+- Added `configs/r2_2v1_stalker_240_finish_trade_v3_from_best556.yaml`: a simplified 2v1-only
+  STALKER dataset (`configs/maps/r2_smaclite_simple_2v1_stalker_240_configs`, 160 train / 40
+  validation / 40 blind_iid) to isolate whether the best r2_2100 `finish_trade_v3` checkpoint
+  (best556) adapts quickly to a simpler distribution without sampler bias.
+- Reward, gamma (0.997), `max_episode_steps` (200), model, structured observation, and action
+  space are unchanged vs `r2_2100_finish_trade_v3.yaml`, so the run resumes with
+  `--resume-mode full`. Only the map distribution, sampler, W&B identity, and logdir differ.
+- Uses `sampling_mode: shuffled_round_robin` with `map_priority.enabled: false` (uniform coverage,
+  no hard-map bias) and `validation.run_at_start: true`.
+- Pins an explicit `padding` block (max_agents=9, max_enemies=10, max_actions=16, max_obs_size=255)
+  to the best556 checkpoint shape so the 2v1 set cannot shrink the model dims and break `full`
+  resume; every 2v1 map fits (2<=9, 1<=10, 7<=16). Flattened the unpacked dataset's redundant
+  double-nested top folder.
+
 ## finish_trade_v4 reward
 
 - Added `finish_trade_v4` reward (registry only; v1/v2/v3 untouched), iterating on v3 to reduce two failure modes: post-contact timeout/disengagement and high-enemy-EHP all-allies-dead wipeouts.
