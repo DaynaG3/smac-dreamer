@@ -360,7 +360,7 @@ def main():
         agent = Dreamer(config.model, obs_space, act_space).to(config.device)
         print(f"  Parameters : {sum(p.numel() for p in agent.parameters()):,}")
         if args.resume:
-            ckpt = torch.load(args.resume, map_location=str(cfg.device), weights_only=False)
+            ckpt = torch.load(args.resume, map_location=str(cfg.device))
             agent.load_state_dict(ckpt["agent_state_dict"])
             if ckpt.get("agent_training_state") and hasattr(agent, "load_training_state_dict"):
                 agent.load_training_state_dict(ckpt["agent_training_state"])
