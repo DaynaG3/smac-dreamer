@@ -40,3 +40,26 @@ def maybe_override_sight_range():
         _applied = True
         print(f"[sight_range] applied AGENT_SIGHT_RANGE={value} (pid={os.getpid()})", flush=True)
     return value
+
+
+def resolve_and_export_sight_range(run_meta, cfg):
+    """Reconstruct the training sight range for standalone eval and export the env var.
+
+    Priority: ``run_meta['sight_range']`` (if present and non-null) > ``cfg.observation.sight_range``
+    > ``None`` (default partial observability). When the resolved value is not None, exports
+    ``SMACLITE_SIGHT_RANGE`` so every SMAClite env built afterwards (in-process probe, spawned
+    discovery / eval children -- all of which call :func:`maybe_override_sight_range`) uses the same
+    visibility the checkpoint was trained with. MUST be called BEFORE any env is constructed.
+    Returns the resolved int, or None. Works with dict or OmegaConf ``run_meta`` / ``cfg``.
+    """
+    sight_range = run_meta.get("sight_range") if run_meta else None
+    obs = cfg.get("observation") if cfg is not None else None
+    if sight_range is None and obs:
+        sight_range = obs.get("sight_range")       # .get works on dict and OmegaConf alike
+    sight_range = int(sight_range) if sight_range is not None else None
+    if sight_range is not None:
+        os.environ[ENV_VAR] = str(sight_range)
+        print(f"Reconstruction: sight_range={sight_range} -> SMACLITE_SIGHT_RANGE", flush=True)
+    else:
+        print("Reconstruction: sight_range=None -> default SMAClite partial observability", flush=True)
+    return sight_range

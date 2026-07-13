@@ -21,6 +21,7 @@ Usage (smac-r2 conda env, project root):
 import argparse
 import json
 import math
+import os
 import pathlib
 import sys
 from collections import defaultdict
@@ -42,6 +43,7 @@ from dreamer import Dreamer
 from smacdreamer.envs.map_discovery import discover, SplitSpec
 from smacdreamer.r2dreamer_factory import make_smaclite_multimap_env
 from smacdreamer.evaluation import evaluate_heldout, DEFAULT_FIXED_SEEDS
+from smacdreamer.sight_range import resolve_and_export_sight_range
 from train_r2dreamer_smaclite_debug import make_config as _make_debug_config
 # Reuse the recursive device propagation so a GPU eval sets EVERY device field (buffer,
 # encoder, all heads), not just the three top-level ones — same fix as the training script.
@@ -94,6 +96,12 @@ def main():
     batch_size, batch_length, imag_horizon = _dim("batch_size"), _dim("batch_length"), _dim("imag_horizon")
     print(f"Reconstruction: obs_mode={obs_mode} units={units} deter={deter} "
           f"(from {'run_meta.json' if run_meta else '--config'})")
+
+    # Reconstruct the training sight-range (full-observability ablation) and export
+    # SMACLITE_SIGHT_RANGE BEFORE any SMAClite env is built (discovery, probe, eval children), so a
+    # full-vis checkpoint is evaluated under the SAME visibility it was trained with. None -> default
+    # partial observability. Priority: run_meta > cfg.observation.sight_range > None.
+    sight_range = resolve_and_export_sight_range(run_meta, cfg)
 
     # Maps to evaluate: explicit-folder split (validation / blind_iid / blind_compositional)
     # using the EXACT training padding (from run_meta), or the legacy ratio held-out split.
@@ -159,6 +167,7 @@ def main():
         max_episode_steps=int(cfg.max_episode_steps), obs_mode=obs_mode, progress=True,
     )
     eval_report["obs_mode"] = obs_mode
+    eval_report["sight_range"] = sight_range
 
     # Per-family macro win rate (each map = one sample within its family).
     per_family_winrates = defaultdict(list)

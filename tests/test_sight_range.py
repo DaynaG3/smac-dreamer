@@ -16,7 +16,11 @@ import pytest
 from conftest import requires_smaclite
 
 import smacdreamer.sight_range as sr
-from smacdreamer.sight_range import ENV_VAR, maybe_override_sight_range
+from smacdreamer.sight_range import (
+    ENV_VAR,
+    maybe_override_sight_range,
+    resolve_and_export_sight_range,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -58,6 +62,35 @@ def test_helper_default_leaves_nine(sight_constant):
     sight_constant.AGENT_SIGHT_RANGE = 9
     assert maybe_override_sight_range() is None
     assert sight_constant.AGENT_SIGHT_RANGE == 9
+
+
+# --- Standalone-eval reconstruction (scripts/evaluate_multimap.py) -----------------------------
+# Pure resolution logic; no smaclite needed. The autouse fixture clears SMACLITE_SIGHT_RANGE first.
+
+def test_eval_resolve_uses_run_meta():
+    run_meta = {"sight_range": 24}
+    cfg = {"observation": {"sight_range": 99}}   # run_meta wins over cfg
+    assert resolve_and_export_sight_range(run_meta, cfg) == 24
+    assert os.environ[ENV_VAR] == "24"
+
+
+def test_eval_resolve_falls_back_to_cfg():
+    run_meta = {}                                 # no sight_range in run_meta
+    cfg = {"observation": {"sight_range": 16}}
+    assert resolve_and_export_sight_range(run_meta, cfg) == 16
+    assert os.environ[ENV_VAR] == "16"
+
+
+def test_eval_resolve_run_meta_null_falls_back_to_cfg():
+    run_meta = {"sight_range": None}              # present but null -> treat as absent
+    cfg = {"observation": {"sight_range": 12}}
+    assert resolve_and_export_sight_range(run_meta, cfg) == 12
+    assert os.environ[ENV_VAR] == "12"
+
+
+def test_eval_resolve_default_does_not_set_env_var():
+    assert resolve_and_export_sight_range({}, {}) is None
+    assert ENV_VAR not in os.environ            # partial-obs checkpoints: env var untouched
 
 
 @requires_smaclite
