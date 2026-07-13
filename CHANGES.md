@@ -26,3 +26,11 @@
 - Replacement workers receive the slot's completed-episode offset and advance the sampler cursor before the first reset.
 - `MapSampler.advance(count)` restores deterministic cursor and coverage state for round-robin, shuffled-round-robin, and RNG-based modes.
 - `ParallelEnv` constructor compatibility now uses signature inspection instead of broad `TypeError` fallback.
+
+## Full-observability ablation
+
+- New optional `observation.sight_range` config knob. When set, it overrides SMAClite's `AGENT_SIGHT_RANGE` (default 9) so units see the whole map (oracle / upper-bound experiment). Absent leaves behaviour identical to today (partial observability, sight 9).
+- Propagation: the trainer exports `SMACLITE_SIGHT_RANGE` in the parent process; every spawned child (train workers, validation env children, discovery probes) inherits it and applies the override via `smacdreamer.sight_range.maybe_override_sight_range()`, called from `r2dreamer_factory._ensure_paths()` and `map_discovery.validate_map()`. Each process logs the applied value once (`[sight_range] applied AGENT_SIGHT_RANGE=...`). No edits to `external/`.
+- Accepted coupling caveat: `AGENT_SIGHT_RANGE` is ALSO SMAClite's distance/dx/dy normalization divisor, so enlarging it (e.g. 9 -> 24) rescales those features (~0.375x). Attack availability uses a separate `AGENT_TARGET_RANGE` (unchanged), so engagement rules are unaffected.
+- `sight_range` is recorded in `run_meta.json` and the W&B run config. Reward, gamma, model, action masking, and padding are unchanged.
+- Added `configs/r2_2100_finish_trade_v3_fullobs.yaml` (sight_range 24, `validation.run_at_start: true`, resume with `--resume-mode weights_only` from the best finish_trade_v3 checkpoint) and `docs/training/full_observability_ablation.md`.

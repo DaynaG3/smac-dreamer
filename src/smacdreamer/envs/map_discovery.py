@@ -113,6 +113,10 @@ def validate_map(
                 "path": path, "rel_path": rel_path, "file_hash": file_hash}
 
     # Probe env dims (import deferred so this module imports without smaclite installed).
+    # Apply the full-observability sight-range override (if set) so discovery probes see the same
+    # visibility as training/validation. No-op when SMACLITE_SIGHT_RANGE is unset.
+    from smacdreamer.sight_range import maybe_override_sight_range
+    maybe_override_sight_range()
     try:
         from smaclite.env.smaclite import SMACliteEnv as _SMACliteEnv
         env = _SMACliteEnv(map_file=str(path))

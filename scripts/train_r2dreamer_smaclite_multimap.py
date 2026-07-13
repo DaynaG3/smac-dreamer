@@ -161,6 +161,16 @@ def main():
     if obs_mode not in ("flat", "structured"):
         raise ValueError(f"observation.mode must be 'flat' or 'structured', got {obs_mode!r}")
 
+    # --- Full-observability ablation: optional sight-range override -------------
+    # Export SMACLITE_SIGHT_RANGE BEFORE any env/discovery is built; spawn children (train
+    # workers, validation env children, discovery probes) inherit it and apply the override via
+    # smacdreamer.sight_range.maybe_override_sight_range(). Absent -> partial obs (sight 9).
+    sight_range = None
+    if cfg.get("observation") and cfg.observation.get("sight_range") is not None:
+        sight_range = int(cfg.observation.sight_range)
+        os.environ["SMACLITE_SIGHT_RANGE"] = str(sight_range)
+        print(f"  [observation] full-visibility override: AGENT_SIGHT_RANGE -> {sight_range}")
+
     # --- Action masking (P0.1/P0.2): requires structured obs (per-agent avail + masks) -----
     action_masking = bool(cfg.get("action_masking", False))
     if action_masking and obs_mode != "structured":
@@ -288,6 +298,7 @@ def main():
         "reward_params_resolved": resolved,
         "reward_hash": rhash,
         "obs_mode": obs_mode,
+        "sight_range": sight_range,
         "dataset_tag": dataset_tag,
         "explicit_folders": explicit,
         "padding": discovery["padding"],
@@ -304,6 +315,7 @@ def main():
     # regardless of which --config is passed later.
     run_meta = {
         "obs_mode": obs_mode,
+        "sight_range": sight_range,
         "units": int(cfg.units), "deter": int(cfg.deter),
         "batch_size": int(cfg.batch_size), "batch_length": int(cfg.batch_length),
         "imag_horizon": int(cfg.imag_horizon),

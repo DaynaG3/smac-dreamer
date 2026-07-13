@@ -1,0 +1,42 @@
+"""Optional runtime override of SMAClite's AGENT_SIGHT_RANGE for full-observability ablations.
+
+SMAClite gates unit visibility with the module constant ``AGENT_SIGHT_RANGE`` (default 9) and ALSO
+uses it as the distance/dx/dy normalization divisor. Enlarging it (e.g. to 24 on r2_2100, whose
+maps span <=~21 units) makes every unit see the whole map -- at the cost of rescaling the distance
+features (an accepted coupling; we do NOT edit external/smaclite to decouple them).
+
+Propagation: the trainer sets the ``SMACLITE_SIGHT_RANGE`` env var once in the parent process from
+``observation.sight_range``. Spawn children (train workers, validation env children, discovery
+probes) inherit ``os.environ``; each calls :func:`maybe_override_sight_range` before its first
+SMAClite env is built (from ``r2dreamer_factory._ensure_paths`` and ``map_discovery.validate_map``),
+so the override is applied uniformly across training, validation, and discovery.
+
+Absent/empty env var -> no-op (behaviour identical to today). SMAClite is imported lazily so this
+module stays importable without smaclite on ``sys.path``.
+"""
+
+import os
+
+ENV_VAR = "SMACLITE_SIGHT_RANGE"
+
+# Guards a single log line per process (the helper may be called many times per worker).
+_applied = False
+
+
+def maybe_override_sight_range():
+    """Override ``smaclite.env.smaclite.AGENT_SIGHT_RANGE`` from ``SMACLITE_SIGHT_RANGE``.
+
+    Returns the applied integer sight range, or ``None`` when the env var is absent/empty (in which
+    case SMAClite is left untouched). Idempotent; logs the applied value once per process.
+    """
+    global _applied
+    raw = os.environ.get(ENV_VAR)
+    if not raw:
+        return None
+    value = int(raw)
+    from smaclite.env import smaclite as _smaclite  # lazy: path set up by _ensure_paths first
+    _smaclite.AGENT_SIGHT_RANGE = value
+    if not _applied:
+        _applied = True
+        print(f"[sight_range] applied AGENT_SIGHT_RANGE={value} (pid={os.getpid()})", flush=True)
+    return value
