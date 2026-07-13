@@ -93,6 +93,12 @@ def test_eval_resolve_default_does_not_set_env_var():
     assert ENV_VAR not in os.environ            # partial-obs checkpoints: env var untouched
 
 
+def test_eval_resolve_default_clears_stale_env_var(monkeypatch):
+    monkeypatch.setenv(ENV_VAR, "24")           # stale export from a prior full-vis shell
+    assert resolve_and_export_sight_range({}, {}) is None
+    assert ENV_VAR not in os.environ            # must be cleared, not left contaminating eval
+
+
 @requires_smaclite
 def test_full_visibility_probe(sight_constant):
     """With radius 24 every agent sees all alive enemies on an r2_2100 map (full visibility)."""

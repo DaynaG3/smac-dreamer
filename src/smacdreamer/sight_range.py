@@ -61,5 +61,7 @@ def resolve_and_export_sight_range(run_meta, cfg):
         os.environ[ENV_VAR] = str(sight_range)
         print(f"Reconstruction: sight_range={sight_range} -> SMACLITE_SIGHT_RANGE", flush=True)
     else:
+        # Clear any stale export from the shell so a partial-obs eval is never contaminated.
+        os.environ.pop(ENV_VAR, None)
         print("Reconstruction: sight_range=None -> default SMAClite partial observability", flush=True)
     return sight_range
