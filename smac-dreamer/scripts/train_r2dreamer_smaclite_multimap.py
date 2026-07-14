@@ -59,7 +59,7 @@ torch.set_float32_matmul_precision("high")
 
 
 def _read_jepa_checkpoint_runtime_config(path: pathlib.Path) -> tuple[dict, JEPAVisibilityConfig]:
-    checkpoint = torch.load(path, map_location="cpu")
+    checkpoint = torch.load(path, map_location="cpu", weights_only=False)
     if not isinstance(checkpoint, dict):
         raise TypeError(f"JEPA checkpoint must be a dict: {path}")
     metadata = dict(checkpoint.get("metadata", {}))
