@@ -49,6 +49,7 @@ from smacdreamer.validation_trainer import ValidationTrainer
 from smacdreamer.wandb_logger import WandbLogger
 from smacdreamer.checkpointing import PeriodicCheckpointer, attach_checkpointing
 from smacdreamer.envs.reward_registry import resolved_params
+from smacdreamer.sight_range import configure_train_sight_range
 from smacdreamer.cuda_preflight import resolve_amp_dtype, run_cuda_preflight
 
 # Reuse the exact Dreamer/buffer/trainer config from the debug script.
@@ -162,14 +163,12 @@ def main():
         raise ValueError(f"observation.mode must be 'flat' or 'structured', got {obs_mode!r}")
 
     # --- Full-observability ablation: optional sight-range override -------------
-    # Export SMACLITE_SIGHT_RANGE BEFORE any env/discovery is built; spawn children (train
+    # Set/clear SMACLITE_SIGHT_RANGE BEFORE any env/discovery is built; spawn children (train
     # workers, validation env children, discovery probes) inherit it and apply the override via
-    # smacdreamer.sight_range.maybe_override_sight_range(). Absent -> partial obs (sight 9).
-    sight_range = None
-    if cfg.get("observation") and cfg.observation.get("sight_range") is not None:
-        sight_range = int(cfg.observation.sight_range)
-        os.environ["SMACLITE_SIGHT_RANGE"] = str(sight_range)
-        print(f"  [observation] full-visibility override: AGENT_SIGHT_RANGE -> {sight_range}")
+    # smacdreamer.sight_range.maybe_override_sight_range(). When the config does NOT request full
+    # visibility, any stale SMACLITE_SIGHT_RANGE from the shell is cleared so a partial-obs run
+    # never accidentally becomes full-vis. Absent -> partial obs (sight 9).
+    sight_range = configure_train_sight_range(cfg)
 
     # --- Action masking (P0.1/P0.2): requires structured obs (per-agent avail + masks) -----
     action_masking = bool(cfg.get("action_masking", False))

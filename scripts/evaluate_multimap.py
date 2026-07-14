@@ -149,7 +149,7 @@ def main():
     _propagate_device(config, device)   # set EVERY device field (buffer/encoder/heads)
 
     agent = Dreamer(config.model, obs_space, act_space).to(device)
-    ckpt = torch.load(args.checkpoint, map_location=device)
+    ckpt = torch.load(args.checkpoint, map_location=device, weights_only=False)
     agent.load_state_dict(ckpt["agent_state_dict"])
     agent.eval()
     print(f"Loaded checkpoint: {args.checkpoint}")

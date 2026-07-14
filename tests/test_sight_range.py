@@ -18,6 +18,7 @@ from conftest import requires_smaclite
 import smacdreamer.sight_range as sr
 from smacdreamer.sight_range import (
     ENV_VAR,
+    configure_train_sight_range,
     maybe_override_sight_range,
     resolve_and_export_sight_range,
 )
@@ -62,6 +63,27 @@ def test_helper_default_leaves_nine(sight_constant):
     sight_constant.AGENT_SIGHT_RANGE = 9
     assert maybe_override_sight_range() is None
     assert sight_constant.AGENT_SIGHT_RANGE == 9
+
+
+# --- Training-side setup (scripts/train_r2dreamer_smaclite_multimap.py) -------------------------
+# The autouse fixture clears SMACLITE_SIGHT_RANGE before each test.
+
+def test_train_config_sets_env_var():
+    assert configure_train_sight_range({"observation": {"mode": "structured", "sight_range": 24}}) == 24
+    assert os.environ[ENV_VAR] == "24"
+
+
+def test_train_no_sight_range_clears_stale_env_var(monkeypatch):
+    monkeypatch.setenv(ENV_VAR, "24")           # stale export from a prior full-vis shell
+    # A normal partial-obs config (no observation.sight_range) must NOT inherit the stale value.
+    assert configure_train_sight_range({"observation": {"mode": "structured"}}) is None
+    assert ENV_VAR not in os.environ
+
+
+def test_train_no_observation_block_clears_stale_env_var(monkeypatch):
+    monkeypatch.setenv(ENV_VAR, "24")
+    assert configure_train_sight_range({}) is None
+    assert ENV_VAR not in os.environ
 
 
 # --- Standalone-eval reconstruction (scripts/evaluate_multimap.py) -----------------------------

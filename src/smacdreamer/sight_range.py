@@ -42,6 +42,29 @@ def maybe_override_sight_range():
     return value
 
 
+def configure_train_sight_range(cfg):
+    """Training-side sight-range setup from ``cfg.observation.sight_range``.
+
+    - Present (full-visibility ablation): export ``SMACLITE_SIGHT_RANGE`` and return the int.
+    - Absent: **pop** any stale ``SMACLITE_SIGHT_RANGE`` so a leaked shell export cannot silently
+      turn a normal partial-observation run into full visibility; return None.
+
+    MUST be called before any env is built (its value is inherited by spawn children). Works with
+    dict or OmegaConf ``cfg``.
+    """
+    obs = cfg.get("observation") if cfg is not None else None
+    sight_range = obs.get("sight_range") if obs else None
+    if sight_range is not None:
+        sight_range = int(sight_range)
+        os.environ[ENV_VAR] = str(sight_range)
+        print(f"  [observation] full-visibility override: AGENT_SIGHT_RANGE -> {sight_range}",
+              flush=True)
+    else:
+        os.environ.pop(ENV_VAR, None)
+        print("  [observation] default SMAClite visibility: AGENT_SIGHT_RANGE=9", flush=True)
+    return sight_range
+
+
 def resolve_and_export_sight_range(run_meta, cfg):
     """Reconstruct the training sight range for standalone eval and export the env var.
 
