@@ -1,0 +1,213 @@
+{
+  "seed": 21072026,
+  "total_configs": 480,
+  "validation_errors": 0,
+  "unique_semantic_configs": 480,
+  "split_counts": {
+    "train": 320,
+    "validation": 80,
+    "blind_iid": 80
+  },
+  "engagement_counts": {
+    "train": {
+      "near": 128,
+      "immediate": 96,
+      "medium": 80,
+      "far": 16
+    },
+    "validation": {
+      "near": 32,
+      "medium": 20,
+      "immediate": 24,
+      "far": 4
+    },
+    "blind_iid": {
+      "medium": 20,
+      "far": 4,
+      "near": 32,
+      "immediate": 24
+    }
+  },
+  "terrain_counts": {
+    "train": {
+      "SIMPLE": 172,
+      "OCTAGON": 115,
+      "NARROW": 33
+    },
+    "validation": {
+      "OCTAGON": 27,
+      "SIMPLE": 42,
+      "NARROW": 11
+    },
+    "blind_iid": {
+      "SIMPLE": 45,
+      "NARROW": 13,
+      "OCTAGON": 22
+    }
+  },
+  "formation_counts": {
+    "train": {
+      "close_split": 120,
+      "wide_split": 58,
+      "staggered": 28,
+      "type_split": 62,
+      "compact": 52
+    },
+    "validation": {
+      "close_split": 19,
+      "wide_split": 17,
+      "staggered": 7,
+      "type_split": 22,
+      "compact": 15
+    },
+    "blind_iid": {
+      "close_split": 23,
+      "wide_split": 18,
+      "staggered": 5,
+      "type_split": 19,
+      "compact": 15
+    }
+  },
+  "orientation_counts": {
+    "train": {
+      "opposing": 287,
+      "vertical_same_side": 33
+    },
+    "validation": {
+      "opposing": 69,
+      "vertical_same_side": 11
+    },
+    "blind_iid": {
+      "opposing": 67,
+      "vertical_same_side": 13
+    }
+  },
+  "family_counts": {
+    "train": {
+      "terran_marine_mirror": 20,
+      "swarm_zergling_mirror": 20,
+      "terran_marauder_advantage": 20,
+      "protoss_stalker_mirror": 20,
+      "protoss_zealot_heavy": 20,
+      "bio_marauder_zergling": 20,
+      "terran_mixed_light": 20,
+      "bio_zergling_light": 20,
+      "terran_marauder_mirror": 20,
+      "protoss_zealot_mirror": 20,
+      "protoss_melee_vs_ranged": 20,
+      "bio_zergling_melee": 20,
+      "terran_mixed_heavy": 20,
+      "protoss_mixed_equal": 20,
+      "protoss_ranged_advantage": 20,
+      "terran_marine_advantage": 20
+    },
+    "validation": {
+      "terran_marauder_mirror": 5,
+      "protoss_zealot_mirror": 5,
+      "terran_marine_advantage": 5,
+      "protoss_mixed_equal": 5,
+      "bio_zergling_light": 5,
+      "bio_marauder_zergling": 5,
+      "protoss_ranged_advantage": 5,
+      "protoss_melee_vs_ranged": 5,
+      "swarm_zergling_mirror": 5,
+      "terran_marauder_advantage": 5,
+      "terran_mixed_light": 5,
+      "protoss_zealot_heavy": 5,
+      "terran_marine_mirror": 5,
+      "bio_zergling_melee": 5,
+      "terran_mixed_heavy": 5,
+      "protoss_stalker_mirror": 5
+    },
+    "blind_iid": {
+      "terran_marauder_advantage": 5,
+      "terran_mixed_heavy": 5,
+      "terran_mixed_light": 5,
+      "protoss_stalker_mirror": 5,
+      "protoss_zealot_mirror": 5,
+      "bio_marauder_zergling": 5,
+      "bio_zergling_melee": 5,
+      "protoss_ranged_advantage": 5,
+      "protoss_melee_vs_ranged": 5,
+      "swarm_zergling_mirror": 5,
+      "protoss_zealot_heavy": 5,
+      "bio_zergling_light": 5,
+      "protoss_mixed_equal": 5,
+      "terran_marine_mirror": 5,
+      "terran_marauder_mirror": 5,
+      "terran_marine_advantage": 5
+    }
+  },
+  "difficulty_proxy_counts": {
+    "train": {
+      "moderate": 120,
+      "hard_winnable": 80,
+      "easy": 120
+    },
+    "validation": {
+      "moderate": 30,
+      "easy": 30,
+      "hard_winnable": 20
+    },
+    "blind_iid": {
+      "hard_winnable": 20,
+      "easy": 30,
+      "moderate": 30
+    }
+  },
+  "ally_value_ratio": {
+    "min": 1.2,
+    "max": 2.0,
+    "mean": 1.54166875,
+    "median": 1.5
+  },
+  "initial_min_cross_distance": {
+    "min": 4.3501,
+    "max": 14.0318,
+    "mean": 7.684512083333333,
+    "median": 7.4491499999999995
+  },
+  "allowed_units_in_groups": [
+    "MARAUDER",
+    "MARINE",
+    "STALKER",
+    "ZEALOT",
+    "ZERGLING"
+  ],
+  "excluded_special_units": [
+    "BANELING",
+    "COLOSSUS",
+    "MEDIVAC",
+    "SPINE_CRAWLER"
+  ],
+  "global_unit_type_ids": {
+    "BANELING": 0,
+    "COLOSSUS": 1,
+    "MARAUDER": 2,
+    "MARINE": 3,
+    "MEDIVAC": 4,
+    "SPINE_CRAWLER": 5,
+    "STALKER": 6,
+    "ZEALOT": 7,
+    "ZERGLING": 8
+  },
+  "static_checks": [
+    "exact JSON schema",
+    "name/filename agreement",
+    "allowed basic units only",
+    "excluded special units absent from groups",
+    "exact 3v2 composition",
+    "unit-count field agreement",
+    "global unit-type vocabulary",
+    "per-faction shield homogeneity and matching flags",
+    "ally static value ratio >= 1.18",
+    "group placement emulation",
+    "spawn bounds",
+    "terrain walkability",
+    "same-plane overlap rejection",
+    "attack-point bounds",
+    "engagement bucket",
+    "duplicate semantic map rejection"
+  ],
+  "dynamic_validation_required": true
+}

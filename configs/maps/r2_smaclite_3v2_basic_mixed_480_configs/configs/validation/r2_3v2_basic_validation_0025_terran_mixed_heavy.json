@@ -1,0 +1,44 @@
+{
+  "name": "r2_3v2_basic_validation_0025_terran_mixed_heavy",
+  "num_allied_units": 3,
+  "num_enemy_units": 2,
+  "groups": [
+    {
+      "x": 13.066,
+      "y": 16.07,
+      "faction": "ALLY",
+      "units": {
+        "MARINE": 1,
+        "MARAUDER": 2
+      }
+    },
+    {
+      "x": 18.239,
+      "y": 15.942,
+      "faction": "ENEMY",
+      "units": {
+        "MARINE": 1,
+        "MARAUDER": 1
+      }
+    }
+  ],
+  "attack_point": [
+    12.895,
+    15.874
+  ],
+  "terrain_preset": "OCTAGON",
+  "num_unit_types": 9,
+  "ally_has_shields": false,
+  "enemy_has_shields": false,
+  "unit_type_ids": {
+    "BANELING": 0,
+    "COLOSSUS": 1,
+    "MARAUDER": 2,
+    "MARINE": 3,
+    "MEDIVAC": 4,
+    "SPINE_CRAWLER": 5,
+    "STALKER": 6,
+    "ZEALOT": 7,
+    "ZERGLING": 8
+  }
+}
