@@ -1,0 +1,30 @@
+{
+  "map": "r2g_blind_iid_1428",
+  "seed": 1,
+  "battle_won": false,
+  "episode_length": 125,
+  "total_original_return": 15.54967950284481,
+  "total_shaped_reward": 14.256541265407577,
+  "total_enemy_hp_damage": 544.875,
+  "final_enemy_ehp_frac": 0.12275390326976776,
+  "final_ally_ehp_frac": 0.0,
+  "enemies_alive_at_end": 2,
+  "allies_alive_at_end": 0,
+  "attack_action_count": 180,
+  "move_action_count": 160,
+  "noop_stop_action_count": 785,
+  "per_target_histogram": {
+    "0": 2,
+    "1": 27,
+    "2": 24,
+    "3": 26,
+    "4": 28,
+    "5": 21,
+    "6": 25,
+    "7": 27
+  },
+  "mean_target_focus_score": 0.7781024531024531,
+  "attack_steps": 55,
+  "low_enemy_damage": false,
+  "poor_target_focus": false
+}
