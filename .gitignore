@@ -16,7 +16,7 @@ build/
 .Python
 
 # Training logs and checkpoints (large, generated at runtime)
-logs/
+#logs/
 
 # Large result files (trajectories can be MB each)
 # results/*.jsonl
