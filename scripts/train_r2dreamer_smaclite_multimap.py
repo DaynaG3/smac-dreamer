@@ -179,6 +179,17 @@ def main():
     config.model.amp_dtype = resolve_amp_dtype(str(cfg.get("amp_dtype", "bfloat16")), str(cfg.device))
     run_cuda_preflight(str(cfg.device), str(config.model.amp_dtype))
 
+    # --- Optional per-run loss-scale overrides (e.g. repval) --------------------
+    # Any key under cfg.loss_scales is applied onto config.model.loss_scales BEFORE the agent is
+    # built. Unknown keys fail loudly (guards typos). Captured in run_config via config.model.
+    if cfg.get("loss_scales"):
+        for k, v in OmegaConf.to_container(cfg.loss_scales, resolve=True).items():
+            if k not in config.model.loss_scales:
+                raise ValueError(f"loss_scales override: unknown key {k!r}; valid keys: "
+                                 f"{sorted(config.model.loss_scales.keys())}")
+            config.model.loss_scales[k] = float(v)
+            print(f"  [loss_scales] override {k} -> {float(v)}")
+
     # --- Continuation / resume settings (mode, global-step offset, actor warm-up) -----
     resume_cfg = cfg.get("resume") or {}
     resume_mode = str(args.resume_mode or resume_cfg.get("mode", "full"))

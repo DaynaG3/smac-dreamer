@@ -35,3 +35,8 @@
 - `sight_range` is recorded in `run_meta.json` and the W&B run config. Reward, gamma, model, action masking, and padding are unchanged.
 - Added `configs/r2_2100_finish_trade_v3_fullobs.yaml` (sight_range 24, `validation.run_at_start: true`, resume with `--resume-mode weights_only` from the best finish_trade_v3 checkpoint) and `docs/training/full_observability_ablation.md`.
 - Standalone eval (`scripts/evaluate_multimap.py`) now reconstructs the training `sight_range` (priority `run_meta.json` > `cfg.observation.sight_range` > None) and exports `SMACLITE_SIGHT_RANGE` before any env is built, so full-vis checkpoints are evaluated under the same visibility they were trained with; the value is recorded in the eval report as `"sight_range"`. Partial-obs checkpoints (no sight_range) are unaffected.
+
+## Per-run loss-scale overrides
+
+- The multimap training script now accepts an optional `loss_scales:` block in the config; any key under it (e.g. `repval`) is applied onto `config.model.loss_scales` before the agent is built, with an unknown-key guard so typos fail loudly. Absent block -> baseline loss scales unchanged. Overrides are captured in the W&B run config via `config.model` and logged at startup (`[loss_scales] override repval -> ...`).
+- Added `configs/r2_2100_finish_trade_v3_repval015.yaml` (repval 0.15 vs the 0.3 baseline; one knob changed, `--resume-mode full` from the best finish_trade_v3 checkpoint).
