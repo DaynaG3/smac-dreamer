@@ -1,0 +1,24 @@
+{
+  "map": "r2_3v2_basic_blind_iid_0052_protoss_zealot_mirror",
+  "seed": 2,
+  "battle_won": true,
+  "episode_length": 21,
+  "total_original_return": 20.000000178813934,
+  "total_shaped_reward": 20.726761323865503,
+  "total_enemy_hp_damage": 200.0,
+  "final_enemy_ehp_frac": 0.0,
+  "final_ally_ehp_frac": 0.43111109733581543,
+  "enemies_alive_at_end": 0,
+  "allies_alive_at_end": 3,
+  "attack_action_count": 37,
+  "move_action_count": 17,
+  "noop_stop_action_count": 9,
+  "per_target_histogram": {
+    "0": 18,
+    "1": 19
+  },
+  "mean_target_focus_score": 0.8111111111111112,
+  "attack_steps": 15,
+  "low_enemy_damage": false,
+  "poor_target_focus": false
+}

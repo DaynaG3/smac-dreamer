@@ -1,0 +1,24 @@
+{
+  "map": "r2_3v2_basic_blind_iid_0031_terran_marine_mirror",
+  "seed": 0,
+  "battle_won": true,
+  "episode_length": 14,
+  "total_original_return": 20.00000011920929,
+  "total_shaped_reward": 20.67705527227372,
+  "total_enemy_hp_damage": 90.0,
+  "final_enemy_ehp_frac": 0.0,
+  "final_ally_ehp_frac": 0.35555556416511536,
+  "enemies_alive_at_end": 0,
+  "allies_alive_at_end": 2,
+  "attack_action_count": 20,
+  "move_action_count": 10,
+  "noop_stop_action_count": 12,
+  "per_target_histogram": {
+    "0": 11,
+    "1": 9
+  },
+  "mean_target_focus_score": 1.0,
+  "attack_steps": 11,
+  "low_enemy_damage": false,
+  "poor_target_focus": false
+}

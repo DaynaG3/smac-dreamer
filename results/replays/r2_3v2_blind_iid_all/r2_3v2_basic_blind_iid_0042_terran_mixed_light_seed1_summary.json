@@ -1,0 +1,24 @@
+{
+  "map": "r2_3v2_basic_blind_iid_0042_terran_mixed_light",
+  "seed": 1,
+  "battle_won": true,
+  "episode_length": 17,
+  "total_original_return": 19.999999791383743,
+  "total_shaped_reward": 20.647226615808904,
+  "total_enemy_hp_damage": 170.0,
+  "final_enemy_ehp_frac": 0.0,
+  "final_ally_ehp_frac": 0.3255814015865326,
+  "enemies_alive_at_end": 0,
+  "allies_alive_at_end": 2,
+  "attack_action_count": 27,
+  "move_action_count": 13,
+  "noop_stop_action_count": 11,
+  "per_target_histogram": {
+    "0": 10,
+    "1": 17
+  },
+  "mean_target_focus_score": 0.8095238095238095,
+  "attack_steps": 14,
+  "low_enemy_damage": false,
+  "poor_target_focus": false
+}

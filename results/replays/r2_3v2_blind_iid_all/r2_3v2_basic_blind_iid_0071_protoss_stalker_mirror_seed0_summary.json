@@ -1,0 +1,24 @@
+{
+  "map": "r2_3v2_basic_blind_iid_0071_protoss_stalker_mirror",
+  "seed": 0,
+  "battle_won": true,
+  "episode_length": 30,
+  "total_original_return": 19.999999701976776,
+  "total_shaped_reward": 20.694041294511408,
+  "total_enemy_hp_damage": 160.0,
+  "final_enemy_ehp_frac": 0.0,
+  "final_ally_ehp_frac": 0.4104166626930237,
+  "enemies_alive_at_end": 0,
+  "allies_alive_at_end": 2,
+  "attack_action_count": 38,
+  "move_action_count": 21,
+  "noop_stop_action_count": 31,
+  "per_target_histogram": {
+    "0": 19,
+    "1": 19
+  },
+  "mean_target_focus_score": 0.875,
+  "attack_steps": 20,
+  "low_enemy_damage": false,
+  "poor_target_focus": false
+}
