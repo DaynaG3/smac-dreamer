@@ -1,0 +1,752 @@
+#!/usr/bin/env python3
+"""Fail-closed installer for Tactical Mixture Actor v1.
+
+Target: the current combined-jepa-dreamer tree after the unified adaptive-
+priority integration. The generated tactical experiment config disables both
+adaptive map priority and sequence PER so the tactical ablation is isolated.
+"""
+
+from __future__ import annotations
+
+import argparse
+import ast
+import datetime as dt
+import pathlib
+import shutil
+import subprocess
+
+from omegaconf import OmegaConf
+
+
+BUNDLE = pathlib.Path(__file__).resolve().parent
+PAYLOAD = BUNDLE / "payload"
+
+
+def die(message: str) -> None:
+    raise SystemExit(f"[FAIL] {message}")
+
+
+def replace_once(text: str, old: str, new: str, label: str) -> str:
+    count = text.count(old)
+    if count == 0 and new in text:
+        return text
+    if count != 1:
+        die(f"{label}: expected exactly one source match, found {count}")
+    return text.replace(old, new, 1)
+
+
+def replace_one_of(
+    text: str,
+    alternatives: tuple[str, ...],
+    new: str,
+    label: str,
+) -> str:
+    """Replace exactly one formatting variant and reject ambiguity."""
+    matches = [(candidate, text.count(candidate)) for candidate in alternatives]
+    total = sum(count for _, count in matches)
+    if total == 0 and new in text:
+        return text
+    if total != 1:
+        detail = {candidate[:80]: count for candidate, count in matches}
+        die(f"{label}: expected one formatting variant, found {total}: {detail}")
+    old = next(candidate for candidate, count in matches if count == 1)
+    return text.replace(old, new, 1)
+
+
+def method_segment(text: str, method_name: str) -> tuple[int, int, str]:
+    tree = ast.parse(text)
+    lines = text.splitlines(keepends=True)
+    matches = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == method_name
+    ]
+    if len(matches) != 1:
+        die(f"method {method_name!r}: expected one AST match, found {len(matches)}")
+    node = matches[0]
+    if getattr(node, "end_lineno", None) is None:
+        die(f"method {method_name!r} has no end_lineno")
+    start_line = node.lineno - 1
+    end_line = node.end_lineno
+    start = sum(len(line) for line in lines[:start_line])
+    end = sum(len(line) for line in lines[:end_line])
+    return start, end, "".join(lines[start_line:end_line])
+
+
+def transform_method(text: str, method_name: str, transform) -> str:
+    start, end, segment = method_segment(text, method_name)
+    changed = transform(segment)
+    if changed == segment:
+        die(f"method {method_name!r} was not changed")
+    return text[:start] + changed + text[end:]
+
+
+def patch_dreamer(text: str) -> str:
+    if "# TACTICAL_MIXTURE_V1" in text:
+        return text
+    if "# UNIFIED_PRIORITY_V1" not in text:
+        die("dreamer.py lacks UNIFIED_PRIORITY_V1")
+    if "_priority_weighted_mean" not in text:
+        die("dreamer.py lacks adaptive importance-weighted JEPA losses")
+
+    text = replace_once(
+        text,
+        "from tools import to_f32\n",
+        "from tools import to_f32\n"
+        "from tactical_policy import TacticalMixturePolicy\n\n"
+        "# TACTICAL_MIXTURE_V1\n",
+        "tactical import",
+    )
+
+    def patch_init(segment: str) -> str:
+        segment = replace_once(
+            segment,
+            "        # P0.2: prob threshold for the predicted availability mask -> logit cut.\n",
+            "        _tactical_cfg = getattr(config, 'tactical_mixture', None)\n"
+            "        self.tactical_enabled = bool(\n"
+            "            getattr(_tactical_cfg, 'enabled', False)\n"
+            "            if _tactical_cfg is not None else False\n"
+            "        )\n"
+            "        self.tactical_policy = None\n"
+            "        if self.tactical_enabled:\n"
+            "            if self.world_model_backend != 'jepa':\n"
+            "                raise NotImplementedError(\n"
+            "                    'Tactical Mixture v1 is validated only for JEPA'\n"
+            "                )\n"
+            "            if not self.action_masking or not self.act_discrete:\n"
+            "                raise ValueError(\n"
+            "                    'Tactical Mixture v1 requires masked discrete actions'\n"
+            "                )\n"
+            "            self.tactical_policy = TacticalMixturePolicy(\n"
+            "                self.feat_size, sum(self._actor_shape), _tactical_cfg\n"
+            "            )\n"
+            "            self.tactical_policy.assert_legacy_equivalence_ready()\n\n"
+            "        # P0.2: prob threshold for the predicted availability mask -> logit cut.\n",
+            "tactical construction",
+        )
+        segment = replace_once(
+            segment,
+            "        if self.world_model_backend == \"rssm\":\n",
+            "        if self.tactical_enabled:\n"
+            "            modules['tactical_policy'] = self.tactical_policy\n"
+            "        if self.world_model_backend == \"rssm\":\n",
+            "optimizer registration",
+        )
+        return segment
+
+    text = transform_method(text, "__init__", patch_init)
+
+    def patch_train(segment: str) -> str:
+        return replace_once(
+            segment,
+            "        if self.world_model_backend == \"jepa\":\n"
+            "            self.jepa_world_model.train(False)\n"
+            "        return self\n",
+            "        if self.world_model_backend == \"jepa\":\n"
+            "            self.jepa_world_model.train(False)\n"
+            "        if self.tactical_enabled and hasattr(\n"
+            "            self, '_frozen_tactical_policy'\n"
+            "        ):\n"
+            "            self._frozen_tactical_policy.train(False)\n"
+            "        return self\n",
+            "frozen tactical eval mode",
+        )
+
+    text = transform_method(text, "train", patch_train)
+
+    def patch_clone(segment: str) -> str:
+        return replace_once(
+            segment,
+            "        self._frozen_value = copy.deepcopy(self.value)\n",
+            "        if self.tactical_enabled:\n"
+            "            self._frozen_tactical_policy = copy.deepcopy(\n"
+            "                self.tactical_policy\n"
+            "            )\n"
+            "            for (name_orig, param_orig), (name_new, param_new) in zip(\n"
+            "                self.tactical_policy.named_parameters(),\n"
+            "                self._frozen_tactical_policy.named_parameters(),\n"
+            "            ):\n"
+            "                assert name_orig == name_new\n"
+            "                param_new.data = param_orig.data\n"
+            "                param_new.requires_grad_(False)\n"
+            "            self._frozen_tactical_policy.train(False)\n"
+            "        else:\n"
+            "            self._frozen_tactical_policy = None\n"
+            "        self._frozen_value = copy.deepcopy(self.value)\n",
+            "frozen tactical copy",
+        )
+
+    text = transform_method(text, "clone_and_freeze", patch_clone)
+
+    def patch_act(segment: str) -> str:
+        return replace_one_of(
+            segment,
+            (
+                "            raw_logits = self._frozen_actor.last(\n"
+                "                self._frozen_actor.mlp(feat)\n"
+                "            )\n",
+                "            raw_logits = self._frozen_actor.last(self._frozen_actor.mlp(feat))\n",
+        ),
+            "            raw_logits = self._frozen_actor.last(\n"
+            "                self._frozen_actor.mlp(feat)\n"
+            "            )\n"
+            "            if self.tactical_enabled:\n"
+            "                tactic = self._frozen_tactical_policy.select_tactic(\n"
+            "                    feat, deterministic=eval\n"
+            "                )\n"
+            "                raw_logits = self._frozen_tactical_policy.combine_logits(\n"
+            "                    raw_logits, feat, tactic\n"
+            "                )\n",
+            "real tactical action",
+        )
+
+    text = transform_method(text, "act", patch_act)
+
+    def patch_imagine(segment: str) -> str:
+        segment = replace_once(
+            segment,
+            "        actions = []\n",
+            "        actions = []\n        tactics = []\n",
+            "imagination tactic list",
+        )
+        segment = replace_one_of(
+            segment,
+            (
+                "                raw_logits = self._frozen_actor.last(\n"
+                "                    self._frozen_actor.mlp(feat)\n"
+                "                )\n",
+                "                raw_logits = self._frozen_actor.last(self._frozen_actor.mlp(feat))\n",
+            ),
+            "                raw_logits = self._frozen_actor.last(\n"
+            "                    self._frozen_actor.mlp(feat)\n"
+            "                )\n"
+            "                if self.tactical_enabled:\n"
+            "                    tactic = self._frozen_tactical_policy.select_tactic(\n"
+            "                        feat\n"
+            "                    )\n"
+            "                    raw_logits = self._frozen_tactical_policy.combine_logits(\n"
+            "                        raw_logits, feat, tactic\n"
+            "                    )\n",
+            "imagined tactical action",
+        )
+        segment = replace_once(
+            segment,
+            "            actions.append(action)\n",
+            "            actions.append(action)\n"
+            "            if self.tactical_enabled:\n"
+            "                tactics.append(tactic)\n",
+            "append imagined tactic",
+        )
+        segment = replace_once(
+            segment,
+            "        return torch.stack(feats, dim=1), torch.stack(actions, dim=1)\n",
+            "        if self.tactical_enabled:\n"
+            "            return (\n"
+            "                torch.stack(feats, dim=1),\n"
+            "                torch.stack(actions, dim=1),\n"
+            "                torch.stack(tactics, dim=1),\n"
+            "            )\n"
+            "        return torch.stack(feats, dim=1), torch.stack(actions, dim=1)\n",
+            "imagination return contract",
+        )
+        return segment
+
+    text = transform_method(text, "_imagine", patch_imagine)
+
+    def patch_jepa(segment: str) -> str:
+        segment = replace_one_of(
+            segment,
+            (
+                "        imag_feat, imag_action = self._imagine(\n"
+                "            start, self.imag_horizon + 1\n"
+                "        )\n"
+                "        imag_feat, imag_action = imag_feat.detach(), imag_action.detach()\n",
+                "        imag_feat, imag_action = self._imagine(start, self.imag_horizon + 1)\n"
+                "        imag_feat, imag_action = imag_feat.detach(), imag_action.detach()\n",
+            ),
+            "        imag_out = self._imagine(start, self.imag_horizon + 1)\n"
+            "        if self.tactical_enabled:\n"
+            "            imag_feat, imag_action, imag_tactic = imag_out\n"
+            "            imag_tactic = imag_tactic.detach()\n"
+            "        else:\n"
+            "            imag_feat, imag_action = imag_out\n"
+            "            imag_tactic = None\n"
+            "        imag_feat = imag_feat.detach()\n"
+            "        imag_action = imag_action.detach()\n",
+            "tactical imagination unpack",
+        )
+        segment = replace_one_of(
+            segment,
+            (
+                "            policy_logits = self.actor.last(self.actor.mlp(imag_feat))\n"
+                "            _amask, _aactive = self._predicted_action_mask(imag_feat)\n",
+                "            policy_logits = self.actor.last(\n"
+                "                self.actor.mlp(imag_feat)\n"
+                "            )\n"
+                "            _amask, _aactive = self._predicted_action_mask(imag_feat)\n",
+            ),
+            "            base_policy_logits = self.actor.last(\n"
+            "                self.actor.mlp(imag_feat)\n"
+            "            )\n"
+            "            if self.tactical_enabled:\n"
+            "                tactic_logits = self.tactical_policy.selector_logits(\n"
+            "                    imag_feat\n"
+            "                )\n"
+            "                tactic_dist = torch.distributions.Categorical(\n"
+            "                    logits=tactic_logits\n"
+            "                )\n"
+            "                policy_logits = self.tactical_policy.combine_logits(\n"
+            "                    base_policy_logits, imag_feat, imag_tactic\n"
+            "                )\n"
+            "            else:\n"
+            "                tactic_logits = None\n"
+            "                tactic_dist = None\n"
+            "                policy_logits = base_policy_logits\n"
+            "            _amask, _aactive = self._predicted_action_mask(imag_feat)\n",
+            "current tactical policy logits",
+        )
+        segment = replace_once(
+            segment,
+            "        losses[\"policy\"] = _priority_weighted_mean(\n"
+            "            weight[:, :-1].detach()\n"
+            "            * -(logpi * adv.detach() + self.act_entropy * entropy)\n"
+            "        )\n",
+            "        primitive_policy_loss = _priority_weighted_mean(\n"
+            "            weight[:, :-1].detach()\n"
+            "            * -(logpi * adv.detach() + self.act_entropy * entropy)\n"
+            "        )\n"
+            "        if self.tactical_enabled:\n"
+            "            tactic_logpi = tactic_dist.log_prob(imag_tactic)[\n"
+            "                :, :-1\n"
+            "            ].unsqueeze(-1)\n"
+            "            tactic_entropy = tactic_dist.entropy()[\n"
+            "                :, :-1\n"
+            "            ].unsqueeze(-1)\n"
+            "            tactical = self.tactical_policy.settings\n"
+            "            tactic_policy_loss = _priority_weighted_mean(\n"
+            "                weight[:, :-1].detach()\n"
+            "                * -(\n"
+            "                    tactical.tactic_pg_scale\n"
+            "                    * tactic_logpi\n"
+            "                    * adv.detach()\n"
+            "                    + tactical.tactic_entropy_scale * tactic_entropy\n"
+            "                )\n"
+            "            )\n"
+            "            start_is = _seq_is[:, None].expand(B, T).reshape(\n"
+            "                B * T, 1\n"
+            "            )\n"
+            "            tactic_aux_weight = (\n"
+            "                weight[:, :-1, 0].detach() * start_is\n"
+            "            )\n"
+            "            balance_loss, tactic_usage = (\n"
+            "                self.tactical_policy.balance_loss(\n"
+            "                    tactic_logits[:, :-1], tactic_aux_weight\n"
+            "                )\n"
+            "            )\n"
+            "            effect_js = self.tactical_policy.effect_js(\n"
+            "                imag_feat[:, :-1],\n"
+            "                base_policy_logits[:, :-1],\n"
+            "                _amask[:, :-1],\n"
+            "                _aactive[:, :-1],\n"
+            "                self._actor_shape,\n"
+            "                tactic_aux_weight,\n"
+            "            )\n"
+            "            effect_loss = torch.relu(\n"
+            "                torch.as_tensor(\n"
+            "                    tactical.effect_target,\n"
+            "                    device=effect_js.device,\n"
+            "                    dtype=effect_js.dtype,\n"
+            "                )\n"
+            "                - effect_js\n"
+            "            )\n"
+            "            losses[\"policy\"] = (\n"
+            "                primitive_policy_loss\n"
+            "                + tactic_policy_loss\n"
+            "                + tactical.balance_loss_scale * balance_loss\n"
+            "                + tactical.effect_loss_scale * effect_loss\n"
+            "            )\n"
+            "            metrics[\"tactic/policy_loss\"] = tactic_policy_loss\n"
+            "            metrics[\"tactic/entropy\"] = tactic_entropy.mean()\n"
+            "            metrics[\"tactic/entropy_normalized\"] = (\n"
+            "                tactic_entropy.mean()\n"
+            "                / math.log(self.tactical_policy.num_tactics)\n"
+            "            )\n"
+            "            metrics[\"tactic/selector_max_probability\"] = (\n"
+            "                tactic_dist.probs.max(-1).values.mean()\n"
+            "            )\n"
+            "            metrics[\"tactic/balance_loss\"] = balance_loss\n"
+            "            metrics[\"tactic/effect_loss\"] = effect_loss\n"
+            "            metrics[\"tactic/effect_js\"] = effect_js\n"
+            "            residual = policy_logits - base_policy_logits\n"
+            "            residual_rms = residual.float().square().mean().sqrt()\n"
+            "            base_rms = (\n"
+            "                base_policy_logits.float().square().mean().sqrt()\n"
+            "            )\n"
+            "            metrics[\"tactic/residual_rms\"] = residual_rms\n"
+            "            metrics[\"tactic/residual_to_base_ratio\"] = (\n"
+            "                residual_rms / base_rms.clamp_min(1e-6)\n"
+            "            )\n"
+            "            metrics[\"tactic/usage_max\"] = tactic_usage.max()\n"
+            "            usage_entropy = -(\n"
+            "                tactic_usage.clamp_min(1e-8)\n"
+            "                * tactic_usage.clamp_min(1e-8).log()\n"
+            "            ).sum()\n"
+            "            metrics[\"tactic/effective_count\"] = usage_entropy.exp()\n"
+            "            for tactic_index, tactic_probability in enumerate(\n"
+            "                tactic_usage\n"
+            "            ):\n"
+            "                metrics[\n"
+            "                    f\"tactic/usage_{tactic_index}\"\n"
+            "                ] = tactic_probability\n"
+            "        else:\n"
+            "            losses[\"policy\"] = primitive_policy_loss\n",
+            "tactical actor objective",
+        )
+        return segment
+
+    text = transform_method(text, "_cal_grad_jepa", patch_jepa)
+
+    anchor = "    def _update_slow_target(self):\n"
+    if text.count(anchor) != 1:
+        die("checkpoint migration insertion anchor is ambiguous")
+    migration_methods = '''    def tactical_metadata(self):
+        if not self.tactical_enabled:
+            return {
+                "schema_version": 1,
+                "architecture": "legacy",
+                "enabled": False,
+            }
+        metadata = self.tactical_policy.metadata()
+        metadata["enabled"] = True
+        return metadata
+
+    def load_tactical_compatible_state_dict(
+        self,
+        state_dict,
+        checkpoint_metadata=None,
+    ):
+        """Strict tactical resume or allowlisted migration from legacy."""
+        if not self.tactical_enabled:
+            self.load_state_dict(state_dict, strict=True)
+            self.clone_and_freeze()
+            return {"migrated_legacy": False, "strict": True}
+
+        if checkpoint_metadata is not None:
+            expected = self.tactical_metadata()
+            for key in (
+                "architecture",
+                "num_tactics",
+                "embedding_dim",
+                "hidden_dim",
+                "duration",
+            ):
+                if checkpoint_metadata.get(key) != expected.get(key):
+                    raise RuntimeError(
+                        f"tactical metadata mismatch for {key}: "
+                        f"{checkpoint_metadata.get(key)!r} "
+                        f"!= {expected.get(key)!r}"
+                    )
+            self.load_state_dict(state_dict, strict=True)
+            self.clone_and_freeze()
+            return {"migrated_legacy": False, "strict": True}
+
+        incompatible = self.load_state_dict(state_dict, strict=False)
+        allowed_prefixes = (
+            "tactical_policy.",
+            "_frozen_tactical_policy.",
+        )
+        illegal_missing = [
+            key
+            for key in incompatible.missing_keys
+            if not key.startswith(allowed_prefixes)
+        ]
+        if illegal_missing or incompatible.unexpected_keys:
+            raise RuntimeError(
+                "legacy tactical migration found incompatible keys: "
+                f"illegal_missing={illegal_missing}, "
+                f"unexpected={list(incompatible.unexpected_keys)}"
+            )
+        if not incompatible.missing_keys:
+            raise RuntimeError(
+                "checkpoint has no tactical metadata and no missing tactical keys"
+            )
+        self.tactical_policy.assert_legacy_equivalence_ready()
+        self.clone_and_freeze()
+        return {
+            "migrated_legacy": True,
+            "strict": False,
+            "missing_keys": list(incompatible.missing_keys),
+        }
+
+'''
+    text = text.replace(anchor, migration_methods + anchor, 1)
+    ast.parse(text)
+    return text
+
+
+def patch_training_script(text: str) -> str:
+    if "# TACTICAL_MIXTURE_V1" in text:
+        return text
+    if "# UNIFIED_PRIORITY_V1" not in text:
+        die("multimap runner lacks UNIFIED_PRIORITY_V1")
+    if "from adaptive_buffer import AdaptiveBuffer" not in text:
+        die("multimap runner lacks AdaptiveBuffer integration")
+
+    text = replace_once(
+        text,
+        "# UNIFIED_PRIORITY_V1\n",
+        "# UNIFIED_PRIORITY_V1\n# TACTICAL_MIXTURE_V1\n",
+        "runner marker",
+    )
+    text = replace_once(
+        text,
+        "from adaptive_buffer import AdaptiveBuffer\n",
+        "from adaptive_buffer import AdaptiveBuffer\nfrom buffer import Buffer\n",
+        "uniform replay import",
+    )
+    text = replace_once(
+        text,
+        "    config.model.world_model.backend = wm_backend\n",
+        "    config.model.world_model.backend = wm_backend\n"
+        "    tactical_cfg = cfg.get('tactical_mixture') or OmegaConf.create(\n"
+        "        {'enabled': False}\n"
+        "    )\n"
+        "    config.model.tactical_mixture = OmegaConf.create(\n"
+        "        OmegaConf.to_container(tactical_cfg, resolve=True)\n"
+        "    )\n",
+        "config plumbing",
+    )
+    text = replace_once(
+        text,
+        "    print(f\" amp_dtype : {config.model.amp_dtype}\")\n",
+        "    print(f\" amp_dtype : {config.model.amp_dtype}\")\n"
+        "    print(\n"
+        "        ' tactical : enabled='\n"
+        "        f\"{bool(config.model.tactical_mixture.get('enabled', False))} \"\n"
+        "        f\"K={int(config.model.tactical_mixture.get('num_tactics', 4))} \"\n"
+        "        f\"embed={int(config.model.tactical_mixture.get('embedding_dim', 16))} \"\n"
+        "        f\"duration={int(config.model.tactical_mixture.get('duration', 1))}\"\n"
+        "    )\n",
+        "startup print",
+    )
+    text = replace_once(
+        text,
+        "        \"world_model_backend\": wm_backend,\n",
+        "        \"world_model_backend\": wm_backend,\n"
+        "        \"tactical_mixture\": OmegaConf.to_container(\n"
+        "            config.model.tactical_mixture, resolve=True\n"
+        "        ),\n",
+        "run metadata",
+    )
+    text = replace_once(
+        text,
+        "        replay_buffer = AdaptiveBuffer(config.buffer, priority_controller)\n",
+        "        _adaptive_map = bool(\n"
+        "            (_adaptive_cfg.get('map') or {}).get('enabled', False)\n"
+        "        )\n"
+        "        _adaptive_sequence = bool(\n"
+        "            (_adaptive_cfg.get('sequence') or {}).get('enabled', False)\n"
+        "        )\n"
+        "        _adaptive_any = bool(\n"
+        "            _adaptive_cfg.get('enabled', False)\n"
+        "            or _adaptive_map\n"
+        "            or _adaptive_sequence\n"
+        "        )\n"
+        "        if _adaptive_any:\n"
+        "            replay_buffer = AdaptiveBuffer(\n"
+        "                config.buffer, priority_controller\n"
+        "            )\n"
+        "        else:\n"
+        "            replay_buffer = Buffer(config.buffer)\n"
+        "            print(\n"
+        "                ' [replay] adaptive priority disabled; using original uniform SliceSampler',\n"
+        "                flush=True,\n"
+        "            )\n",
+        "true uniform replay when adaptive priority is disabled",
+    )
+    text = replace_once(
+        text,
+        "            agent.load_state_dict(ckpt[\"agent_state_dict\"])\n"
+        "            if ckpt.get(\"agent_training_state\") and hasattr(\n"
+        "                agent, \"load_training_state_dict\"\n"
+        "            ):\n"
+        "                agent.load_training_state_dict(\n"
+        "                    ckpt[\"agent_training_state\"]\n"
+        "                )\n"
+        "                print(\n"
+        "                    f\" [resume] restored model + optimizer/scheduler/scaler state from {args.resume}\"\n"
+        "                )\n"
+        "            else:\n"
+        "                print(f\" [resume] restored model weights only from {args.resume}\")\n",
+        "            tactical_load = agent.load_tactical_compatible_state_dict(\n"
+        "                ckpt[\"agent_state_dict\"],\n"
+        "                checkpoint_metadata=ckpt.get(\n"
+        "                    \"tactical_mixture_metadata\"\n"
+        "                ),\n"
+        "            )\n"
+        "            can_restore_training = (\n"
+        "                not tactical_load.get('migrated_legacy', False)\n"
+        "                and ckpt.get(\"agent_training_state\")\n"
+        "                and hasattr(agent, \"load_training_state_dict\")\n"
+        "            )\n"
+        "            if can_restore_training:\n"
+        "                agent.load_training_state_dict(\n"
+        "                    ckpt[\"agent_training_state\"]\n"
+        "                )\n"
+        "                print(\n"
+        "                    f\" [resume] restored tactical model + optimizer state from {args.resume}\"\n"
+        "                )\n"
+        "            elif tactical_load.get('migrated_legacy', False):\n"
+        "                print(\n"
+        "                    ' [resume] migrated legacy weights; tactical modules are zero-init'\n"
+        "                )\n"
+        "                print(\n"
+        "                    ' [resume] optimizer/scheduler/return EMA start fresh'\n"
+        "                )\n"
+        "            else:\n"
+        "                print(\n"
+        "                    f\" [resume] restored model weights only from {args.resume}\"\n"
+        "                )\n",
+        "checkpoint migration",
+    )
+    text = replace_once(
+        text,
+        "                'adaptive_priority_state': priority_controller.state_dict(),\n"
+        "            }\n",
+        "                'adaptive_priority_state': priority_controller.state_dict(),\n"
+        "                'tactical_mixture_metadata': agent.tactical_metadata(),\n"
+        "            }\n",
+        "checkpoint metadata",
+    )
+    ast.parse(text)
+    return text
+
+
+PATCHERS = {
+    "external/r2dreamer/dreamer.py": patch_dreamer,
+    "scripts/train_r2dreamer_smaclite_multimap.py": patch_training_script,
+}
+
+
+def make_config(repo: pathlib.Path, base_config: str) -> pathlib.Path:
+    source = pathlib.Path(base_config).expanduser()
+    if not source.is_absolute():
+        source = repo / source
+    if not source.is_file():
+        die(f"base config missing: {source}")
+    target = repo / "configs/r2_2100_jepa_tactical_mixture.yaml"
+    if target.exists():
+        existing = OmegaConf.load(target)
+        if bool((existing.get("tactical_mixture") or {}).get("enabled", False)):
+            print(f"[OK] tactical config already exists: {target}")
+            return target
+        die(f"unrecognised existing target config: {target}")
+
+    cfg = OmegaConf.load(source)
+    if cfg.get("validation") is None:
+        cfg.validation = OmegaConf.create({})
+    cfg.validation.run_at_start = False
+    cfg.validation.every = 200000
+
+    adaptive = cfg.get("adaptive_priority") or OmegaConf.create({})
+    adaptive.enabled = False
+    if adaptive.get("map") is None:
+        adaptive.map = OmegaConf.create({})
+    if adaptive.get("sequence") is None:
+        adaptive.sequence = OmegaConf.create({})
+    adaptive.map.enabled = False
+    adaptive.sequence.enabled = False
+    cfg.adaptive_priority = adaptive
+    if str(cfg.get("sampling_mode", "")) == "adaptive_priority":
+        cfg.sampling_mode = "shuffled_round_robin"
+
+    cfg.tactical_mixture = OmegaConf.create(
+        {
+            "enabled": True,
+            "num_tactics": 4,
+            "embedding_dim": 16,
+            "hidden_dim": 128,
+            "tactic_pg_scale": 1.0,
+            "tactic_entropy_scale": 3.0e-4,
+            "balance_loss_scale": 1.0e-3,
+            "effect_loss_scale": 1.0e-3,
+            "effect_target": 0.02,
+            "max_effect_states": 256,
+            "duration": 1,
+        }
+    )
+    if cfg.get("wandb") is None:
+        cfg.wandb = OmegaConf.create({})
+    cfg.wandb.run_name = "exp40_best_tactical_mixture_2m"
+    OmegaConf.save(cfg, target)
+    return target
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--repo", required=True)
+    parser.add_argument("--base-config", required=True)
+    parser.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args()
+
+    repo = pathlib.Path(args.repo).expanduser().resolve()
+    if not (repo / "external/r2dreamer/dreamer.py").is_file():
+        die(f"wrong repo root: {repo}")
+    try:
+        git_root = pathlib.Path(
+            subprocess.check_output(
+                ["git", "-C", str(repo), "rev-parse", "--show-toplevel"],
+                text=True,
+            ).strip()
+        )
+    except Exception:
+        die(f"{repo} is not inside a Git worktree")
+    print(f"[INFO] Git root: {git_root}")
+    print(f"[INFO] Target subtree: {repo}")
+
+    patched = {}
+    for relative, patcher in PATCHERS.items():
+        source = repo / relative
+        if not source.is_file():
+            die(f"required source missing: {relative}")
+        patched[relative] = patcher(source.read_text(encoding="utf-8"))
+        ast.parse(patched[relative], filename=str(source))
+
+    if args.dry_run:
+        print("[OK] dry-run markers matched and patched ASTs parse")
+        return
+
+    stamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup = repo.parent / f"{repo.name}_tactical_mixture_installer_backup_{stamp}"
+    backup.mkdir(parents=True, exist_ok=False)
+    for relative in PATCHERS:
+        source = repo / relative
+        destination = backup / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+
+    for relative, content in patched.items():
+        (repo / relative).write_text(content, encoding="utf-8")
+
+    for source in PAYLOAD.rglob("*"):
+        if not source.is_file():
+            continue
+        relative = source.relative_to(PAYLOAD)
+        destination = repo / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+        if destination.suffix == ".sh" or (
+            destination.suffix == ".py" and destination.parent.name == "scripts"
+        ):
+            destination.chmod(destination.stat().st_mode | 0o111)
+
+    target = make_config(repo, args.base_config)
+    print("[OK] installed Tactical Mixture Actor v1")
+    print(f"[OK] installer backup: {backup}")
+    print(f"[OK] generated config: {target}")
+    print("[NEXT] run scripts/static_audit_tactical_mixture.sh")
+
+
+if __name__ == "__main__":
+    main()

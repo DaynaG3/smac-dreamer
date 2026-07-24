@@ -1,0 +1,30 @@
+[eval] ORDINARY_EVAL=/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33_anchored.py
+[eval] HIDDEN_EVAL=/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py
+precision_policy policy=fp16(auto) autocast=True grad_scaler=True amp_init_scale=1024.0 amp_growth_interval=10000
+visibility_preflight_passed items=1024 hidden_fraction=0.000776
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/smac_jepa/train_jepa_exp34_dreamer.py", line 214, in <module>
+    main()
+  File "/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/smac_jepa/train_jepa_exp34_dreamer.py", line 210, in main
+    _base.main()
+  File "/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/smac_jepa/train_jepa_exp31_exp35.py", line 1432, in main
+    model = SMACJEPA(state_dim=dataset.metadata.state_dim, n_agents=dataset.metadata.n_agents, n_actions=dataset.metadata.n_actions, latent_dim=int(arch['latent_dim']), hidden_dim=int(arch['hidden_dim']), action_dim=int(arch['action_dim']), num_heads=int(arch['num_heads']), mode=dataset.metadata.mode, max_agents=dataset.metadata.max_agents, max_enemies=dataset.metadata.max_enemies, max_actions=dataset.metadata.max_actions, token_dim=dataset.metadata.token_dim, static_dim=dataset.metadata.static_dim, decoder_weight=args.decoder_weight, encoder_layers=int(arch['encoder_layers']), action_layers=int(arch['action_layers']), predictor_layers=int(arch['predictor_layers']), max_context_len=args.max_context_len).to(device)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/workspace/dreamer/combined-upload/.venv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1384, in to
+    return self._apply(convert)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/workspace/dreamer/combined-upload/.venv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 934, in _apply
+    module._apply(fn)
+  File "/home/jovyan/workspace/dreamer/combined-upload/.venv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 934, in _apply
+    module._apply(fn)
+  File "/home/jovyan/workspace/dreamer/combined-upload/.venv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 965, in _apply
+    param_applied = fn(param)
+                    ^^^^^^^^^
+  File "/home/jovyan/workspace/dreamer/combined-upload/.venv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1370, in convert
+    return t.to(
+           ^^^^^
+  File "/home/jovyan/workspace/dreamer/combined-upload/.venv/lib/python3.11/site-packages/torch/cuda/__init__.py", line 478, in _lazy_init
+    torch._C._cuda_init()
+RuntimeError: No CUDA GPUs are available

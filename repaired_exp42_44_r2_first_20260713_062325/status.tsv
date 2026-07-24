@@ -1,0 +1,2 @@
+2026-07-13_06:23:25	pipeline_start	OK	/home/jovyan/workspace/dreamer/combined-upload/repaired_exp42_44_r2_first_20260713_062325
+2026-07-13_06:23:26	r2_resume_start	RUN	/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/exp40_jepa_dense_v3_perm_imagmask_100k_2m_20260710_022902/latest.pt

@@ -1,0 +1,43 @@
+[checkpoint] /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/runs/rnn_seqmem_exp40_event_balanced_5ep_20260709_083104/checkpoint.pt
+[manifest]   /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/splits/r2_general_2100.json split=eval
+[rollout]    window=20 horizon=15 training_horizon=5
+[device]     cuda amp=True
+[dataset] items=16862 sampled_items=8 potential_rollout_starts=160
+[batch 001/002] examples=80 elapsed=0.1 min
+[batch 002/002] examples=160 elapsed=0.1 min
+/home/jovyan/workspace/dreamer/combined-upload/exp40_rollout_gallery_bundle/eval_exp40_rollout_gallery.py:483: UserWarning: 'where' used without 'out', expect unitialized memory in output. If this is intentional, use out=None.
+  curve = np.divide(numerator, np.maximum(denominator, 1.0), where=denominator > 0)
+/home/jovyan/workspace/dreamer/combined-upload/exp40_rollout_gallery_bundle/eval_exp40_rollout_gallery.py:483: UserWarning: 'where' used without 'out', expect unitialized memory in output. If this is intentional, use out=None.
+  curve = np.divide(numerator, np.maximum(denominator, 1.0), where=denominator > 0)
+/home/jovyan/workspace/dreamer/combined-upload/exp40_rollout_gallery_bundle/eval_exp40_rollout_gallery.py:483: UserWarning: 'where' used without 'out', expect unitialized memory in output. If this is intentional, use out=None.
+  curve = np.divide(numerator, np.maximum(denominator, 1.0), where=denominator > 0)
+/home/jovyan/workspace/dreamer/combined-upload/exp40_rollout_gallery_bundle/eval_exp40_rollout_gallery.py:483: UserWarning: 'where' used without 'out', expect unitialized memory in output. If this is intentional, use out=None.
+  curve = np.divide(numerator, np.maximum(denominator, 1.0), where=denominator > 0)
+/home/jovyan/workspace/dreamer/combined-upload/exp40_rollout_gallery_bundle/eval_exp40_rollout_gallery.py:483: UserWarning: 'where' used without 'out', expect unitialized memory in output. If this is intentional, use out=None.
+  curve = np.divide(numerator, np.maximum(denominator, 1.0), where=denominator > 0)
+/home/jovyan/workspace/dreamer/combined-upload/exp40_rollout_gallery_bundle/eval_exp40_rollout_gallery.py:483: UserWarning: 'where' used without 'out', expect unitialized memory in output. If this is intentional, use out=None.
+  curve = np.divide(numerator, np.maximum(denominator, 1.0), where=denominator > 0)
+/home/jovyan/workspace/dreamer/combined-upload/exp40_rollout_gallery_bundle/eval_exp40_rollout_gallery.py:483: UserWarning: 'where' used without 'out', expect unitialized memory in output. If this is intentional, use out=None.
+  curve = np.divide(numerator, np.maximum(denominator, 1.0), where=denominator > 0)
+/home/jovyan/workspace/dreamer/combined-upload/exp40_rollout_gallery_bundle/eval_exp40_rollout_gallery.py:483: UserWarning: 'where' used without 'out', expect unitialized memory in output. If this is intentional, use out=None.
+  curve = np.divide(numerator, np.maximum(denominator, 1.0), where=denominator > 0)
+/home/jovyan/workspace/dreamer/combined-upload/exp40_rollout_gallery_bundle/eval_exp40_rollout_gallery.py:483: UserWarning: 'where' used without 'out', expect unitialized memory in output. If this is intentional, use out=None.
+  curve = np.divide(numerator, np.maximum(denominator, 1.0), where=denominator > 0)
+/home/jovyan/workspace/dreamer/combined-upload/exp40_rollout_gallery_bundle/eval_exp40_rollout_gallery.py:483: UserWarning: 'where' used without 'out', expect unitialized memory in output. If this is intentional, use out=None.
+  curve = np.divide(numerator, np.maximum(denominator, 1.0), where=denominator > 0)
+/home/jovyan/workspace/dreamer/combined-upload/exp40_rollout_gallery_bundle/eval_exp40_rollout_gallery.py:483: UserWarning: 'where' used without 'out', expect unitialized memory in output. If this is intentional, use out=None.
+  curve = np.divide(numerator, np.maximum(denominator, 1.0), where=denominator > 0)
+/home/jovyan/workspace/dreamer/combined-upload/exp40_rollout_gallery_bundle/eval_exp40_rollout_gallery.py:483: UserWarning: 'where' used without 'out', expect unitialized memory in output. If this is intentional, use out=None.
+  curve = np.divide(numerator, np.maximum(denominator, 1.0), where=denominator > 0)
+/home/jovyan/workspace/dreamer/combined-upload/exp40_rollout_gallery_bundle/eval_exp40_rollout_gallery.py:483: UserWarning: 'where' used without 'out', expect unitialized memory in output. If this is intentional, use out=None.
+  curve = np.divide(numerator, np.maximum(denominator, 1.0), where=denominator > 0)
+/home/jovyan/workspace/dreamer/combined-upload/exp40_rollout_gallery_bundle/eval_exp40_rollout_gallery.py:483: UserWarning: 'where' used without 'out', expect unitialized memory in output. If this is intentional, use out=None.
+  curve = np.divide(numerator, np.maximum(denominator, 1.0), where=denominator > 0)
+/home/jovyan/workspace/dreamer/combined-upload/exp40_rollout_gallery_bundle/eval_exp40_rollout_gallery.py:483: UserWarning: 'where' used without 'out', expect unitialized memory in output. If this is intentional, use out=None.
+  curve = np.divide(numerator, np.maximum(denominator, 1.0), where=denominator > 0)
+
+==============================================================================
+EXP40 ROLLOUT GALLERY COMPLETE
+Output directory: /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/analysis_outputs/exp40_h15_gallery_smoke_20260724_023142
+Upload this file back to ChatGPT: /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/analysis_outputs/exp40_h15_gallery_smoke_20260724_023142/UPLOAD_THIS_BACK_TO_CHAT.zip
+==============================================================================

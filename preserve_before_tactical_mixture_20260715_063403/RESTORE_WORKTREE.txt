@@ -1,0 +1,5 @@
+To restore the preserved smac-dreamer subtree:
+  rsync -a '/home/jovyan/workspace/dreamer/combined-upload/preserve_before_tactical_mixture_20260715_063403/smac-dreamer-working-tree/' '/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/'
+
+Git refs are preserved in:
+  /home/jovyan/workspace/dreamer/combined-upload/preserve_before_tactical_mixture_20260715_063403/repo_all_refs.bundle

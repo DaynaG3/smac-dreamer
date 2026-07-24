@@ -1,0 +1,45 @@
+Option-Critic P0/P1 Hotfix v3 Validation
+========================================
+
+Architecture:
+  dreamer_option_critic_v3_p0p1
+
+Core regression test state:
+  47 passed
+
+Coverage added beyond the prior 38-test package:
+  - episode-start manager boundaries receive task gradients
+  - exact Tactical Mixture v1.2 grouped manager migration
+  - exact copied worker residual migration
+  - step-zero per-state routing preservation
+  - manager unimix increases conservatively from zero
+  - temporal commitment decays from per-state reselection
+  - variable 5-10 imagination horizon is bounded/checkpointed
+  - world-model gradient freeze and optimizer guard
+  - top-tail KL detects rare policy damage
+  - high-confidence source action guard
+  - smooth termination bound retains gradient near cap
+
+Static validation:
+  Python compilation passed
+  shell syntax passed
+  payload 47-test suite passed
+  post-install fixture dry-run passed
+  post-install fixture full installation passed
+  generated v3 configuration resolution passed
+  complete post-install source/config audit passed
+  exact backup rollback passed
+
+Installer behavior:
+  fail-closed against a repository without Option-Critic v2
+  creates a complete backup of every replaced file
+  patches BF16 metric conversion idempotently
+  patches the world-model optimizer guard before unscale/step
+  introduces a new v3 config without overwriting the v2 config
+  does not resume or mutate the previous Option-Critic run
+
+Runtime boundary:
+  This packaging environment cannot execute the user's CUDA/SMACLite trainer.
+  The complete static audit must pass in the real repository before launch.
+  The corrected run must start fresh from Tactical Mixture v1.2
+  best_val_macro_winrate.pt (recorded macro validation win rate 0.375).

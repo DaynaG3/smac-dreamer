@@ -1,0 +1,6 @@
+exp45-pow2-direct-v1
+Built: 2026-07-20
+Base contract: installed Exp40 event-balanced R2-offline trainer
+Power heads: 1,2,4,8,16
+Dynamic shared exact head: 1..16 rotating supervision
+Binary/power-chunk composition: arbitrary supplied action horizon

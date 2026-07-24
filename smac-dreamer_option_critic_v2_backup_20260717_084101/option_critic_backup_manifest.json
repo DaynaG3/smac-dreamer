@@ -1,0 +1,30 @@
+{
+  "schema_version": 2,
+  "repo": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer",
+  "backed_up_files": [
+    "external/r2dreamer/dreamer.py",
+    "external/r2dreamer/trainer.py",
+    "scripts/train_r2dreamer_smaclite_multimap.py",
+    "src/smacdreamer/validation_trainer.py"
+  ],
+  "backed_up_sha256": {
+    "external/r2dreamer/dreamer.py": "d7b831f7fd61bddce1eb714240080407a5be0add6130a5ee5ecec34267f46cb1",
+    "external/r2dreamer/trainer.py": "3e4333b3b3260d87ced77c780f61eda1ed2c3d808ad312cc6a99a702543a0610",
+    "scripts/train_r2dreamer_smaclite_multimap.py": "2a8d76219265da05eacb0a5c15e71d5d4f60b25cb694c978772716f632a00c40",
+    "src/smacdreamer/validation_trainer.py": "31e509973ed1f293721f57bf588fa2b9d751e1c0599357f6d30fd65f96d65cca"
+  },
+  "introduced_files": [
+    "external/r2dreamer/hierarchical_options.py",
+    "external/r2dreamer/option_critic.py",
+    "external/r2dreamer/hierarchical_dreamer.py",
+    "scripts/audit_option_critic_hierarchy.py",
+    "scripts/static_audit_option_critic_hierarchy.sh",
+    "scripts/assert_option_critic_metrics.py",
+    "scripts/run_option_critic_2m.sh",
+    "tests/test_hierarchical_options.py",
+    "tests/test_option_critic_math.py",
+    "tests/test_hierarchical_auxiliary.py",
+    "tests/test_hierarchy_migration.py",
+    "configs/r2_2100_jepa_option_critic_8_v2.yaml"
+  ]
+}

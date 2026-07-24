@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "repo": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer",
+  "introduced_files": [
+    "tests/test_tactical_policy_hardened.py",
+    "scripts/audit_tactical_hardening.py",
+    "scripts/static_audit_tactical_hardening.sh",
+    "scripts/assert_tactical_hardened_metrics.py",
+    "scripts/run_tactical_hardened_2m.sh",
+    "configs/r2_2100_jepa_tactical_mixture_hardened.yaml"
+  ],
+  "backed_up_files": [
+    "configs/r2_2100_jepa_tactical_mixture.yaml",
+    "external/r2dreamer/dreamer.py",
+    "external/r2dreamer/tactical_policy.py",
+    "scripts/train_r2dreamer_smaclite_multimap.py",
+    "src/smacdreamer/validation_trainer.py"
+  ]
+}

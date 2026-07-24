@@ -1,0 +1,42 @@
+.....................................................                                           [100%]
+53 passed, 12 deselected in 10.28s
+...........................                                                                     [100%]
+========================================== warnings summary ===========================================
+tests/test_option_critic_v9_auxiliary.py::test_actual_schedule_routes_gradients_stage_by_stage_under_anomaly_detection
+  /home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/tests/test_option_critic_v9_auxiliary.py:226: UserWarning: Anomaly Detection has been enabled. This mode will increase the runtime and should only be enabled for debugging.
+    with torch.autograd.detect_anomaly():
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+27 passed, 1 warning in 9.56s
+[OK] Option-Critic v9 anchor-safe source/config audit passed
+{
+  "checkpoint": {
+    "path": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/adaptive_best_tactical_v1_2_2m_20260716_101741/best_val_macro_winrate.pt",
+    "sha256": "74875c693150d4cd21be27201e332cb0d8d4f6648c10701761154dcd6588d99e",
+    "step": 800004,
+    "val_macro_original_return": 12.359741715341801,
+    "val_macro_win_rate": 0.375
+  },
+  "checks": {
+    "all_slots_available": true,
+    "bounded_child_delta": true,
+    "complete_tactical_training_regime_preserved": true,
+    "critic_noise_guard": true,
+    "duration_1_4": true,
+    "eight_options": true,
+    "enabled": true,
+    "fixed_anchor_floor": true,
+    "fixed_horizon_15": true,
+    "fresh_run_local_replay": true,
+    "learned_termination_disabled": true,
+    "no_task_independent_diversity_pressure": true,
+    "tactical_module_disabled": true,
+    "two_frozen_source_groups": true,
+    "validation_start_and_200k": true,
+    "worker_before_manager": true,
+    "world_model_exactly_frozen": true
+  },
+  "config": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/configs/r2_2100_jepa_option_critic_8_v9_anchor_safe_h15_800k.yaml",
+  "repo": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer"
+}
+[OK] Option-Critic v9 anchor-safe static audit passed

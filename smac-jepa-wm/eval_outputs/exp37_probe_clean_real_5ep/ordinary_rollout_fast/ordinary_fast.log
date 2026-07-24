@@ -1,0 +1,21 @@
+Evaluating 1 checkpoint(s) split=eval device=cuda
+evaluating runs/rnn_seqmem_exp37_probe_clean_real_5ep_20260708_090932/checkpoint.pt
+/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33.py:1131: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  scaler = torch.cuda.amp.GradScaler(enabled=amp_enabled)
+training independent probe decoder module=decoder signature=[(192, 512), (512, 26)] epochs=5 max_batches_per_epoch=100
+/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33.py:1161: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  torch.cuda.amp.autocast(enabled=amp_enabled)
+probe epoch=1/5 updates=100 train_mse=0.013688
+probe epoch=2/5 updates=200 train_mse=0.003214
+probe epoch=3/5 updates=300 train_mse=0.002162
+probe epoch=4/5 updates=400 train_mse=0.001669
+probe epoch=5/5 updates=500 train_mse=0.001378
+saved probe decoder eval_outputs/exp37_probe_clean_real_5ep/ordinary_rollout_fast/eval_metrics.json/probe_decoders/rnn_seqmem_exp37_probe_clean_real_5ep_20260708_090932_checkpoint_meaningful_features_v2_probe_decoder.pt
+/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33.py:2009: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  torch.cuda.amp.autocast(enabled=amp_enabled)
+WARNING: no hidden target entities occurred in the evaluated subset. Overall, probe, action, memory, presence, and rollout metrics remain valid; hidden-only metrics are unavailable.
+done saved_epoch=5 global_step=15625 eval_metric_latent_mse=0.625903 eval_metric_latent_error_growth_ratio=1.312379 eval_corrected_native_dynamic_mae=0.038678 eval_corrected_native_dynamic_target_std_normalized_rmse=0.172391 eval_corrected_native_dynamic_coord_acc_0p05=0.749272 eval_corrected_native_dynamic_entity_acc_0p05=0.108610 eval_corrected_native_static_mae=0.017522 eval_corrected_native_vs_persistence_dynamic_mae_relative_improvement=-4.147201 eval_corrected_native_enemy_dynamic_mae=0.026495 eval_metric_presence_f1=0.994915 eval_metric_variance_normalized_latent_mse=0.945056 eval_metric_target_latent_std_mean=0.793014 eval_metric_pred_to_target_std_ratio=1.038358 eval_probe_reconstruction_mse=0.001869 eval_probe_rollout_mse=0.017443 eval_probe_rollout_gap_mse=0.015573 eval_probe_rollout_acc_0p05=0.509597 eval_probe_accuracy_drop_0p05=0.339432 eval_diagnostic_wrong_action_latent_penalty=0.016846 eval_diagnostic_memory_latent_gain=0.010221 eval_diagnostic_oracle_mask_latent_advantage=0.000504
+wrote eval_outputs/exp37_probe_clean_real_5ep/ordinary_rollout_fast/eval_metrics.json/eval_rnn_seqmem_exp37_probe_clean_real_5ep_20260708_090932_checkpoint.json
+wrote eval_outputs/exp37_probe_clean_real_5ep/ordinary_rollout_fast/eval_metrics.json/eval_rnn_seqmem_exp37_probe_clean_real_5ep_20260708_090932_checkpoint.csv
+wrote summary eval_outputs/exp37_probe_clean_real_5ep/ordinary_rollout_fast/summary.csv
+wrote summary eval_outputs/exp37_probe_clean_real_5ep/ordinary_rollout_fast/summary.jsonl

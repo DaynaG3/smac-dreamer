@@ -1,0 +1,12 @@
+stage	status	timestamp	exit	detail
+install	SKIPPED	2026-07-22T06:52:46+00:00	0	trainer already installed
+static_audit	STARTED	2026-07-22T06:52:46+00:00	-	
+static_audit	COMPLETED	2026-07-22T06:52:49+00:00	0	
+training	STARTED	2026-07-22T06:52:49+00:00	-	
+training	COMPLETED	2026-07-22T10:17:43+00:00	0	
+checkpoint	AVAILABLE	2026-07-22T10:17:43+00:00	0	/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/runs/rnn_seqmem_exp45_pow2_direct_20260722_065246/checkpoint.pt
+ordinary_eval	STARTED	2026-07-22T10:17:43+00:00	-	
+ordinary_eval	FAILED	2026-07-22T10:17:43+00:00	1	/home/jovyan/workspace/dreamer/combined-upload/forecast_ac15_ocv9_20260722_065246/forecast/logs/eval_ordinary.log
+hidden_eval	STARTED	2026-07-22T10:17:43+00:00	-	
+hidden_eval	FAILED	2026-07-22T10:17:43+00:00	1	/home/jovyan/workspace/dreamer/combined-upload/forecast_ac15_ocv9_20260722_065246/forecast/logs/eval_hidden.log
+pipeline	COMPLETED_WITH_FAILURES	2026-07-22T10:17:43+00:00	0	/home/jovyan/workspace/dreamer/combined-upload/forecast_ac15_ocv9_20260722_065246/forecast

@@ -2,6 +2,8 @@ import torch
 
 import tools
 
+# OPTION_CRITIC_HIERARCHY_V2
+
 
 class OnlineTrainer:
     def __init__(self, config, replay_buffer, logger, logdir, train_envs, eval_envs):
@@ -10,6 +12,9 @@ class OnlineTrainer:
         self.train_envs = train_envs
         self.eval_envs = eval_envs
         self.steps = int(config.steps)
+        self.start_step = int(getattr(config, 'start_step', 0) or 0)
+        self.current_step = self.start_step
+        # UNIFIED_PRIORITY_V1
         self.pretrain = int(config.pretrain)
         self.eval_every = int(config.eval_every)
         self.eval_episode_num = int(config.eval_episode_num)
@@ -35,6 +40,8 @@ class OnlineTrainer:
         ``.to()`` is a no-op when source and target devices match.
         """
         print("Evaluating the policy...")
+        if getattr(agent, 'hierarchical_enabled', False):
+            agent.set_hierarchy_training_step(train_step)
         envs = self.eval_envs
         agent.eval()
         # (B,)
@@ -110,7 +117,10 @@ class OnlineTrainer:
         """
         envs = self.train_envs
         video_cache = []
-        step = self.replay_buffer.count() * self._action_repeat
+        step = self.start_step + self.replay_buffer.count() * self._action_repeat
+        self.current_step = int(step)
+        if hasattr(self.replay_buffer, 'set_env_step'):
+            self.replay_buffer.set_env_step(step)
         update_count = 0
         # (B,)
         done = torch.ones(envs.env_num, dtype=torch.bool, device=agent.device)
@@ -156,6 +166,9 @@ class OnlineTrainer:
                         self.logger.write(step + i)  # to show all values on tensorboard
                         returns[i] = lengths[i] = 0
             step += int((~done).sum()) * self._action_repeat  # step is based on env side
+            self.current_step = int(step)
+            if hasattr(self.replay_buffer, 'set_env_step'):
+                self.replay_buffer.set_env_step(step)
             lengths += ~done
 
             # Step environments.  Each env backend handles device placement
@@ -172,39 +185,71 @@ class OnlineTrainer:
             # Policy inference on GPU.
             # "agent_state" is reset by the agent based on the "is_first" flag in trans.
             # (B, A)
+            if getattr(agent, 'hierarchical_enabled', False):
+                agent.set_hierarchy_training_step(step)
             act, agent_state = agent.act(trans.clone(), agent_state, eval=False)
 
             # Store transition.
             # We keep the observation and the action that produced it together.
             # Mask actions after an episode has ended.
             trans["action"] = act * ~done.unsqueeze(-1)
+            if getattr(agent, "hierarchical_enabled", False):
+                for option_key in (
+                    "option_id", "option_age", "option_has",
+                    "option_before_id", "option_before_age",
+                    "option_before_has", "option_action_age",
+                    "option_started", "option_terminated",
+                    "option_termination_eligible",
+                    "option_termination_prob",
+                ):
+                    trans[option_key] = agent_state[option_key]
             trans["stoch"] = agent_state["stoch"]
             trans["deter"] = agent_state["deter"]
             trans["episode"] = episode_ids  # Don't lift dim
             if "image" in trans:
                 video_cache.append(trans["image"][0])
+            if hasattr(self.replay_buffer, 'record_collection'):
+                self.replay_buffer.record_collection(trans, env_step=step)
             self.replay_buffer.add_transition(trans.detach())
             returns += trans["reward"][:, 0]
             # Update models after enough data has accumulated
-            if step // (envs.env_num * self._action_repeat) > self.batch_length + 1:
+            # Resume uses a new replay, so warm-up must depend on replay contents,
+            # never on the restored absolute environment step.
+            if self.replay_buffer.count() // envs.env_num > self.batch_length + 1:
                 if self._should_pretrain():
                     update_num = self.pretrain
                 else:
                     update_num = self._updates_needed(step)
+
                 for _ in range(update_num):
                     _metrics = agent.update(self.replay_buffer)
                     train_metrics = _metrics
+
                 update_count += update_num
-                # Log training metrics
-                if self._should_log(step):
-                    for name, value in train_metrics.items():
-                        value = tools.to_np(value) if isinstance(value, torch.Tensor) else value
-                        self.logger.scalar(f"train/{name}", value)
-                    self.logger.scalar("train/opt/updates", update_count)
-                    if self.video_pred_log:
-                        data, _, initial = self.replay_buffer.sample()
-                        self.logger.video("open_loop", tools.to_np(agent.video_pred(data, initial)))
-                    if self.params_hist_log:
-                        for name, param in agent._named_params.items():
-                            self.logger.histogram(name, tools.to_np(param))
-                    self.logger.write(step, fps=True)
+            # Log training metrics
+            if self._should_log(step):
+                if hasattr(self.replay_buffer, "metrics"):
+                    train_metrics.update(self.replay_buffer.metrics())
+
+                for name, value in train_metrics.items():
+                    value = (
+                        tools.to_np(value)
+                        if isinstance(value, torch.Tensor)
+                        else value
+                    )
+                    self.logger.scalar(f"train/{name}", value)
+
+                self.logger.scalar("train/opt/updates", update_count)
+
+                if self.video_pred_log:
+                    data, _, initial = self.replay_buffer.sample()
+                    self.logger.video(
+                        "open_loop",
+                        tools.to_np(agent.video_pred(data, initial)),
+                    )
+
+                if self.params_hist_log:
+                    for name, param in agent._named_params.items():
+                        self.logger.histogram(name, tools.to_np(param))
+
+                self.logger.write(step, fps=True)

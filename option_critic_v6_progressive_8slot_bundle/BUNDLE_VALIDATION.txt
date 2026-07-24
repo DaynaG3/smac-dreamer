@@ -1,0 +1,30 @@
+Option-Critic v6 progressive eight-slot bundle validation
+
+Design contracts:
+- 8 total option slots, 2 source tactical groups, 4 slots per group
+- exact Tactical Mixture v1.2 policy at step zero
+- options 0/1 are permanent source-backed anchors
+- options 2/3 unlock at 150k, 4/5 at 350k, 6/7 at 550k
+- each unlock gate ramps for 150k
+- each child policy-gradient/specialization scale ramps for 200k
+- child actions are bounded deltas around their source group
+- source group routing is separately distilled on real and imagined states
+- world model and inherited actor remain frozen
+- fresh 1M phase, startup validation, evaluation every 200k
+
+Validation completed in the packaging environment:
+- 65 mathematical, migration, state-machine, trust-region, and auxiliary-gradient tests passed
+- Python compilation passed
+- shell syntax passed
+- installer manifest verification passed
+- fail-closed installer dry-run passed on a synthetic integrated-v5 fixture
+- full fixture installation passed
+- generated v6 config resolved
+- complete post-install source/config static audit passed
+- exact backup restoration and introduced-file removal passed
+
+Boundary:
+- The packaging environment cannot execute the user's CUDA/SMACLite learner or Exp45 workload.
+- The real-repository static audit is mandatory before launch.
+- No finite test suite can guarantee monotonic validation improvement.
+- ZIP re-extraction and packaged manifest verification passed

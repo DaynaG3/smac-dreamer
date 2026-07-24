@@ -1,0 +1,32 @@
+...........................................................             [100%]
+59 passed in 3.67s
+[OK] Option-Critic v5 stability source/config audit passed
+{
+  "repo": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer",
+  "config": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/configs/r2_2100_jepa_option_critic_2_v5_stability_1m.yaml",
+  "checkpoint": {
+    "path": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/adaptive_best_tactical_v1_2_2m_20260716_101741/best_val_macro_winrate.pt",
+    "sha256": "74875c693150d4cd21be27201e332cb0d8d4f6648c10701761154dcd6588d99e",
+    "step": 800004,
+    "val_macro_win_rate": 0.375,
+    "val_macro_original_return": 12.359741715341801
+  },
+  "checks": {
+    "world_model_jepa": true,
+    "dense_reward_unchanged": true,
+    "hierarchy_enabled": true,
+    "two_source_options_only": true,
+    "short_bounded_duration": true,
+    "reactive_reselection_floor": true,
+    "staged_policy_learning": true,
+    "late_low_scale_termination": true,
+    "forward_action_distillation": true,
+    "source_manager_distillation": true,
+    "task_agnostic_regularizers_disabled": true,
+    "world_model_exactly_frozen": true,
+    "conservative_variable_horizon": true,
+    "validation_start_and_every_200k": true,
+    "fresh_uniform_replay": true
+  }
+}
+[OK] Option-Critic v5 stability static audit passed

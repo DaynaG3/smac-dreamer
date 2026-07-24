@@ -1,0 +1,60 @@
++ test -f /etc/shinit_v2
++ source /etc/shinit_v2
++++ sed -n 's/^NVRM.*Kernel Module *\([^() ]*\).*$/\1/p' /proc/driver/nvidia/version
++++ sed 's/^$/unknown/'
+++ NV_DRIVER_VERS=535.161.08
+++ export _CUDA_COMPAT_PATH=/usr/local/cuda/compat
+++ _CUDA_COMPAT_PATH=/usr/local/cuda/compat
++++ hostname
+++ _CUDA_COMPAT_CHECKFILE=/usr/local/cuda/compat/.535.161.08.jepa-dreamer-0.checked
+++ _CUDA_COMPAT_REALLIB=/usr/local/cuda/compat/lib.real
+++ _CUDA_COMPAT_SYMLINK=/usr/local/cuda/compat/lib
+++ '[' '(' '(' -n 535.161.08 -a -e /dev/nvidiactl ')' -o -e /dev/nvgpu ')' -a '!' -e /usr/local/cuda/compat/.535.161.08.jepa-dreamer-0.checked ']'
++++ cat /sys/module/mlx5_core/version
+++ _DETECTED_MOFED=5.4-3.1.0
+++ '[' -n 5.4-3.1.0 ']'
++++ uname -r
+++ '[' 5.4-3.1.0 '!=' 5.13.0-52-generic ']'
+++ dpkg --compare-versions 5.4-3.1.0 lt 4.9
+++ unset _DETECTED_MOFED
+++ unset _CUDA_COMPAT_CHECKFILE
+++ unset _CUDA_COMPAT_REALLIB
+++ unset _CUDA_COMPAT_SYMLINK
++ '[' -z '' ']'
++ return
++ set -euo pipefail
++++ dirname scripts/run_option_critic_2m.sh
+++ cd scripts
+++ pwd
++ SCRIPT_DIR=/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/scripts
+++ cd /home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/scripts/..
+++ pwd
++ DEFAULT_REPO=/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer
++ REPO=/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer
++ ROOT=/home/jovyan/workspace/dreamer/combined-upload
++ PY=/home/jovyan/workspace/dreamer/combined-upload/.venv/bin/python
++ CONFIG=configs/r2_2100_jepa_option_critic_8_v2.yaml
++ FINAL_STEP=2000000
++ [[ -z /home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/adaptive_best_tactical_v1_2_2m_20260716_101741 ]]
++ SOURCE_CHECKPOINT=/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/exp40_best_weights_unified_priority_2m_20260714_090503/best_val_macro_winrate.pt
++ SOURCE_RUN_META=/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/exp40_best_weights_unified_priority_2m_20260714_090503/run_meta.json
++ [[ -x /home/jovyan/workspace/dreamer/combined-upload/.venv/bin/python ]]
++ [[ -d /home/jovyan/workspace/dreamer/combined-upload/smac-dreamer ]]
++ [[ configs/r2_2100_jepa_option_critic_8_v2.yaml = /* ]]
++ CONFIG_PATH=/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/configs/r2_2100_jepa_option_critic_8_v2.yaml
++ [[ -s /home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/configs/r2_2100_jepa_option_critic_8_v2.yaml ]]
++ [[ -s /home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/exp40_best_weights_unified_priority_2m_20260714_090503/best_val_macro_winrate.pt ]]
++ [[ -s /home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/exp40_best_weights_unified_priority_2m_20260714_090503/run_meta.json ]]
++ [[ 2000000 =~ ^[0-9]+$ ]]
++ ((  FINAL_STEP > 0  ))
+++ readlink -f /home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/adaptive_best_tactical_v1_2_2m_20260716_101741
++ SOURCE_RUN_REAL=/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/adaptive_best_tactical_v1_2_2m_20260716_101741
+++ readlink -f /home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/exp40_best_weights_unified_priority_2m_20260714_090503/best_val_macro_winrate.pt
++ CHECKPOINT_REAL=/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/exp40_best_weights_unified_priority_2m_20260714_090503/best_val_macro_winrate.pt
+++ readlink -f /home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/exp40_best_weights_unified_priority_2m_20260714_090503/run_meta.json
++ META_REAL=/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/exp40_best_weights_unified_priority_2m_20260714_090503/run_meta.json
+++ dirname /home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/exp40_best_weights_unified_priority_2m_20260714_090503/best_val_macro_winrate.pt
++ [[ /home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/exp40_best_weights_unified_priority_2m_20260714_090503 == \/\h\o\m\e\/\j\o\v\y\a\n\/\w\o\r\k\s\p\a\c\e\/\d\r\e\a\m\e\r\/\c\o\m\b\i\n\e\d\-\u\p\l\o\a\d\/\s\m\a\c\-\d\r\e\a\m\e\r\/\l\o\g\s\/\r\2\d\r\e\a\m\e\r\/\a\d\a\p\t\i\v\e\_\b\e\s\t\_\t\a\c\t\i\c\a\l\_\v\1\_\2\_\2\m\_\2\0\2\6\0\7\1\6\_\1\0\1\7\4\1 ]]
++ echo '[FAIL] checkpoint is not inside selected v1.2 run'
+[FAIL] checkpoint is not inside selected v1.2 run
++ exit 1

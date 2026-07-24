@@ -1,0 +1,20 @@
+{
+  "BUNDLE_VALIDATION.txt": "f33fff2222c87fa9f92ec7c649cce7909a8e6af7ebbccaecd9ec3e3735180664",
+  "README.md": "9eba1d1889c99998afca82c892ef5af40733ee5bb4ba7576aecb8d8bb4419e09",
+  "install_unified_priority.py": "5c2ee2d0427c12c195244a0b156316ecd6067b8c59f4c41a57c6d0d445572bc5",
+  "payload/external/r2dreamer/adaptive_buffer.py": "f7684fe05645621c3a06cc6cb0b5d184820f19e7828721a5453e1c77753587d0",
+  "payload/scripts/assert_unified_priority_metrics.py": "8e33c2aac64d2faacab92e8c50ea3019dffb9aa954d3429c7602a36821cd3751",
+  "payload/scripts/infer_resume_step.py": "a6f803c12ff6c969e0e1e4e407e6e4bddedb3bd33624c68a82202450ee6ca16e",
+  "payload/scripts/inspect_unified_priority_checkpoint.py": "bbcada1cc7e2441d676ef3c3ff9b6dba6d118166253f702af1cf45e6dcc09e0f",
+  "payload/scripts/preflight_unified_priority.py": "df0c7e430c0d60080b0c0d0e868b07dc0dbeadb45d3a2cec54b6ee7b9141ecef",
+  "payload/scripts/run_unified_priority_resume_full.sh": "518eb45c7fdd22c586edccf741c275730d8fa2e73447dd2789826f0fbca944be",
+  "payload/scripts/run_unified_priority_resume_smoke.sh": "5cc23118985ae99c8736592e828a8d074521fb399134ae6ee941a1df02bb7f6f",
+  "payload/scripts/static_audit_unified_priority.sh": "dc11b3427c188ee9fbdbf66fa171997fecd10e4109a8414ea0f6708f5ebfd113",
+  "payload/src/smacdreamer/adaptive_priority.py": "f1c4b8a61b98d7aadc66d453e22ac79fed0621c94b211ccba9a7811b5fe72ab8",
+  "payload/tests/test_adaptive_buffer_math.py": "c9cf71b721e7e02378da8cb1a8a165282cc3d98a97a444ed75293541009850b7",
+  "payload/tests/test_adaptive_buffer_torchrl.py": "5c950fe00811c0c13dd6c898784fb86825c855579c043c7ff59499082412ff13",
+  "payload/tests/test_adaptive_map_sampler.py": "279f4b9946ded882999362d0e06e6d221014022345171eba63039bda1d71c44c",
+  "payload/tests/test_adaptive_priority_controller.py": "43271d7f20758f7452f3f965d780bd5bf4dcaf74a19b4690dbdafd03240e8486",
+  "preserve_before_unified_priority.sh": "767d9688994165a38c59243eb690dd65bb905398d8a980af03a53447525e2166",
+  "restore_from_installer_backup.sh": "9aab70abca48c8a1be7819de04dbb8a00efd8b219e475abbffc60ac0e90803e7"
+}

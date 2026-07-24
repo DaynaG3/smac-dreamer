@@ -1,0 +1,19 @@
+
+# Generated training artefacts
+**/logs/
+**/wandb/
+**/outputs/
+**/checkpoints/
+**/artifacts/
+**/__pycache__/
+**/.pytest_cache/
+
+# Model and replay artefacts
+*.pt
+*.pth
+*.ckpt
+*.npy
+*.npz
+*.memmap
+*.pyc
+*.bundle

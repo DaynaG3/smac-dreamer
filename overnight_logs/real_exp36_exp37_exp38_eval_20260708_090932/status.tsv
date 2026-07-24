@@ -1,0 +1,10 @@
+Preflight REAL Exp36/37/38 files and eval discovery	OK	rc=0
+Train Exp36 real action/change	OK	rc=0
+Ordinary rollout metrics Exp36	OK	rc=0
+Hidden belief metrics Exp36	OK	rc=0
+Train Exp37 real probe-clean	OK	rc=0
+Ordinary rollout metrics Exp37	FAIL	rc=1; see /home/jovyan/workspace/dreamer/combined-upload/overnight_logs/real_exp36_exp37_exp38_eval_20260708_090932/eval_exp37_ordinary.log
+Hidden belief metrics Exp37	FAIL	rc=1; see /home/jovyan/workspace/dreamer/combined-upload/overnight_logs/real_exp36_exp37_exp38_eval_20260708_090932/eval_exp37_hidden.log
+Train Exp38 real anchored	FAIL	rc=1; see /home/jovyan/workspace/dreamer/combined-upload/overnight_logs/real_exp36_exp37_exp38_eval_20260708_090932/train_exp38.log
+Ordinary rollout metrics Exp38	FAIL	rc=2; see /home/jovyan/workspace/dreamer/combined-upload/overnight_logs/real_exp36_exp37_exp38_eval_20260708_090932/eval_exp38_ordinary.log
+Hidden belief metrics Exp38	FAIL	rc=2; see /home/jovyan/workspace/dreamer/combined-upload/overnight_logs/real_exp36_exp37_exp38_eval_20260708_090932/eval_exp38_hidden.log

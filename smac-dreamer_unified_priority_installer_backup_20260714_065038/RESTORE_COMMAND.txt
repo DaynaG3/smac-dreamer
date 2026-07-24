@@ -1,0 +1,2 @@
+Run from the repository parent:
+rsync -a '/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer_unified_priority_installer_backup_20260714_065038/' '/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/'

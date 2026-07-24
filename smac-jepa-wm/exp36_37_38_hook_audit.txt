@@ -1,0 +1,26 @@
+Hook audit over: smac_jepa/train_jepa_exp31_exp35.py, smac_jepa/train_jepa_exp31_exp33.py
+SMAC_JEPA_EXP34_TWO_MASK_LOSS                    FOUND
+SMAC_JEPA_PRESENCE_NEG_CLASS_WEIGHT              FOUND
+SMAC_JEPA_EXP36_ACTION_CHANGE                    not found
+SMAC_JEPA_CHANGED_COORD_WEIGHT                   not found
+SMAC_JEPA_ACTION_SHUFFLE_CONTRAST_WEIGHT         not found
+SMAC_JEPA_ACTION_SHUFFLE_MARGIN                  not found
+SMAC_JEPA_ACTION_EFFECTIVE_WINDOW_WEIGHT         not found
+SMAC_JEPA_EXP37_PROBE_CLEAN                      not found
+SMAC_JEPA_DECODER_WEIGHT_SCALE                   not found
+SMAC_JEPA_BARLOW_WEIGHT_SCALE                    not found
+SMAC_JEPA_REP_WEIGHT_SCALE                       not found
+SMAC_JEPA_SIGREG_WEIGHT_SCALE                    not found
+SMAC_JEPA_PROBE_ALIGN_WEIGHT                     not found
+SMAC_JEPA_EXP38_ANCHORED_RESIDUAL                not found
+SMAC_JEPA_USE_ANCHORED_BELIEF                    not found
+SMAC_JEPA_ANCHOR_RESIDUAL_HIDDEN                 not found
+SMAC_JEPA_ANCHOR_GATE_BIAS                       not found
+SMAC_JEPA_ANCHOR_STABLE_WEIGHT                   not found
+SMAC_JEPA_ANCHOR_CHANGED_WEIGHT                  not found
+SMAC_JEPA_DELTA_WEIGHT                           not found
+SMAC_JEPA_HIDDEN_RECON_WEIGHT                    not found
+SMAC_JEPA_REAPPEAR_WEIGHT                        not found
+
+FOUND means the trainer can react to that env key.
+not found means the wrapper still runs, but that specific intended change may be a no-op unless already wired under another name.

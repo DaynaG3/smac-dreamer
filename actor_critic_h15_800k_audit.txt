@@ -1,0 +1,22 @@
+{
+  "checkpoint": {
+    "path": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/adaptive_best_tactical_v1_2_2m_20260716_101741/best_val_macro_winrate.pt",
+    "sha256": "74875c693150d4cd21be27201e332cb0d8d4f6648c10701761154dcd6588d99e",
+    "step": 800004,
+    "val_macro_win_rate": 0.375
+  },
+  "checks": {
+    "exactly_800k_enforced_by_runner": true,
+    "fixed_horizon_15": true,
+    "fresh_run_local_replay": true,
+    "option_critic_disabled": true,
+    "ordinary_tactical_actor_critic": true,
+    "source_training_regime_preserved": true,
+    "startup_and_200k_validation": true,
+    "tactical_mixture_enabled": true
+  },
+  "config": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/configs/r2_2100_jepa_tactical_mixture_v1_2_actor_critic_h15_800k.yaml",
+  "source_config": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/configs/r2_2100_jepa_tactical_mixture_v1_2.yaml"
+}
+[OK] Tactical-v1.2 ordinary actor-critic H=15 source/config audit passed
+[OK] Tactical-v1.2 ordinary actor-critic H=15 static audit passed

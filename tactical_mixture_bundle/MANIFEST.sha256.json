@@ -1,0 +1,13 @@
+{
+  "BUNDLE_VALIDATION.txt": "7017f746060dd5bee8195767dc27e2dd41dc463a3de36e6648efdc29462e5874",
+  "README.md": "9a8663290680b36f0dfaea6fa981693bd3cadb5aa5eb2b5d7053d54ee49aeb4d",
+  "install_tactical_mixture.py": "8826018fc8888743e2db63a363e637737c7f3fee2392979d3d99b17ed75b40bd",
+  "payload/external/r2dreamer/tactical_policy.py": "620cd6ec49b96120b90721b5273d1731dc31c216c9d7469661f0199718c5a156",
+  "payload/scripts/assert_tactical_metrics.py": "2e4329fec8ada1c32eb2378821e30f1b21239fda8df049eec60cfe4b42262ef7",
+  "payload/scripts/preflight_tactical_mixture.py": "06794e9a31727a62cf87d74a2fd0767756e8ceba53365a5550d82c500c31eb7e",
+  "payload/scripts/run_tactical_mixture_2m.sh": "5ee046d5db4f4d72b94f428275ea323dc67712325ae68c80cdcc56bf3e98ed20",
+  "payload/scripts/static_audit_tactical_mixture.sh": "52759da593ea5b3940f5ebb71ae31ad8869dd5954a5cdcbbffb6ee9c08e7d7d4",
+  "payload/tests/test_tactical_policy.py": "294fc8a62ebca3d86ef899953ebcb8503af8e03712f84640fec0235d987058e1",
+  "preserve_before_tactical_mixture.sh": "7f12d6a967c1a588239ec28ef3fbc7e3cb064d62afb3421db7b85ad7f957f87e",
+  "restore_from_installer_backup.sh": "a1f89e9de02b38e2ed958d63839e9ee70dc09628dba02777ca7ac9f2fd107005"
+}

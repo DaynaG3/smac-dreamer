@@ -1,0 +1,3 @@
+[eval] ORDINARY_EVAL=/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33_anchored.py
+[eval] HIDDEN_EVAL=/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py
+[missing checkpoint] /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/runs/rnn_seqmem_exp38_anchor_real_5ep_20260708_090932/checkpoint.pt

@@ -1,0 +1,305 @@
+#!/usr/bin/env python3
+"""Fail-closed, transactional installer for Option-Critic v9."""
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import hashlib
+import json
+import os
+import pathlib
+import shutil
+import subprocess
+import tempfile
+from typing import Any
+
+from omegaconf import OmegaConf
+
+BUNDLE = pathlib.Path(__file__).resolve().parent
+PAYLOAD = BUNDLE / "payload"
+MANIFEST = BUNDLE / "MANIFEST.sha256.json"
+
+REPLACED = (
+    "external/r2dreamer/hierarchical_options.py",
+    "external/r2dreamer/hierarchical_dreamer.py",
+    "external/r2dreamer/option_critic.py",
+)
+INTRODUCED = (
+    "configs/r2_2100_jepa_option_critic_8_v9_anchor_safe_h15_800k.yaml",
+    "scripts/audit_option_critic_v9_anchor_safe.py",
+    "scripts/static_audit_option_critic_v9_anchor_safe.sh",
+    "scripts/assert_option_critic_v9_metrics.py",
+    "scripts/run_option_critic_v9_anchor_safe_800k.sh",
+    "scripts/run_exp45_full_train_eval_resilient.sh",
+    "scripts/run_forecast_first_then_option_critic_v9_800k.sh",
+    "tests/test_option_critic_v9_core.py",
+    "tests/test_option_critic_v9_migration.py",
+    "tests/test_option_critic_v9_auxiliary.py",
+)
+EXECUTABLE_SUFFIXES = {".py", ".sh"}
+
+
+def die(message: str) -> None:
+    raise SystemExit(f"[FAIL] {message}")
+
+
+def sha256(path: pathlib.Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def verify_bundle() -> None:
+    if not MANIFEST.is_file():
+        die(f"bundle manifest missing: {MANIFEST}")
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    if manifest.get("schema_version") != 1 or not isinstance(manifest.get("files"), dict):
+        die("invalid bundle manifest schema")
+    for relative, expected in manifest["files"].items():
+        path = BUNDLE / relative
+        if not path.is_file():
+            die(f"bundle file missing: {relative}")
+        actual = sha256(path)
+        if actual != expected:
+            die(f"bundle hash mismatch: {relative}; expected={expected}; actual={actual}")
+    print(f"[OK] verified {len(manifest['files'])} bundle hashes")
+
+
+def build_config(repo: pathlib.Path) -> Any:
+    tactical_path = repo / "configs/r2_2100_jepa_tactical_mixture_v1_2.yaml"
+    v6_path = repo / "configs/r2_2100_jepa_option_critic_8_v6_progressive_1m.yaml"
+    if not tactical_path.is_file():
+        die("missing Tactical Mixture v1.2 source config")
+    if not v6_path.is_file():
+        die("missing integrated v6 config")
+
+    config = OmegaConf.load(tactical_path)
+    old = OmegaConf.load(v6_path)
+    old_hierarchy = OmegaConf.to_container(old.hierarchical_options, resolve=True)
+    if not isinstance(old_hierarchy, dict):
+        die("v6 hierarchical_options block did not resolve to a mapping")
+
+    old_hierarchy.update(
+        {
+            "enabled": True,
+            "num_options": 8,
+            "source_manager_group_count": 2,
+            "min_duration": 1,
+            "max_duration": 4,
+            # The execution SMDP is fixed for the whole run. There is no moving
+            # commitment or termination curriculum.
+            "commitment_warmup_steps": 0,
+            "commitment_full_steps": 1,
+            "commitment_reselect_initial": 0.0,
+            "commitment_reselect_final": 0.0,
+            "termination_warmup_steps": 800_000,
+            "termination_full_steps": 800_001,
+            "termination_cap_full_steps": 800_002,
+            "termination_max_probability_during_ramp": 0.30,
+            "termination_max_probability_final": 0.30,
+            "termination_loss_scale": 0.0,
+            "termination_entropy_scale": 0.0,
+            "termination_collapse_scale": 0.0,
+            # Frozen source-group routing; only within-group identity learns.
+            "manager_unimix_initial": 0.0,
+            "manager_unimix_final": 0.0,
+            "slot_manager_unimix": 0.01,
+            "slot_anchor_floor": 0.40,
+            "slot_pair_unlock_initial_steps": 0,
+            "slot_pair_unlock_interval_steps": 1,
+            "slot_unlock_ramp_steps": 1,
+            # Child policies learn before the slot manager is allowed to route
+            # based on their value estimates.
+            "worker_pg_warmup_steps": 20_000,
+            "worker_pg_full_steps": 150_000,
+            "manager_pg_warmup_steps": 100_000,
+            "manager_pg_full_steps": 300_000,
+            "slot_pg_ramp_steps": 130_000,
+            "slot_delta_scale_max": 0.10,
+            "option_critic_consistency_scale": 1.0,
+            "worker_scale_initial": 0.25,
+            "worker_scale_warmup_steps": 0,
+            "worker_scale_full_steps": 1,
+            "worker_scale_max": 0.25,
+            # Keep the controlled comparison on the checkpointed world model.
+            "world_model_grad_scale_initial": 0.0,
+            "world_model_grad_scale_final": 0.0,
+            # Fixed H=15 for direct RSSM R2-Dreamer comparison.
+            "imag_horizon_initial_max": 15,
+            "imag_horizon_final_max": 15,
+            "imag_horizon_window": 1,
+            "imag_horizon_ramp_steps": 1,
+            # No task-independent pressure to manufacture distinct options.
+            "manager_collapse_scale": 0.0,
+            "manager_mi_scale": 0.0,
+            "action_diversity_scale": 0.0,
+            "residual_cosine_scale": 0.0,
+        }
+    )
+    config.hierarchical_options = OmegaConf.create(old_hierarchy)
+    config.tactical_mixture.enabled = False
+    config.buffer.scratch_dir = "replay_v9_anchor_safe_h15"
+    config.validation.run_at_start = True
+    config.validation.every = 200_000
+    config.imag_horizon = 15
+    if "compile" in config:
+        config.compile = False
+    if "model" in config and "compile" in config.model:
+        config.model.compile = False
+    if "wandb" in config:
+        config.wandb.run_name = "tactical_v12_option_critic_v9_anchor_safe_h15_800k"
+
+    OmegaConf.to_container(config, resolve=True, throw_on_missing=True)
+    return config
+
+
+def validate_source(repo: pathlib.Path) -> None:
+    source = repo / "external/r2dreamer/hierarchical_options.py"
+    if not source.is_file():
+        die(f"missing integrated source: {source}")
+    text = source.read_text(encoding="utf-8")
+    if "dreamer_option_critic_v9_anchor_safe_8slot" in text:
+        die("v9 is already installed")
+    if "dreamer_option_critic_v6_progressive_8slot" not in text:
+        die("expected integrated v6 source; do not layer v9 over v7 or another variant")
+
+    for relative in REPLACED:
+        source_path = repo / relative
+        payload_path = PAYLOAD / relative
+        if not source_path.is_file():
+            die(f"replace target missing: {relative}")
+        if not payload_path.is_file():
+            die(f"payload missing: {relative}")
+        compile(payload_path.read_text(encoding="utf-8"), str(payload_path), "exec")
+    for relative in INTRODUCED[1:]:
+        payload_path = PAYLOAD / relative
+        if not payload_path.is_file():
+            die(f"payload missing: {relative}")
+        if payload_path.suffix == ".py":
+            compile(payload_path.read_text(encoding="utf-8"), str(payload_path), "exec")
+    preexisting = [relative for relative in INTRODUCED if (repo / relative).exists()]
+    if preexisting:
+        die(f"v9-introduced paths already exist: {preexisting}")
+
+
+def atomic_replace(staged: pathlib.Path, destination: pathlib.Path) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    os.replace(staged, destination)
+
+
+def install(repo: pathlib.Path, config: Any) -> pathlib.Path:
+    stamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup = repo.parent / f"{repo.name}_option_critic_v9_anchor_safe_backup_{stamp}"
+    backup.mkdir(parents=False, exist_ok=False)
+
+    git_head = subprocess.check_output(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"], text=True
+    ).strip()
+    git_status = subprocess.check_output(
+        ["git", "-C", str(repo), "status", "--short"], text=True
+    )
+    (backup / "git_head.txt").write_text(git_head + "\n", encoding="utf-8")
+    (backup / "git_status.txt").write_text(git_status, encoding="utf-8")
+
+    for relative in REPLACED:
+        destination = backup / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(repo / relative, destination)
+
+    staged_paths: dict[str, pathlib.Path] = {}
+    try:
+        with tempfile.TemporaryDirectory(prefix="option_critic_v9_stage_", dir=repo.parent) as temp_dir:
+            temp = pathlib.Path(temp_dir)
+            for relative in REPLACED:
+                staged = temp / relative
+                staged.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(PAYLOAD / relative, staged)
+                staged_paths[relative] = staged
+            config_relative = INTRODUCED[0]
+            staged_config = temp / config_relative
+            staged_config.parent.mkdir(parents=True, exist_ok=True)
+            OmegaConf.save(config, staged_config)
+            # Reparse the exact serialized configuration before mutation.
+            OmegaConf.to_container(
+                OmegaConf.load(staged_config), resolve=True, throw_on_missing=True
+            )
+            staged_paths[config_relative] = staged_config
+            for relative in INTRODUCED[1:]:
+                staged = temp / relative
+                staged.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(PAYLOAD / relative, staged)
+                staged_paths[relative] = staged
+
+            # Commit only after every staged artifact has been validated.
+            for relative in REPLACED + INTRODUCED:
+                atomic_replace(staged_paths[relative], repo / relative)
+                destination = repo / relative
+                destination.chmod(
+                    0o755 if destination.suffix in EXECUTABLE_SUFFIXES else 0o644
+                )
+
+        # Verify exact payload bytes after commit.
+        for relative in REPLACED + INTRODUCED[1:]:
+            if sha256(repo / relative) != sha256(PAYLOAD / relative):
+                raise RuntimeError(f"post-install hash mismatch: {relative}")
+
+        manifest = {
+            "schema_version": 1,
+            "replaced": list(REPLACED),
+            "introduced": list(INTRODUCED),
+            "sha256": {relative: sha256(backup / relative) for relative in REPLACED},
+            "git_head": git_head,
+        }
+        (backup / "option_critic_v9_anchor_safe_backup_manifest.json").write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        return backup
+    except Exception:
+        # Exact rollback on any commit/verification error.
+        for relative in REPLACED:
+            source = backup / relative
+            if source.is_file():
+                destination = repo / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, destination)
+        for relative in INTRODUCED:
+            path = repo / relative
+            if path.exists():
+                path.unlink()
+        raise
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--repo", type=pathlib.Path, required=True)
+    parser.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args()
+
+    verify_bundle()
+    repo = args.repo.resolve()
+    if not repo.is_dir():
+        die(f"repo does not exist: {repo}")
+    subprocess.check_call(
+        ["git", "-C", str(repo), "rev-parse", "--show-toplevel"],
+        stdout=subprocess.DEVNULL,
+    )
+    validate_source(repo)
+    config = build_config(repo)
+
+    if args.dry_run:
+        print(
+            "[OK] v9 dry-run matched integrated v6, parsed all payloads, "
+            "and resolved the Tactical-v1.2-based H=15 config"
+        )
+        return
+
+    try:
+        backup = install(repo, config)
+    except Exception as exc:
+        die(f"transaction failed and was rolled back: {exc}")
+    target = repo / INTRODUCED[0]
+    print("[OK] installed Option-Critic v9 anchor-safe 8-slot hotfix")
+    print(f"[OK] backup: {backup}")
+    print(f"[OK] config: {target}")
+
+
+if __name__ == "__main__":
+    main()

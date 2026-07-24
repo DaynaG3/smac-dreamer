@@ -1,0 +1,79 @@
+Option-Critic Hierarchy v2 -- validation record
+================================================
+
+Final payload tests
+-------------------
+38 passed
+
+Covered invariants
+------------------
+- centered option residuals sum to zero
+- residuals remain hard bounded after centering
+- worker scale and termination schedules
+- minimum duration is never violated
+- maximum duration always creates a manager boundary
+- same-option reselection remains legal
+- reset selects a fresh option and resets action age
+- fixed warm-up hazard is used before learned termination
+- learned termination gradient sign is correct
+- forced/ineligible decisions receive zero termination gradient
+- the complete termination head receives zero gradient during warm-up
+- manager gradients occur only on option boundaries
+- option critic zero residual exactly matches inherited state value
+- BF16 path remains finite
+- post-mask action statistics remain finite
+- real auxiliary loss routes gradients to manager, worker, option critic,
+  termination, and hierarchy value
+- replay pre-decision option state reproduces the real call-and-return decision
+- v1.2 -> eight-option migration is controlled and shape-strict
+- v1.2 selector is temperature-softened to avoid starving new options
+- new option embeddings are near-neutral but non-identical
+- strict hierarchy resume rejects metadata mismatch
+
+Installer fixture
+-----------------
+- manifest verification: passed
+- dry-run against synthetic audited v1.2 source: passed
+- full install: passed
+- generated config resolution: passed
+- patched Python AST/compilation: passed
+- shell syntax: passed
+- static source/config audit: passed
+- source checkpoint lineage audit: passed
+- backup manifest restore returned every replaced file to its original hash
+- all introduced files were removed by restore
+
+Defects found and corrected during audit
+----------------------------------------
+1. Replay initially stored only post-action carry age. Starting imagination
+   from that state would evaluate termination twice at the same posterior.
+   Added explicit pre-decision replay fields and a regression test.
+
+2. The first design kept ordinary Dreamer actor/value losses alongside the
+   hierarchy, training the same value network toward two different behaviour
+   policies. Hierarchy mode now removes policy/value/repval from the base
+   loss before total-loss construction.
+
+3. Copying the highly confident two-way v1.2 selector at full scale would
+   starve options 2--7. The manager hidden representation is retained while
+   the output is temperature-softened and new rows start near neutral.
+
+4. Termination entropy/collapse regularizers originally remained active during
+   the fixed-hazard warm-up. They are now multiplied by the same activation
+   blend, making the learned termination head exactly frozen through 100k.
+
+5. Diversity pair rotation originally depended on replay count, which caps at
+   buffer capacity. It now uses a checkpointed per-update counter so all pairs
+   continue rotating throughout training.
+
+6. A hierarchy-value log-probability shape mismatch was found by the synthetic
+   end-to-end gradient test and fixed before packaging.
+
+7. Real replay option metrics were added separately from imagined metrics so
+   dwell/boundary/termination behaviour can be diagnosed directly.
+
+Honest boundary
+---------------
+No full CUDA/SMAClite environment run was possible in the packaging sandbox.
+The installer is fail-closed and the fast audit runs against the actual local
+v1.2 source, checkpoint, metadata, and generated configuration before launch.

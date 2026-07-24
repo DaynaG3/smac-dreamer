@@ -1,0 +1,27 @@
+{
+  "git_head": "4d521da937c0b7319ab04af1f708177efc2b9839",
+  "introduced": [
+    "configs/r2_2100_jepa_option_critic_8_v9_anchor_safe_h15_800k.yaml",
+    "scripts/audit_option_critic_v9_anchor_safe.py",
+    "scripts/static_audit_option_critic_v9_anchor_safe.sh",
+    "scripts/assert_option_critic_v9_metrics.py",
+    "scripts/run_option_critic_v9_anchor_safe_800k.sh",
+    "scripts/run_forecast_first_then_option_critic_v9_800k.sh",
+    "tests/test_option_critic_v9_core.py",
+    "tests/test_option_critic_v9_migration.py",
+    "tests/test_option_critic_v9_auxiliary.py"
+  ],
+  "replaced": [
+    "external/r2dreamer/hierarchical_options.py",
+    "external/r2dreamer/hierarchical_dreamer.py",
+    "external/r2dreamer/option_critic.py",
+    "scripts/run_exp45_full_train_eval_resilient.sh"
+  ],
+  "schema_version": 1,
+  "sha256": {
+    "external/r2dreamer/hierarchical_dreamer.py": "71a5a958549a47cb40a516a560b092580a85f3552df8fe9c727cb676469de166",
+    "external/r2dreamer/hierarchical_options.py": "bd53acf87a6b67aa15af12c1c7bf21a7d73a09154d3ad6259e628bfdaec0f729",
+    "external/r2dreamer/option_critic.py": "bd8945742c4d16995e8ec68f3d2097605af96e7342108ecfa95cb2f6f551e5e2",
+    "scripts/run_exp45_full_train_eval_resilient.sh": "fedc08fef8232801042b0d97f5c43d39a80f1a2e94b6c67042452d6d39eea1ba"
+  }
+}

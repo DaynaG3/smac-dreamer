@@ -1,0 +1,37 @@
+...................................                                                                                                                                                  [100%]
+35 passed in 2.70s
+3 auxiliary hierarchy integration tests passed
+[OK] Option-Critic hierarchy source/config audit passed
+{
+  "repo": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer",
+  "config": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/configs/r2_2100_jepa_option_critic_8_v2.yaml",
+  "checkpoint": {
+    "path": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/adaptive_best_tactical_v1_2_2m_20260716_101741/best_val_macro_winrate.pt",
+    "sha256": "74875c693150d4cd21be27201e332cb0d8d4f6648c10701761154dcd6588d99e",
+    "step": 800004,
+    "val_macro_win_rate": 0.375,
+    "val_macro_original_return": 12.359741715341801,
+    "tactical_architecture": "tactical_mixture_v1_2",
+    "has_training_state": false
+  },
+  "checks": {
+    "world_model": true,
+    "reward": true,
+    "horizon": true,
+    "hierarchy_enabled": true,
+    "eight_options": true,
+    "duration": true,
+    "learned_termination": true,
+    "conservative_worker": true,
+    "non_forced_capacity": true,
+    "tactical_disabled": true,
+    "adaptive_disabled": true,
+    "uniform_replay": true,
+    "fresh_replay": true,
+    "startup_validation_disabled": true,
+    "validation_interval": true,
+    "source_ast": true,
+    "migration_lineage": true
+  }
+}
+[OK] Option-Critic hierarchy v2 static audit passed

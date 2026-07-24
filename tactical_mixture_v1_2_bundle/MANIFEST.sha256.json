@@ -1,0 +1,16 @@
+{
+  "files": {
+    "BUNDLE_VALIDATION.txt": "6b804b438c1e8c2c87720c159c3979b2abd2f09f8de5909aece8833c58ec5344",
+    "README.md": "e05543971e61e8d40a45d784f57ad6c0654c4353a58b828eb05e84b2290f21f6",
+    "install_tactical_v1_2.py": "0bb9d97933031839e5204f437ef6ecab8dcd6fc019dd9403d68ecc98e5ca96de",
+    "payload/external/r2dreamer/__pycache__/tactical_policy.cpython-313.pyc": "7e43c86619b34bf62b985c22752c0e355dc31d9bb5455ea1aec8ac11f16bf3d1",
+    "payload/external/r2dreamer/tactical_policy.py": "0e581eca534a179c9d2c3ad55bd907044bb7269205b30445828a0b95b840c37c",
+    "payload/scripts/assert_tactical_v1_2_metrics.py": "e0b9157306fdcbb116bbee1fd29c826d61e6a8104b4d9eedd4f04fabb552fe7a",
+    "payload/scripts/audit_tactical_v1_2.py": "ce4a43a8771abc1c3e4a1dc09c9b169bacff7ccf4376c40ccef00ff55de5bfce",
+    "payload/scripts/run_tactical_v1_2_2m.sh": "c615f40c99eb4ad752b4667ee03544d1343a60c1f7753ec7668919a4d22cb8cd",
+    "payload/scripts/static_audit_tactical_v1_2.sh": "9b478cee84e4ef6e8614aa57a1f9632f28c326341147292711a50bcac33c3a4c",
+    "payload/tests/test_tactical_policy_v1_2.py": "372dfcccd78c885e50f6abc3014507d3899aeb6402280226134d731e2218bc96",
+    "restore_tactical_v1_2_backup.sh": "e857f8a115e77243163764a61c8da5448032f4a73dc4d226ca7fb0094ebd8729"
+  },
+  "schema_version": 1
+}

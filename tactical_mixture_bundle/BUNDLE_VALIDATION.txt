@@ -1,0 +1,67 @@
+TACTICAL MIXTURE ACTOR V1 — BUNDLE VALIDATION
+
+Artifact build validation:
+
+1. Python syntax
+   PASS: installer
+   PASS: tactical_policy.py
+   PASS: preflight_tactical_mixture.py
+   PASS: assert_tactical_metrics.py
+
+2. Shell syntax
+   PASS: preserve_before_tactical_mixture.sh
+   PASS: restore_from_installer_backup.sh
+   PASS: static_audit_tactical_mixture.sh
+   PASS: run_tactical_mixture_2m.sh
+
+3. Tactical module unit tests
+   PASS: 6 tests
+   - uniform selector initialization
+   - exact zero-residual legacy-logit equivalence
+   - selector/residual/embedding gradient flow
+   - marginal-usage balance loss
+   - masked tactic-effect JS diagnostic
+   - architecture metadata and duration guard
+
+4. Installer patch-contract fixtures
+   PASS: Dreamer AST-scoped patch fixture
+   PASS: multimap-runner patch fixture
+   PASS: one-line actor-logit formatting
+   PASS: patched AST parsing
+
+5. Full synthetic installation fixture
+   PASS: dry-run
+   PASS: timestamped backup creation
+   PASS: full installation
+   PASS: patched Python compilation
+   PASS: generated tactical config
+   PASS: adaptive priority disabled
+   PASS: startup validation disabled
+   PASS: validation every 200,000
+   PASS: imagination horizon preserved at 5
+
+6. Sanity corrections made during review
+   - Added one-line and multiline source-format support.
+   - Added strict legacy/tactical checkpoint migration.
+   - Added source-run metadata and JEPA checkpoint hash preflight.
+   - Added original Buffer selection when adaptive priority is disabled.
+   - Corrected W&B run-name placement under cfg.wandb.run_name.
+   - Kept tactic out of JEPA action tensors and replay.
+   - Kept primitive masks unchanged.
+   - Kept duration=1 to avoid persistent-state integration in v1.
+
+Not executable in this artifact environment:
+
+- A full SMAClite/CUDA rollout with the user's JEPA checkpoint and local
+  adaptive-priority-modified tree. The installer is therefore fail-closed and
+  must pass --dry-run against that exact local tree before writing anything.
+- A scientific claim that tactical modes improve held-out win rate. That is the
+  purpose of the 2M experiment.
+
+Known scientific caveat:
+
+- The old primitive logit distribution is exactly preserved at initialization,
+  but sampling a tactic consumes an RNG draw. Therefore stochastic sampled
+  primitive actions are distribution-equivalent, not guaranteed bit-for-bit
+  identical under an unchanged global RNG stream. Deterministic evaluation is
+  identical while the residual remains zero.

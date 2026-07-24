@@ -1,0 +1,24 @@
+REAL Exp36/37/38 audit
+CLI flags in train_jepa_exp31_exp35.py:
+  --event-dynamics-weight                    FOUND
+  --event-dynamics-threshold                 FOUND
+  --delta-loss-weight                        FOUND
+  --inverse-dynamics-weight                  FOUND
+  --inverse-dynamics-hidden-dim              FOUND
+  --r2-rep-scale                             FOUND
+  --r2-barlow-scale                          FOUND
+  --sigreg-weight                            FOUND
+  --decoder-weight                           FOUND
+  --hidden-reconstruction-weight             FOUND
+  --last-seen-anchor-weight                  FOUND
+  --hidden-presence-weight                   FOUND
+  --reappearance-consistency-weight          FOUND
+Env keys in wrapper/base:
+  SMAC_JEPA_EXP34_TWO_MASK_LOSS              FOUND
+  SMAC_JEPA_PRESENCE_NEG_CLASS_WEIGHT        FOUND
+  SMAC_JEPA_ANCHOR_GATE_INIT                 FOUND
+  SMAC_JEPA_ANCHOR_DELTA_SCALE               FOUND
+  SMAC_JEPA_ANCHOR_HIDDEN_CORRECTION_SCALE   FOUND
+  SMAC_JEPA_ANCHOR_GATE_SPARSITY_WEIGHT      FOUND
+Exp36 inverse-dynamics restriction removed: YES
+PASS: real Exp36/37/38 runners use existing supported knobs.

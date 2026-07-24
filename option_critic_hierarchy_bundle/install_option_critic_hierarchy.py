@@ -1,0 +1,837 @@
+#!/usr/bin/env python3
+"""Fail-closed Option-Critic hierarchy installer for Tactical Mixture v1.2.
+
+The installer expects the current repository to contain the audited v1.2
+centered trust-region integration. It backs up every replaced file, validates
+all source anchors and the generated config before writing, and rolls back on
+any exception.
+"""
+
+from __future__ import annotations
+
+import argparse
+import ast
+import datetime as dt
+import hashlib
+import json
+import math
+import pathlib
+import re
+import shutil
+import subprocess
+import textwrap
+from typing import Callable
+
+from omegaconf import OmegaConf
+
+
+BUNDLE = pathlib.Path(__file__).resolve().parent
+PAYLOAD = BUNDLE / "payload"
+MARKER = "# OPTION_CRITIC_HIERARCHY_V2"
+OLD_MARKER = "# OPTION_CRITIC_HIERARCHY_V1"
+
+
+def reject_existing_hierarchy(text: str, label: str) -> None:
+    if OLD_MARKER in text:
+        die(
+            f"{label} contains the superseded Option-Critic v1 patch; "
+            "restore its backup before installing v2"
+        )
+    if MARKER in text:
+        die(f"{label} already contains Option-Critic hierarchy v2")
+
+
+def die(message: str) -> None:
+    raise SystemExit(f"[FAIL] {message}")
+
+
+def sha256_file(path: pathlib.Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def verify_manifest() -> None:
+    path = BUNDLE / "MANIFEST.sha256.json"
+    if not path.is_file():
+        die("bundle manifest missing")
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    entries = manifest.get("files")
+    if int(manifest.get("schema_version", -1)) != 1 or not isinstance(entries, dict):
+        die("invalid bundle manifest")
+    for rel, expected in entries.items():
+        candidate = BUNDLE / rel
+        if not candidate.is_file():
+            die(f"bundle file missing: {rel}")
+        actual = sha256_file(candidate)
+        if actual != expected:
+            die(f"bundle hash mismatch: {rel}: {actual} != {expected}")
+    print(f"[OK] verified {len(entries)} bundle file hashes")
+
+
+def replace_once(text: str, old: str, new: str, label: str) -> str:
+    count = text.count(old)
+    if count == 0 and new in text:
+        return text
+    if count != 1:
+        die(f"{label}: expected exactly one source match, found {count}")
+    return text.replace(old, new, 1)
+
+
+def method_node(text: str, name: str) -> ast.FunctionDef:
+    tree = ast.parse(text)
+    matches = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name == name
+    ]
+    if len(matches) != 1:
+        die(f"method {name!r}: expected one AST match, found {len(matches)}")
+    return matches[0]
+
+
+def method_segment(text: str, name: str) -> tuple[int, int, str]:
+    node = method_node(text, name)
+    if node.end_lineno is None:
+        die(f"method {name!r} lacks end_lineno")
+    lines = text.splitlines(keepends=True)
+    start = sum(len(line) for line in lines[: node.lineno - 1])
+    end = sum(len(line) for line in lines[: node.end_lineno])
+    return start, end, "".join(lines[node.lineno - 1 : node.end_lineno])
+
+
+def transform_method(text: str, name: str, transform: Callable[[str], str]) -> str:
+    start, end, segment = method_segment(text, name)
+    changed = transform(segment)
+    if changed == segment:
+        die(f"method {name!r} was not changed")
+    return text[:start] + changed + text[end:]
+
+
+def insert_before_statement(segment: str, pattern: str, insertion: str, label: str) -> str:
+    count = segment.count(pattern)
+    if count != 1:
+        die(f"{label}: expected one statement anchor, found {count}")
+    return segment.replace(pattern, insertion + pattern, 1)
+
+
+def append_to_method(segment: str, insertion: str) -> str:
+    lines = segment.splitlines(keepends=True)
+    if not lines:
+        die("cannot append to empty method")
+    body_indent = " " * 8
+    # Method source is class-indented by four spaces; insertion already uses
+    # eight spaces and is placed before the next class method boundary.
+    if not insertion.endswith("\n"):
+        insertion += "\n"
+    return "".join(lines) + insertion
+
+
+MIGRATION_METHODS = r'''    def set_hierarchy_training_step(self, step):
+        if not self.hierarchical_enabled:
+            return
+        self.hierarchical_options.set_training_step(step)
+        if getattr(self, "_frozen_hierarchical_options", None) is not None:
+            self._frozen_hierarchical_options.set_training_step(step)
+
+    def hierarchical_metadata(self):
+        if not self.hierarchical_enabled:
+            return {
+                "schema_version": 1,
+                "architecture": "legacy",
+                "enabled": False,
+            }
+        metadata = self.hierarchical_options.metadata()
+        metadata["enabled"] = True
+        return metadata
+
+    def load_hierarchical_compatible_state_dict(
+        self,
+        state_dict,
+        checkpoint_metadata=None,
+        tactical_metadata=None,
+    ):
+        return load_hierarchical_compatible_state(
+            self,
+            state_dict,
+            checkpoint_metadata=checkpoint_metadata,
+            tactical_metadata=tactical_metadata,
+        )
+
+'''
+
+
+
+def patch_dreamer(text: str) -> str:
+    reject_existing_hierarchy(text, "dreamer.py")
+    if "TACTICAL_MIXTURE_V1_2_CENTERED_TRUST_REGION" not in text:
+        die("dreamer.py is not the audited Tactical Mixture v1.2 source")
+
+    import_anchor = "from tactical_policy import TacticalMixturePolicy\n"
+    import_block = (
+        import_anchor
+        + "from hierarchical_dreamer import (\n"
+        + "    build_hierarchical_modules, clone_and_freeze_hierarchy,\n"
+        + "    hierarchical_act_logits, hierarchical_auxiliary_loss,\n"
+        + "    hierarchy_state_dict_fields, hierarchy_training_state,\n"
+        + "    load_hierarchy_training_state, load_hierarchical_compatible_state,\n"
+        + "    update_slow_option_critic,\n"
+        + ")\n"
+        + "\n"
+        + MARKER
+        + "\n"
+    )
+    text = replace_once(text, import_anchor, import_block, "hierarchy imports")
+
+    def patch_init(segment: str) -> str:
+        anchor = "        # P0.2: prob threshold for the predicted availability mask -> logit cut.\n"
+        segment = insert_before_statement(
+            segment,
+            anchor,
+            "        build_hierarchical_modules(self, config)\n\n",
+            "hierarchy construction",
+        )
+        named_anchor = "        self._named_params = OrderedDict()\n"
+        registration = (
+            "        if self.hierarchical_enabled:\n"
+            "            modules[\"hierarchical_options\"] = self.hierarchical_options\n"
+            "            modules[\"option_critic\"] = self.option_critic\n"
+            "            if self.hierarchical_options.settings.freeze_base_actor:\n"
+            "                modules.pop(\"actor\", None)\n"
+            "            if self.hierarchical_options.settings.freeze_feature_adapter:\n"
+            "                modules.pop(\"jepa_feature_adapter\", None)\n"
+        )
+        segment = insert_before_statement(
+            segment,
+            named_anchor,
+            registration,
+            "hierarchy optimizer registration",
+        )
+        return segment
+
+    text = transform_method(text, "__init__", patch_init)
+
+    def patch_train(segment: str) -> str:
+        anchor = "        return self\n"
+        insertion = (
+            "        if self.hierarchical_enabled and hasattr(\n"
+            "            self, \"_frozen_hierarchical_options\"\n"
+            "        ):\n"
+            "            self._frozen_hierarchical_options.train(False)\n"
+            "            self._slow_option_critic.train(False)\n"
+        )
+        return insert_before_statement(segment, anchor, insertion, "hierarchy eval mode")
+
+    text = transform_method(text, "train", patch_train)
+
+    def patch_clone(segment: str) -> str:
+        return append_to_method(segment, "        clone_and_freeze_hierarchy(self)\n")
+
+    text = transform_method(text, "clone_and_freeze", patch_clone)
+
+    def patch_initial(segment: str) -> str:
+        # Replace the sole return statement semantically.
+        dedented = textwrap.dedent(segment)
+        tree = ast.parse(dedented)
+        returns = [node for node in ast.walk(tree) if isinstance(node, ast.Return)]
+        if len(returns) != 1 or returns[0].end_lineno is None:
+            die("get_initial_state: expected one return")
+        lines = segment.splitlines(keepends=True)
+        node = returns[0]
+        original = "".join(lines[node.lineno - 1 : node.end_lineno])
+        indent = original[: len(original) - len(original.lstrip())]
+        replacement = (
+            f"{indent}initial_state = {ast.get_source_segment(dedented, node.value)}\n"
+            f"{indent}if self.hierarchical_enabled:\n"
+            f"{indent}    for key, value in hierarchy_state_dict_fields(\n"
+            f"{indent}        B, self.device\n"
+            f"{indent}    ).items():\n"
+            f"{indent}        initial_state[key] = value\n"
+            f"{indent}return initial_state\n"
+        )
+        return segment.replace(original, replacement, 1)
+
+    text = transform_method(text, "get_initial_state", patch_initial)
+
+    def patch_act(segment: str) -> str:
+        segment = insert_before_statement(
+            segment,
+            "        if self.action_masking:\n",
+            "        option_fields = {}\n",
+            "act option field initialization",
+        )
+        anchor = (
+            "            agent_active = obs[\"agent_slot_mask\"] "
+            "* obs[\"agent_alive_mask\"]\n"
+        )
+        insertion = (
+            "            if self.hierarchical_enabled:\n"
+            "                raw_logits, option_fields = hierarchical_act_logits(\n"
+            "                    self, feat, raw_logits, state, obs,\n"
+            "                    deterministic=eval,\n"
+            "                )\n"
+        )
+        segment = insert_before_statement(
+            segment, anchor, insertion, "real hierarchy action"
+        )
+        old_variants = (
+            '{"stoch": stoch, "deter": deter, "prev_action": action},',
+            '{\n                "stoch": stoch,\n                "deter": deter,\n                "prev_action": action,\n            },',
+        )
+        matches = [variant for variant in old_variants if variant in segment]
+        if len(matches) != 1:
+            die(f"act state return: expected one formatting variant, found {len(matches)}")
+        old = matches[0]
+        if old.startswith("{") and "\n" not in old:
+            new = (
+                '{"stoch": stoch, "deter": deter, "prev_action": action, '
+                '**option_fields},'
+            )
+        else:
+            new = (
+                '{\n                "stoch": stoch,\n'
+                '                "deter": deter,\n'
+                '                "prev_action": action,\n'
+                '                **option_fields,\n'
+                '            },'
+            )
+        return segment.replace(old, new, 1)
+
+    text = transform_method(text, "act", patch_act)
+
+    def patch_update(segment: str) -> str:
+        candidates = (
+            "            (stoch, deter), mets = self._cal_grad(p_data, initial)\n",
+            "            (stoch, deter), mets = self._cal_grad(\n"
+            "                p_data, initial\n"
+            "            )\n",
+        )
+        matches = [candidate for candidate in candidates if candidate in segment]
+        if len(matches) != 1:
+            die(f"update gradient call: expected one formatting variant, found {len(matches)}")
+        call = matches[0]
+        auxiliary = (
+            call
+            + "            if self.hierarchical_enabled:\n"
+            + "                hierarchy_loss, hierarchy_metrics = (\n"
+            + "                    hierarchical_auxiliary_loss(\n"
+            + "                        self, data, stoch, deter\n"
+            + "                    )\n"
+            + "                )\n"
+            + "                self._scaler.scale(hierarchy_loss).backward()\n"
+            + "                mets.update(hierarchy_metrics)\n"
+            + "                mets[\"option/total_loss\"] = hierarchy_loss.detach()\n"
+        )
+        return segment.replace(call, auxiliary, 1)
+
+    text = transform_method(text, "update", patch_update)
+
+    def patch_jepa_behavior_losses(segment: str) -> str:
+        # Hierarchical acting uses manager + option worker. The ordinary
+        # Dreamer imagination uses the frozen base actor. Training one value
+        # network on both policies would create conflicting behavior targets.
+        anchor = "        total_loss = sum([v * self._loss_scales[k] for k, v in losses.items()])\n"
+        insertion = (
+            "        if self.hierarchical_enabled:\n"
+            "            for legacy_key in (\"policy\", \"value\", \"repval\"):\n"
+            "                losses.pop(legacy_key, None)\n"
+            "            metrics[\"option/legacy_behavior_losses_disabled\"] = (\n"
+            "                torch.ones((), device=feat.device)\n"
+            "            )\n"
+        )
+        return insert_before_statement(
+            segment, anchor, insertion, "disable legacy behavior losses"
+        )
+
+    text = transform_method(
+        text, "_cal_grad_jepa", patch_jepa_behavior_losses
+    )
+
+    def patch_slow(segment: str) -> str:
+        return append_to_method(segment, "        update_slow_option_critic(self)\n")
+
+    text = transform_method(text, "_update_slow_target", patch_slow)
+
+    def patch_training_state(segment: str) -> str:
+        anchor = '            "torch_cuda_rng": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,\n'
+        insertion = anchor + '            "hierarchical_options": hierarchy_training_state(self),\n'
+        return replace_once(
+            segment, anchor, insertion, "hierarchy training checkpoint"
+        )
+
+    text = transform_method(text, "training_state_dict", patch_training_state)
+
+    def patch_load_training(segment: str) -> str:
+        return append_to_method(
+            segment,
+            "        load_hierarchy_training_state(self, state)\n",
+        )
+
+    text = transform_method(text, "load_training_state_dict", patch_load_training)
+
+    insertion_anchor = "    def _update_slow_target(self):\n"
+    if text.count(insertion_anchor) != 1:
+        die("hierarchy migration insertion anchor is ambiguous")
+    text = text.replace(insertion_anchor, MIGRATION_METHODS + insertion_anchor, 1)
+    ast.parse(text)
+    return text
+
+
+def patch_trainer(text: str) -> str:
+    reject_existing_hierarchy(text, "trainer.py")
+    node = method_node(text, "begin")
+    lines = text.splitlines(keepends=True)
+    segment = "".join(lines[node.lineno - 1 : node.end_lineno])
+    anchor = '            trans["action"] = act * ~done.unsqueeze(-1)\n'
+    if segment.count(anchor) != 1:
+        die(f"trainer begin action assignment: found {segment.count(anchor)}")
+    insertion = anchor + (
+        "            if getattr(agent, \"hierarchical_enabled\", False):\n"
+        "                for option_key in (\n"
+        "                    \"option_id\", \"option_age\", \"option_has\",\n"
+        "                    \"option_before_id\", \"option_before_age\",\n"
+        "                    \"option_before_has\", \"option_action_age\",\n"
+        "                    \"option_started\", \"option_terminated\",\n"
+        "                    \"option_termination_eligible\",\n"
+        "                    \"option_termination_prob\",\n"
+        "                ):\n"
+        "                    trans[option_key] = agent_state[option_key]\n"
+    )
+    changed = segment.replace(anchor, insertion, 1)
+    act_anchor = "            act, agent_state = agent.act(trans.clone(), agent_state, eval=False)\n"
+    if changed.count(act_anchor) != 1:
+        die(f"trainer hierarchy step/action anchor count={changed.count(act_anchor)}")
+    changed = changed.replace(
+        act_anchor,
+        "            if getattr(agent, 'hierarchical_enabled', False):\n"
+        "                agent.set_hierarchy_training_step(step)\n"
+        + act_anchor,
+        1,
+    )
+    start = sum(len(line) for line in lines[: node.lineno - 1])
+    end = sum(len(line) for line in lines[: node.end_lineno])
+    text = text[:start] + changed + text[end:]
+    eval_node = method_node(text, "eval")
+    eval_lines = text.splitlines(keepends=True)
+    eval_segment = "".join(
+        eval_lines[eval_node.lineno - 1 : eval_node.end_lineno]
+    )
+    eval_anchor = '        print("Evaluating the policy...")\n'
+    if eval_segment.count(eval_anchor) != 1:
+        die("trainer eval hierarchy-step anchor is ambiguous")
+    eval_segment = eval_segment.replace(
+        eval_anchor,
+        eval_anchor
+        + "        if getattr(agent, 'hierarchical_enabled', False):\n"
+        + "            agent.set_hierarchy_training_step(train_step)\n",
+        1,
+    )
+    eval_start = sum(len(line) for line in eval_lines[: eval_node.lineno - 1])
+    eval_end = sum(len(line) for line in eval_lines[: eval_node.end_lineno])
+    text = text[:eval_start] + eval_segment + text[eval_end:]
+    # Marker after imports.
+    tree = ast.parse(text)
+    imports = [n for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom))]
+    if not imports:
+        die("trainer has no imports")
+    last = max(imports, key=lambda n: n.end_lineno or n.lineno)
+    out = text.splitlines(keepends=True)
+    out.insert(last.end_lineno, "\n" + MARKER + "\n")
+    text = "".join(out)
+    ast.parse(text)
+    return text
+
+
+def patch_runner(text: str) -> str:
+    reject_existing_hierarchy(text, "multimap runner")
+    if "TACTICAL_MIXTURE_V1" not in text:
+        die("runner is not tactical-integrated")
+
+    # Model config plumbing follows the existing tactical config assignment.
+    tactical_anchor = (
+        "    config.model.tactical_mixture = OmegaConf.create(\n"
+        "        OmegaConf.to_container(tactical_cfg, resolve=True)\n"
+        "    )\n"
+    )
+    hierarchy_plumbing = tactical_anchor + (
+        "    hierarchy_cfg = cfg.get('hierarchical_options') or OmegaConf.create(\n"
+        "        {'enabled': False}\n"
+        "    )\n"
+        "    config.model.hierarchical_options = OmegaConf.create(\n"
+        "        OmegaConf.to_container(hierarchy_cfg, resolve=True)\n"
+        "    )\n"
+    )
+    text = replace_once(text, tactical_anchor, hierarchy_plumbing, "hierarchy config plumbing")
+
+    # Replace source load with hierarchy-aware migration. Current v1.2 runner
+    # calls load_tactical_compatible_state_dict exactly once.
+    load_pattern = re.compile(
+        r"(?P<indent>^[ \t]*)tactical_load = agent\.load_tactical_compatible_state_dict\(\n"
+        r"(?P<body>(?:(?P=indent)[ \t]+.*\n)+?)"
+        r"(?P=indent)\)\n",
+        re.MULTILINE,
+    )
+    matches = list(load_pattern.finditer(text))
+    if len(matches) != 1:
+        die(f"hierarchy checkpoint migration: expected one tactical load, found {len(matches)}")
+    match = matches[0]
+    indent = match.group("indent")
+    replacement = (
+        f"{indent}hierarchy_load = agent.load_hierarchical_compatible_state_dict(\n"
+        f"{indent}    ckpt[\"agent_state_dict\"],\n"
+        f"{indent}    checkpoint_metadata=ckpt.get(\"hierarchical_options_metadata\"),\n"
+        f"{indent}    tactical_metadata=ckpt.get(\"tactical_mixture_metadata\"),\n"
+        f"{indent})\n"
+        f"{indent}tactical_load = {{\n"
+        f"{indent}    'migrated_legacy': bool(hierarchy_load.get('migrated', False))\n"
+        f"{indent}}}\n"
+    )
+    text = text[: match.start()] + replacement + text[match.end() :]
+
+    # Extra checkpoint state.
+    metadata_anchor = "'tactical_mixture_metadata': agent.tactical_metadata(),"
+    if text.count(metadata_anchor) != 1:
+        die(f"runner tactical checkpoint metadata anchor count={text.count(metadata_anchor)}")
+    text = text.replace(
+        metadata_anchor,
+        metadata_anchor
+        + "\n                'hierarchical_options_metadata': "
+        + "agent.hierarchical_metadata(),",
+        1,
+    )
+
+    # Run metadata near world-model/tactical metadata.
+    run_meta_anchor = '        "tactical_mixture": OmegaConf.to_container(\n'
+    if run_meta_anchor not in text:
+        die("runner run metadata tactical anchor missing")
+    # Insert before tactical metadata entry, avoiding fragile closing braces.
+    text = text.replace(
+        run_meta_anchor,
+        '        "hierarchical_options": OmegaConf.to_container(\n'
+        '            config.model.hierarchical_options, resolve=True\n'
+        '        ),\n'
+        + run_meta_anchor,
+        1,
+    )
+
+    # Startup print before replay summary or tactical print.
+    startup_anchor = " tactical : enabled="
+    if startup_anchor not in text:
+        die("runner tactical startup print missing")
+    # Insert a separate print immediately before the tactical print statement
+    # using the source line that starts that statement.
+    lines = text.splitlines(keepends=True)
+    indices = [i for i, line in enumerate(lines) if startup_anchor in line]
+    if len(indices) != 1:
+        die(f"runner tactical startup line count={len(indices)}")
+    print_start = indices[0]
+    while print_start > 0 and "print(" not in lines[print_start]:
+        print_start -= 1
+    hierarchy_print = (
+        "    print(\n"
+        "        ' hierarchy: enabled='\n"
+        "        f\"{bool(config.model.hierarchical_options.get('enabled', False))} \"\n"
+        "        f\"K={int(config.model.hierarchical_options.get('num_options', 8))} \"\n"
+        "        f\"duration={int(config.model.hierarchical_options.get('min_duration', 3))}-\"\n"
+        "        f\"{int(config.model.hierarchical_options.get('max_duration', 20))}\"\n"
+        "    )\n"
+    )
+    lines.insert(print_start, hierarchy_print)
+    text = "".join(lines)
+
+    # Marker after existing unified/tactical markers.
+    marker_anchor = "# TACTICAL_MIXTURE_V1\n"
+    if marker_anchor in text:
+        text = text.replace(marker_anchor, marker_anchor + MARKER + "\n", 1)
+    else:
+        text = MARKER + "\n" + text
+    ast.parse(text)
+    return text
+
+
+def patch_validation(text: str) -> str:
+    reject_existing_hierarchy(text, "validation_trainer.py")
+
+    def patch_eval_step(segment: str) -> str:
+        anchor = "        agent.eval()\n"
+        insertion = (
+            "        if getattr(agent, 'hierarchical_enabled', False):\n"
+            "            agent.set_hierarchy_training_step(train_step)\n"
+        )
+        return insert_before_statement(
+            segment, anchor, insertion, "validation hierarchy phase step"
+        )
+
+    text = transform_method(text, "eval", patch_eval_step)
+    tree = ast.parse(text)
+    matches = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.If) or node.end_lineno is None:
+            continue
+        source = ast.get_source_segment(text, node.test) or ""
+        if 'hasattr(agent, "tactical_metadata")' in source:
+            matches.append(node)
+    if len(matches) != 1:
+        die(f"validation tactical metadata block count={len(matches)}")
+    node = matches[0]
+    lines = text.splitlines(keepends=True)
+    source_line = lines[node.lineno - 1]
+    indent = source_line[: len(source_line) - len(source_line.lstrip())]
+    addition = (
+        f'{indent}if hasattr(agent, "hierarchical_metadata"):\n'
+        f'{indent}    best_payload["hierarchical_options_metadata"] = (\n'
+        f'{indent}        agent.hierarchical_metadata()\n'
+        f'{indent}    )\n'
+    )
+    lines.insert(node.end_lineno, addition)
+    text = "".join(lines)
+    tree = ast.parse(text)
+    imports = [
+        item for item in tree.body
+        if isinstance(item, (ast.Import, ast.ImportFrom))
+    ]
+    if imports:
+        last = max(imports, key=lambda item: item.end_lineno or item.lineno)
+        lines = text.splitlines(keepends=True)
+        lines.insert(last.end_lineno, "\n" + MARKER + "\n")
+        text = "".join(lines)
+    else:
+        text = MARKER + "\n" + text
+    ast.parse(text)
+    return text
+
+
+PATCHERS = {
+    "external/r2dreamer/dreamer.py": patch_dreamer,
+    "external/r2dreamer/trainer.py": patch_trainer,
+    "scripts/train_r2dreamer_smaclite_multimap.py": patch_runner,
+    "src/smacdreamer/validation_trainer.py": patch_validation,
+}
+
+
+def build_config(repo: pathlib.Path, source_config: str) -> tuple[pathlib.Path, Any]:
+    source = pathlib.Path(source_config).expanduser()
+    if not source.is_absolute():
+        source = repo / source
+    source = source.resolve()
+    if not source.is_file():
+        die(f"v1.2 source config missing: {source}")
+    cfg = OmegaConf.load(source)
+    if str(cfg.world_model.backend) != "jepa":
+        die("world_model.backend must remain jepa")
+    if str(cfg.reward.name) != "dense_v3":
+        die("reward.name must remain dense_v3")
+    if int(cfg.imag_horizon) != 5:
+        die("imag_horizon must remain 5")
+    if not bool(cfg.tactical_mixture.enabled):
+        die("source config is not Tactical Mixture v1.2")
+    if int(cfg.tactical_mixture.num_tactics) != 2:
+        die("source v1.2 config must contain exactly two tactics")
+
+    cfg.tactical_mixture.enabled = False
+    cfg.hierarchical_options = OmegaConf.create(
+        {
+            "enabled": True,
+            "num_options": 8,
+            "option_embedding_dim": 16,
+            "age_embedding_dim": 8,
+            "hidden_dim": 128,
+            "min_duration": 3,
+            "max_duration": 20,
+            "initial_termination_probability": 0.10,
+            "termination_warmup_steps": 100000,
+            "termination_full_steps": 300000,
+            "termination_max_probability_during_ramp": 0.30,
+            "termination_max_probability_final": 0.80,
+            "termination_cap_full_steps": 500000,
+            "termination_margin_normalized": 0.02,
+            "termination_loss_scale": 0.05,
+            "termination_entropy_scale": 0.0,
+            "termination_collapse_scale": 0.05,
+            "termination_mean_min": 0.02,
+            "termination_mean_max": 0.60,
+            "termination_advantage_clip": 1.0,
+            "termination_min_advantage_magnitude": 0.01,
+            "termination_max_target_disagreement": 0.25,
+            "termination_unimix": 0.02,
+            "eval_sample_termination": False,
+            "eval_termination_hazard_threshold": 1.0,
+            "manager_unimix_initial": 0.20,
+            "manager_unimix_final": 0.02,
+            "manager_unimix_decay_steps": 300000,
+            "manager_pg_scale": 1.0,
+            "manager_pg_warmup_steps": 25000,
+            "manager_pg_full_steps": 100000,
+            "manager_entropy_scale": 1.0e-4,
+            "manager_collapse_scale": 0.05,
+            "manager_mi_target_normalized": 0.10,
+            "manager_mi_scale": 0.02,
+            "max_usage_target": 0.75,
+            "min_effective_options": 3.0,
+            "worker_pg_scale": 1.0,
+            "worker_entropy_scale": 0.0,
+            "worker_scale_warmup_steps": 25000,
+            "worker_scale_full_steps": 100000,
+            "worker_scale_max": 0.25,
+            "max_abs_residual_logit": 2.0,
+            "max_residual_to_base": 0.25,
+            "residual_guard_scale": 0.05,
+            "base_kl_target": 0.02,
+            "base_kl_scale": 0.10,
+            "action_diversity_target": 0.002,
+            "action_diversity_scale": 0.05,
+            "residual_cosine_target": 0.95,
+            "residual_cosine_scale": 0.01,
+            "max_diversity_states": 128,
+            "max_diversity_pairs": 12,
+            "option_critic_scale": 1.0,
+            "hierarchy_value_scale": 0.5,
+            "slow_target_update": 1,
+            "slow_target_fraction": 0.005,
+            "freeze_base_actor": True,
+            "freeze_feature_adapter": True,
+        }
+    )
+    cfg.sampling_mode = "shuffled_round_robin"
+    cfg.adaptive_priority.enabled = False
+    cfg.adaptive_priority.map.enabled = False
+    cfg.adaptive_priority.sequence.enabled = False
+    cfg.buffer.scratch_dir = "replay"
+    cfg.validation.run_at_start = False
+    cfg.validation.every = 200000
+    if "compile" in cfg:
+        cfg.compile = False
+    if "model" in cfg and "compile" in cfg.model:
+        cfg.model.compile = False
+    if "wandb" in cfg:
+        cfg.wandb.run_name = "tactical_v1_2_option_critic_v2_8_3to20_2m"
+    target = repo / "configs/r2_2100_jepa_option_critic_8_v2.yaml"
+    OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
+    return target, cfg
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--repo", type=pathlib.Path, required=True)
+    parser.add_argument(
+        "--source-config",
+        default="configs/r2_2100_jepa_tactical_mixture_v1_2.yaml",
+    )
+    parser.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args()
+
+    verify_manifest()
+    repo = args.repo.expanduser().resolve()
+    try:
+        git_root = pathlib.Path(
+            subprocess.check_output(
+                ["git", "-C", str(repo), "rev-parse", "--show-toplevel"],
+                text=True,
+            ).strip()
+        )
+    except Exception:
+        die(f"{repo} is not inside a Git worktree")
+    print(f"[INFO] Git root: {git_root}")
+    print(f"[INFO] Target subtree: {repo}")
+
+    required_payload = [
+        "external/r2dreamer/hierarchical_options.py",
+        "external/r2dreamer/option_critic.py",
+        "external/r2dreamer/hierarchical_dreamer.py",
+        "scripts/audit_option_critic_hierarchy.py",
+        "scripts/static_audit_option_critic_hierarchy.sh",
+        "scripts/assert_option_critic_metrics.py",
+        "scripts/run_option_critic_2m.sh",
+        "tests/test_hierarchical_options.py",
+        "tests/test_option_critic_math.py",
+        "tests/test_hierarchical_auxiliary.py",
+        "tests/test_hierarchy_migration.py",
+    ]
+    for rel in required_payload:
+        if not (PAYLOAD / rel).is_file():
+            die(f"payload file missing: {rel}")
+
+    patched: dict[str, str] = {}
+    for rel, patcher in PATCHERS.items():
+        path = repo / rel
+        if not path.is_file():
+            die(f"required source missing: {rel}")
+        patched[rel] = patcher(path.read_text(encoding="utf-8"))
+        compile(patched[rel], str(path), "exec")
+
+    target_config, config = build_config(repo, args.source_config)
+    introduced_candidates = required_payload + [str(target_config.relative_to(repo))]
+    collisions = [rel for rel in introduced_candidates if (repo / rel).exists()]
+    if collisions:
+        die(
+            "refusing to overwrite files that must be newly introduced; "
+            f"restore/remove the previous partial hierarchy first: {collisions}"
+        )
+    for rel in required_payload:
+        path = PAYLOAD / rel
+        if path.suffix == ".py":
+            compile(path.read_text(encoding="utf-8"), str(path), "exec")
+
+    if args.dry_run:
+        print(
+            "[OK] Option-Critic dry-run matched v1.2 source, parsed all "
+            "patched ASTs, and resolved the output config"
+        )
+        return
+
+    stamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup = repo.parent / f"{repo.name}_option_critic_v2_backup_{stamp}"
+    backup.mkdir(parents=True, exist_ok=False)
+    backed_up = list(PATCHERS)
+    introduced = introduced_candidates
+    try:
+        for rel in backed_up:
+            src = repo / rel
+            dst = backup / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+        for rel, content in patched.items():
+            (repo / rel).write_text(content, encoding="utf-8")
+        for rel in required_payload:
+            src = PAYLOAD / rel
+            dst = repo / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+            if dst.suffix == ".sh":
+                dst.chmod(0o755)
+        OmegaConf.save(config, target_config)
+        manifest = {
+            "schema_version": 2,
+            "repo": str(repo),
+            "backed_up_files": backed_up,
+            "backed_up_sha256": {
+                rel: sha256_file(backup / rel) for rel in backed_up
+            },
+            "introduced_files": introduced,
+        }
+        (backup / "option_critic_backup_manifest.json").write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        )
+    except Exception:
+        for rel in backed_up:
+            src = backup / rel
+            if src.exists():
+                dst = repo / rel
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dst)
+        for rel in introduced:
+            path = repo / rel
+            if path.exists():
+                path.unlink()
+        raise
+
+    print("[OK] installed Option-Critic hierarchy v2")
+    print(f"[OK] backup: {backup}")
+    print(f"[OK] config: {target_config}")
+    print("[NEXT] run scripts/static_audit_option_critic_hierarchy.sh")
+
+
+if __name__ == "__main__":
+    main()

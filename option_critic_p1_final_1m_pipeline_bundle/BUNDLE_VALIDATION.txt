@@ -1,0 +1,35 @@
+Option-Critic P1-Final 1M + Exp45 Pipeline Validation
+====================================================
+
+Architecture:
+  dreamer_option_critic_v4_p1_final
+
+Validated corrections:
+  - smooth termination upper cap approximates min(beta, cap)
+  - cap relaxation leaves low beta effectively unchanged
+  - executed initial beta is numerically initialized to the fixed hazard
+  - source manager probabilities are grouped by Tactical v1.2 mode
+  - group-level mean/tail KL and high-confidence preservation are optimized
+  - worker/manager/termination schedules are staged rather than simultaneous
+  - imagination horizon varies from 7-10 toward 12-15
+  - startup validation is enabled and periodic validation is every 200k
+  - launcher defaults to a fresh 1,000,000-step phase
+  - RL-to-Exp45 master pipeline continues after recorded stage failures
+  - partial Exp45 checkpoints can still be evaluated after a training failure
+
+Validation results:
+  51 mathematical/state-machine/migration/auxiliary tests passed
+  Python compilation passed
+  shell syntax passed
+  manifest verification passed
+  installer dry-run passed on integrated-v3 synthetic fixture
+  full fixture installation passed
+  generated v4 config resolved
+  complete post-install source/config audit passed on fixture
+  exact rollback and introduced-file removal passed
+  resilient master pipeline failure-continuation test exited 0 and reached summary
+
+Important boundary:
+  The packaging environment cannot execute the actual CUDA/SMACLite learner or
+  the Exp45 forecast-JEPA training. Run the included real-repository static audit
+  before launching.

@@ -1,0 +1,5 @@
+git_root=/home/jovyan/workspace/dreamer/combined-upload
+target_subtree=/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer
+checkpoint=/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/exp40_jepa_dense_v3_perm_imagmask_100k_2m_20260710_022902/best_val_macro_winrate.pt
+branch=combined-jepa-dreamer
+commit=4d521da937c0b7319ab04af1f708177efc2b9839

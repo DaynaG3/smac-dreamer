@@ -1,0 +1,17 @@
+Tactical Mixture v1.2 bundle validation
+
+- Python compilation: passed
+- Shell syntax: passed
+- Installer dry-run fixture: passed
+- Installer full fixture: passed
+- 7 tactical-policy tests: passed
+- Static audit fixture: passed
+- Zero-mean residual invariant: passed
+- Exact inherited evaluation below confidence threshold: passed
+- MI-shortfall behavior: passed
+- Base-KL and action-flip metrics: passed
+- Gradient flow from effect objective: passed
+- torch.compile fullgraph with eager backend: passed
+- BF16 autocast finiteness: passed
+
+Limitation: full CUDA/SMACLite training cannot be executed in this sandbox. The installer is fail-closed against the exact v1.1 source anchors and should be dry-run on the target repo before writing.

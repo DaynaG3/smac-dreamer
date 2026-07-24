@@ -1,0 +1,2 @@
+REAL Exp36/37/38 JEPA training and eval pipeline	OK	rc=0
+Launch final R2-Dreamer 2M W&B only	FAIL	rc=1; see /home/jovyan/workspace/dreamer/combined-upload/overnight_logs/real_exp36_37_38_then_r2_launch_only_20260708_090931/r2_final_2m_launch_only.log

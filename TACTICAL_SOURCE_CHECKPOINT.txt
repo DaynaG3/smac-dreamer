@@ -1,0 +1,3 @@
+run=/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/exp40_best_weights_unified_priority_2m_20260714_090503
+checkpoint=/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/exp40_best_weights_unified_priority_2m_20260714_090503/best_val_macro_winrate.pt
+sha256=3ece2d02d53120b1b099ace404bb33277b931235dc1c7388f69cea6019392ef6

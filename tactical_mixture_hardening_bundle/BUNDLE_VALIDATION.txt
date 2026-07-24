@@ -1,0 +1,51 @@
+Tactical Mixture Actor v1.1 hardening bundle validation
+========================================================
+
+Completed checks
+----------------
+- Python AST/bytecode compilation for installer, tactical policy and audit scripts.
+- Shell syntax validation for install/restore/audit/launch scripts.
+- 22 bundle tests passed:
+  * uniform selector + bounded symmetry break
+  * first-update gradient flow to selector, embedding and residual
+  * uniform-vs-state-specialized mutual-information diagnostic
+  * collapse-only hinge behavior
+  * no diversity-auxiliary gradient into base actor logits
+  * no diversity-auxiliary gradient into JEPA features
+  * empty-mask repair and finite outputs
+  * sampled/argmax/marginal usage separation
+  * metadata and warm-start bounds
+  * zero-weight finite handling
+  * BF16 autocast finiteness
+  * no parameter aliases inside tactical module
+  * smooth deterministic confidence gate
+  * no dynamic nonzero/Tensor-to-Python effect path
+  * torch.compile(fullgraph=True) effect-statistics test
+  * hard residual-logit bound
+  * fail-closed Dreamer patch fixture
+  * uniform Buffer/adaptive-state runner fixture
+  * validation-best metadata fixture
+  * pre-write config construction forces fresh relative replay storage
+  * invalid source backend is rejected before any file is written
+- Fail-closed dry-run against a semantic installed-v1 fixture.
+- Complete fixture installation.
+- Static source-contract audit after installation:
+  * action masking occurs after tactical logit composition
+  * tactic is never passed into world-model img_step
+  * tactical policy is registered before optimizer construction
+  * base actor/adapter freeze occurs before optimizer parameter collection
+  * config reaches config.model.tactical_mixture
+  * uniform replay path is selected
+  * best checkpoint saves tactical metadata
+- Manifest-driven restore returned the fixture repo subtree to its exact baseline.
+
+Limitations
+-----------
+- The sandbox does not contain the user's exact locally modified repository.
+- The sandbox cannot execute the real SMAClite environment, the user's JEPA
+  checkpoint, CUDA workers, TorchRL memmap replay or a full learner update.
+- Therefore the installer remains fail-closed: it must match and audit the
+  user's exact local source before it writes anything.
+- Policy improvement is not claimed. The current v1 W&B validation trend is
+  negative; the hardened run must be judged by held-out macro win rate and
+  original return.

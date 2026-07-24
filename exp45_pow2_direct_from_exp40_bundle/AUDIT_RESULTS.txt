@@ -1,0 +1,22 @@
+Exp45 Pow2 direct bundle local audit
+====================================
+
+Completed checks:
+- Python compilation of predictor, trainer, sanitizer, checkpoint audit, direct evaluator, and anchored evaluator launcher.
+- Bash syntax validation for install/train/smoke/ordinary/hidden/all-eval scripts.
+- Source-contract checks confirming:
+  * installed Exp40 patch is invoked first;
+  * Exp40 recursive loss is forced to horizon 5;
+  * dataset/direct horizon is extended separately;
+  * EMA target encoder is used;
+  * Pow2 checkpoint state is preserved;
+  * binary action chunks are sliced causally.
+- Unit tests: 9 passed.
+- Installer tested against a synthetic combined-upload tree.
+
+Not completed in this container:
+- CUDA smoke against the user's live SMAC-JEPA repository and 2100-map dataset.
+- Full Exp45 training.
+- Ordinary or hidden evaluation on a trained Exp45 checkpoint.
+
+Those require the live repository, dataset, Exp40 checkpoint, and GPU runtime.

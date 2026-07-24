@@ -1,0 +1,167 @@
+RUN=/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/adaptive_best_tactical_hardened_2m_20260716_015807
+METRIC_LINES=13545
+METRIC_KEYS=167
+
+=== VALIDATION ===
+val/macro_win_rate: latest=0.318333@400007  mean20=0.321667  mean100=0.321667  min100=0.318333  max100=0.325
+val/micro_win_rate: latest=0.318333@400007  mean20=0.321667  mean100=0.321667  min100=0.318333  max100=0.325
+val/macro_original_return: latest=11.9706@400007  mean20=11.9848  mean100=11.9848  min100=11.9706  max100=11.999
+val/micro_original_return: latest=11.9706@400007  mean20=11.9848  mean100=11.9848  min100=11.9706  max100=11.999
+val/macro_timeout_rate: latest=0.24@400007  mean20=0.244167  mean100=0.244167  min100=0.24  max100=0.248333
+val/micro_timeout_rate: latest=0.24@400007  mean20=0.244167  mean100=0.244167  min100=0.24  max100=0.248333
+val/macro_final_ally_ehp_frac: latest=0.180269@400007  mean20=0.193143  mean100=0.193143  min100=0.180269  max100=0.206016
+val/micro_final_ally_ehp_frac: latest=0.180269@400007  mean20=0.193143  mean100=0.193143  min100=0.180269  max100=0.206016
+val/macro_final_enemy_ehp_frac: latest=0.306756@400007  mean20=0.306251  mean100=0.306251  min100=0.305745  max100=0.306756
+val/micro_final_enemy_ehp_frac: latest=0.306756@400007  mean20=0.306251  mean100=0.306251  min100=0.305745  max100=0.306756
+
+=== SELECTOR ===
+train/tactic/selector_logit_std: latest=1.21016@421754  mean20=1.22581  mean100=1.18584  min100=0.868676  max100=1.58597
+train/tactic/selector_max_probability: latest=0.459395@421754  mean20=0.476357  mean100=0.478818  min100=0.428859  max100=0.542533
+train/tactic/entropy: latest=1.16683@421754  mean20=1.14896  mean100=1.1521  min100=1.0594  max100=1.22399
+train/tactic/entropy_normalized: latest=0.841691@421754  mean20=0.8288  mean100=0.831066  min100=0.764197  max100=0.882922
+train/tactic/conditional_entropy: latest=1.16594@421754  mean20=1.14756  mean100=1.15044  min100=1.05782  max100=1.22381
+train/tactic/marginal_entropy: latest=1.18517@421754  mean20=1.16549  mean100=1.17005  min100=1.08557  max100=1.23878
+train/tactic/effective_count: latest=3.27124@421754  mean20=3.20795  mean100=3.22368  min100=2.96114  max100=3.4514
+train/tactic/usage_max: latest=0.459395@421754  mean20=0.476357  mean100=0.478814  min100=0.428852  max100=0.542533
+
+=== USAGE ===
+train/tactic/sampled_usage_0: latest=0.0380842@421754  mean20=0.0388644  mean100=0.0435564  min100=0.0263398  max100=0.0642986
+train/tactic/sampled_usage_1: latest=0.462928@421754  mean20=0.476997  mean100=0.478213  min100=0.427895  max100=0.548545
+train/tactic/sampled_usage_2: latest=0.240695@421754  mean20=0.238634  mean100=0.239744  min100=0.210966  max100=0.271869
+train/tactic/sampled_usage_3: latest=0.258292@421754  mean20=0.245504  mean100=0.238487  min100=0.198259  max100=0.268127
+train/tactic/argmax_usage_0: latest=0@421754  mean20=0  mean100=0  min100=0  max100=0
+train/tactic/argmax_usage_1: latest=1@421754  mean20=1  mean100=0.999855  min100=0.996989  max100=1
+train/tactic/argmax_usage_2: latest=0@421754  mean20=0  mean100=0.000144615  min100=0  max100=0.00301051
+train/tactic/argmax_usage_3: latest=0@421754  mean20=0  mean100=0  min100=0  max100=0
+train/tactic/usage_0: latest=0.0431967@421754  mean20=0.0387361  mean100=0.0430357  min100=0.0252764  max100=0.0670594
+train/tactic/usage_1: latest=0.459395@421754  mean20=0.476357  mean100=0.478814  min100=0.428852  max100=0.542533
+train/tactic/usage_2: latest=0.24591@421754  mean20=0.237578  mean100=0.239847  min100=0.218932  max100=0.256189
+train/tactic/usage_3: latest=0.251499@421754  mean20=0.247328  mean100=0.238303  min100=0.19945  max100=0.261685
+
+=== EFFECT ===
+train/tactic/effect_js: latest=5.58489e-06@421754  mean20=1.04773e-05  mean100=9.70184e-06  min100=1.64349e-08  max100=6.72948e-05
+train/tactic/effect_js_min: latest=3.475e-06@421754  mean20=2.59822e-06  mean100=3.08135e-06  min100=0  max100=1.19388e-05
+train/tactic/effect_js_max: latest=7.46323e-06@421754  mean20=1.89306e-05  mean100=1.6094e-05  min100=3.03784e-08  max100=0.000119703
+train/tactic/effect_loss: latest=0.0199944@421754  mean20=0.0199895  mean100=0.0199903  min100=0.0199327  max100=0.02
+train/tactic/residual_rms: latest=3.04666@421754  mean20=2.90001  mean100=2.79367  min100=2.15704  max100=3.42848
+train/tactic/residual_to_base_ratio: latest=0.533729@421754  mean20=0.51045  mean100=0.473894  min100=0.320798  max100=0.870829
+train/tactic/residual_rms_0: latest=3.04564@421754  mean20=2.89878  mean100=2.7922  min100=2.15445  max100=3.42819
+train/tactic/residual_rms_1: latest=3.04606@421754  mean20=2.89894  mean100=2.7923  min100=2.15418  max100=3.42816
+train/tactic/residual_rms_2: latest=3.04875@421754  mean20=2.90226  mean100=2.79639  min100=2.16086  max100=3.42941
+train/tactic/residual_rms_3: latest=3.0462@421754  mean20=2.90004  mean100=2.79378  min100=2.15865  max100=3.42816
+train/tactic/residual_guard_loss: latest=0@421754  mean20=0  mean100=0  min100=0  max100=0
+train/tactic/policy_loss: latest=0.0115397@421754  mean20=0.0137318  mean100=0.0135265  min100=-0.0128815  max100=0.0309286
+
+=== POLICY_AND_MODEL ===
+train/action_entropy: latest=0.401951@421754  mean20=0.382127  mean100=0.369425  min100=0.269021  max100=0.517894
+train/rew: latest=0.0490685@421754  mean20=0.0985467  mean100=0.108357  min100=-0.0416726  max100=0.285643
+train/tar: latest=23.5271@421754  mean20=23.4464  mean100=23.1715  min100=16.1934  max100=28.9035
+train/val: latest=23.1833@421754  mean20=22.9916  mean100=22.7202  min100=15.9153  max100=28.1564
+train/slowval: latest=23.0018@421754  mean20=22.9021  mean100=22.6397  min100=15.7676  max100=27.9379
+train/ret: latest=0.568562@421754  mean20=0.568086  mean100=0.562796  min100=0.387169  max100=0.705554
+train/ret_005: latest=0.879112@421754  mean20=0.755265  mean100=0.66604  min100=0.463462  max100=0.911599
+train/ret_095: latest=40.7129@421754  mean20=40.6988  mean100=40.6561  min100=40.4775  max100=40.8032
+train/adv: latest=0.0101427@421754  mean20=0.0128246  mean100=0.0125884  min100=-0.011637  max100=0.0286722
+train/ret_replay_mean: latest=21.5154@421754  mean20=21.0061  mean100=20.5363  min100=14.0147  max100=26.925
+train/value_replay_mean: latest=21.9083@421754  mean20=21.8665  mean100=21.5178  min100=15.1196  max100=26.6294
+train/slow_value_replay_mean: latest=21.6347@421754  mean20=21.7596  mean100=21.438  min100=14.9721  max100=26.3307
+train/loss/policy: latest=0.0148213@421754  mean20=0.0161425  mean100=0.016535  min100=-0.0161913  max100=0.0376206
+train/loss/value: latest=1.93955@421754  mean20=1.76259  mean100=1.79542  min100=1.30376  max100=2.5183
+train/loss/repval: latest=2.64944@421754  mean20=2.60593  mean100=2.6743  min100=1.77359  max100=3.70966
+train/loss/rew: latest=0.12357@421754  mean20=0.145692  mean100=0.152109  min100=0.0783815  max100=0.25167
+train/loss/con: latest=1.23927e-08@421754  mean20=1.40234e-06  mean100=1.52196e-06  min100=8.47535e-09  max100=2.83586e-05
+
+=== MASK_AND_JEPA ===
+train/real_pre_mask_invalid_mass: latest=0.804427@421754  mean20=0.778602  mean100=0.770944  min100=0.644009  max100=0.888552
+train/real_post_mask_invalid_sample_rate: latest=0@421754  mean20=0  mean100=0  min100=0  max100=0
+train/imag_pre_mask_invalid_mass: latest=0.584189@421754  mean20=0.630724  mean100=0.61974  min100=0.486941  max100=0.798558
+train/imag_pre_mask_invalid_sample_rate: latest=0.575358@421754  mean20=0.620196  mean100=0.610914  min100=0.482236  max100=0.794142
+train/imag_post_mask_invalid_sample_rate: latest=0@421754  mean20=0  mean100=0  min100=0  max100=0
+train/imag_empty_mask_rate: latest=0@421754  mean20=0.00104934  mean100=0.00102375  min100=0  max100=0.0162288
+train/mask_precision: latest=0.902471@421754  mean20=0.912637  mean100=0.915073  min100=0.879476  max100=0.95104
+train/mask_recall: latest=0.999485@421754  mean20=0.998211  mean100=0.998245  min100=0.99548  max100=0.999568
+train/mask_fpr: latest=0.0145169@421754  mean20=0.0134351  mean100=0.0132861  min100=0.00575337  max100=0.0239728
+train/jepa/latent_norm: latest=4.39477@421754  mean20=4.37516  mean100=4.46525  min100=3.47338  max100=5.49489
+train/jepa/latent_std: latest=0.551537@421754  mean20=0.549791  mean100=0.555418  min100=0.490423  max100=0.616969
+train/jepa/memory_norm: latest=12.1467@421754  mean20=11.4609  mean100=11.6682  min100=9.72824  max100=14.186
+train/jepa/feature_norm: latest=100.995@421754  mean20=99.7242  mean100=99.9113  min100=82.5899  max100=127.348
+train/jepa/presence_rate: latest=0.635023@421754  mean20=0.607514  mean100=0.619481  min100=0.531147  max100=0.710578
+train/jepa/predicted_entity_count: latest=12.0654@421754  mean20=11.5428  mean100=11.7701  min100=10.0918  max100=13.501
+train/jepa/trainable_adapter_parameter_count: latest=0@421754  mean20=0  mean100=0  min100=0  max100=0
+
+=== VALIDATION HISTORY ===
+step=200003 macro_win_rate=0.325000
+step=400007 macro_win_rate=0.318333
+
+=== SOURCE CHECKPOINT ===
+{
+  "step": 800004,
+  "val_macro_win_rate": 0.3550000000000001,
+  "val_macro_original_return": 12.246829102560875,
+  "has_training_state": false,
+  "has_tactical_metadata": false,
+  "n_tactical_state_keys": 0
+}
+
+=== AUTOMATIC DIAGNOSIS ===
+- Latest macro validation gap vs source: -0.0367 (0.3183 vs 0.3550).
+- CAUTION: the last two validations are below source.
+- Imagination/replay snapshot: imagined_rew=0.04907, replay_return=21.52.
+
+VERDICT=CONTINUE_WITH_CAUTION
+
+=== RUN CHECKPOINTS ===
+latest.pt: {
+  "step": 409812,
+  "val_macro_win_rate": null,
+  "val_macro_original_return": null,
+  "has_training_state": true,
+  "has_tactical_metadata": true,
+  "n_tactical_state_keys": 18
+}
+best_val_macro_winrate.pt: {
+  "step": 200003,
+  "val_macro_win_rate": 0.325,
+  "val_macro_original_return": 11.999003495859606,
+  "has_training_state": false,
+  "has_tactical_metadata": true,
+  "n_tactical_state_keys": 18
+}
+
+=== ALL TACTICAL KEYS PRESENT ===
+train/tactic/argmax_usage_0
+train/tactic/argmax_usage_1
+train/tactic/argmax_usage_2
+train/tactic/argmax_usage_3
+train/tactic/balance_loss
+train/tactic/collapse_loss
+train/tactic/conditional_entropy
+train/tactic/effect_js
+train/tactic/effect_js_max
+train/tactic/effect_js_min
+train/tactic/effect_loss
+train/tactic/effective_count
+train/tactic/entropy
+train/tactic/entropy_normalized
+train/tactic/marginal_entropy
+train/tactic/mutual_information
+train/tactic/mutual_information_normalized
+train/tactic/policy_loss
+train/tactic/residual_guard_loss
+train/tactic/residual_rms
+train/tactic/residual_rms_0
+train/tactic/residual_rms_1
+train/tactic/residual_rms_2
+train/tactic/residual_rms_3
+train/tactic/residual_to_base_ratio
+train/tactic/sampled_usage_0
+train/tactic/sampled_usage_1
+train/tactic/sampled_usage_2
+train/tactic/sampled_usage_3
+train/tactic/selector_logit_std
+train/tactic/selector_max_probability
+train/tactic/usage_0
+train/tactic/usage_1
+train/tactic/usage_2
+train/tactic/usage_3
+train/tactic/usage_max

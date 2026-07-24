@@ -1,0 +1,43 @@
+[eval] ORDINARY_EVAL=/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33_anchored.py
+[eval] HIDDEN_EVAL=/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py
+[hidden] probe_dir=/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp37_probe_clean_real_5ep/ordinary_rollout
+[eval-cmd] python /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py --checkpoint /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/runs/rnn_seqmem_exp37_probe_clean_real_5ep_20260708_090932/checkpoint.pt --manifest splits/r2_general_2100.json --split eval --device cuda --batch-size 16 --num-workers 4 --out-dir /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp37_probe_clean_real_5ep/hidden_belief --out /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp37_probe_clean_real_5ep/hidden_belief/eval_metrics.json --eval-rollout-horizon 5 --target-mode full --probe-dir /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp37_probe_clean_real_5ep/ordinary_rollout --natural-hidden-eval --controlled-occlusion-eval --controlled-occlusion-spans 1 3 5 --thresholds 0.01 0.05 0.10
+hidden_belief_eval device=cuda amp=True checkpoints=1
+======================================================================== 
+Evaluating hidden belief: /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/runs/rnn_seqmem_exp37_probe_clean_real_5ep_20260708_090932/checkpoint.pt
+Traceback (most recent call last):
+  File "/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py", line 1521, in <module>
+    main()
+  File "/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py", line 1501, in main
+    row = evaluate_checkpoint(checkpoint_path, args, device)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py", line 1329, in evaluate_checkpoint
+    checkpoint = safe_torch_load(checkpoint_path, device)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py", line 139, in safe_torch_load
+    return torch.load(path, map_location=device, weights_only=False)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/workspace/dreamer/combined-upload/.venv/lib/python3.11/site-packages/torch/serialization.py", line 1579, in load
+    return _load(
+           ^^^^^^
+  File "/home/jovyan/workspace/dreamer/combined-upload/.venv/lib/python3.11/site-packages/torch/serialization.py", line 2190, in _load
+    result = unpickler.load()
+             ^^^^^^^^^^^^^^^^
+  File "/home/jovyan/workspace/dreamer/combined-upload/.venv/lib/python3.11/site-packages/torch/serialization.py", line 2154, in persistent_load
+    typed_storage = load_tensor(
+                    ^^^^^^^^^^^^
+  File "/home/jovyan/workspace/dreamer/combined-upload/.venv/lib/python3.11/site-packages/torch/serialization.py", line 2116, in load_tensor
+    wrap_storage = restore_location(storage, location)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/workspace/dreamer/combined-upload/.venv/lib/python3.11/site-packages/torch/serialization.py", line 1920, in restore_location
+    return default_restore_location(storage, str(map_location))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/workspace/dreamer/combined-upload/.venv/lib/python3.11/site-packages/torch/serialization.py", line 734, in default_restore_location
+    result = fn(storage, location)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/workspace/dreamer/combined-upload/.venv/lib/python3.11/site-packages/torch/serialization.py", line 667, in _deserialize
+    device = _validate_device(location, backend_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/workspace/dreamer/combined-upload/.venv/lib/python3.11/site-packages/torch/serialization.py", line 634, in _validate_device
+    raise RuntimeError(
+RuntimeError: Attempting to deserialize object on a CUDA device but torch.cuda.is_available() is False. If you are running on a CPU-only machine, please use torch.load with map_location=torch.device('cpu') to map your storages to the CPU.

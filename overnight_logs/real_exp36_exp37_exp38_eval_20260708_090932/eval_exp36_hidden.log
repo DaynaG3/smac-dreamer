@@ -1,0 +1,14 @@
+[eval] ORDINARY_EVAL=/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33_anchored.py
+[eval] HIDDEN_EVAL=/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py
+[hidden] probe_dir=/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp36_action_change_real_5ep/ordinary_rollout/eval_metrics.json/probe_decoders
+[eval-cmd] python /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py --checkpoint /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/runs/rnn_seqmem_exp36_action_change_real_5ep_20260708_090932/checkpoint.pt --manifest splits/r2_general_2100.json --split eval --device cuda --batch-size 16 --num-workers 4 --out-dir /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp36_action_change_real_5ep/hidden_belief --out /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp36_action_change_real_5ep/hidden_belief/eval_metrics.json --eval-rollout-horizon 5 --target-mode full --probe-dir /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp36_action_change_real_5ep/ordinary_rollout/eval_metrics.json/probe_decoders --natural-hidden-eval --controlled-occlusion-eval --controlled-occlusion-spans 1 3 5 --thresholds 0.01 0.05 0.10
+hidden_belief_eval device=cuda amp=True checkpoints=1
+======================================================================== 
+Evaluating hidden belief: /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/runs/rnn_seqmem_exp36_action_change_real_5ep_20260708_090932/checkpoint.pt
+/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py:146: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  return torch.cuda.amp.autocast(enabled=enabled)
+/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py:146: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  return torch.cuda.amp.autocast(enabled=enabled)
+wrote /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp36_action_change_real_5ep/hidden_belief/eval_metrics.json/hidden_belief_rnn_seqmem_exp36_action_change_real_5ep_20260708_090932_checkpoint.json
+wrote /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp36_action_change_real_5ep/hidden_belief/eval_metrics.json/hidden_belief_summary.jsonl
+wrote /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp36_action_change_real_5ep/hidden_belief/eval_metrics.json/hidden_belief_summary.csv

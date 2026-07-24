@@ -1,0 +1,30 @@
+[venv] activated /home/jovyan/workspace/dreamer/combined-upload/.venv
+[launch] WANDB_PROJECT=smac-dreamer-jepa
+[launch] WANDB_MODE=online
+[launch] bash launch_final_2m_wandb.sh
+wrote configs/tmp_r2_2100_jepa_final_2m_wandb.yaml
+checkpoint: checkpoints/jepa/model.pt
+validation.every: 50000
+wandb.mode: online
+steps: 2000000
+OK: world_model has belief-mask + max_agents patch tokens
+OK: feature_adapter has slot-preserving path tokens
+OK: feature_adapter call is outside no_grad in get_feat
+OK: feature adapter receives gradients; grad_sum=1.20701
+OK: JEPA checkpoint looks valid
+  size_MB: 74.93
+  max_agents: 9
+  max_enemies: 10
+  max_actions: 16
+  anchored_belief_memory: True
+  action_conditioned_memory: True
+  presence_rollout_mode: soft
+PASS: final R2-JEPA preflight passed. Launching 2M is reasonable without a 50k smoke.
+RUN=logs/r2dreamer/exp33_jepa_final_beliefmask_slotadapter_grad_2m_20260708_085535
+CONFIG=configs/tmp_r2_2100_jepa_final_2m_wandb.yaml
+JEPA_CKPT=checkpoints/jepa/model.pt
+Launching 2M R2-Dreamer JEPA run with wandb online...
+[cuda] torch=2.11.0+cu126 cuda_build=12.6 device=cuda:0
+[cuda] gpu=NVIDIA A40 capability=sm_86 arch_list=['sm_50', 'sm_60', 'sm_70', 'sm_75', 'sm_80', 'sm_86', 'sm_90']
+[cuda] tiny tensor operation succeeded.
+Discovering maps (train + validation only; blind splits untouched) ...

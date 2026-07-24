@@ -1,0 +1,50 @@
+{
+  "checkpoint": "/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/runs/rnn_seqmem_exp40_event_balanced_5ep_20260709_083104/checkpoint.pt",
+  "checkpoint_epoch": 5,
+  "manifest": "/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/splits/r2_general_2100.json",
+  "split": "eval",
+  "training_rollout_horizon": 5,
+  "evaluation_rollout_horizon": 15,
+  "rollout_window": 20,
+  "target_mode": "full",
+  "mask_mode": "predicted",
+  "teacher_forcing_after_rollout_start": false,
+  "memory_ablation": false,
+  "dataset_items_total": 16862,
+  "dataset_items_sampled": 8,
+  "rollout_examples_evaluated": 160,
+  "device": "cuda",
+  "amp": true,
+  "seed": 123,
+  "elapsed_seconds": 24.55985450744629,
+  "selected_categories": {
+    "good_eventful": "Eventful rollout with low error at H15; avoids choosing a trivial static clip.",
+    "late_rollout_drift": "Prediction is relatively accurate early but diverges substantially after H5.",
+    "position_drift": "Entity positions drift away from the recorded trajectory by H15.",
+    "health_or_damage_miss": "The rollout misses health/shield changes on transitions where those values change.",
+    "enemy_tracking_failure": "Enemy-state prediction is substantially worse than allied-state prediction.",
+    "presence_lifecycle_failure": "The presence head invents an absent entity or removes one that remains present.",
+    "copying_dynamic_change": "The target changes, but the predicted state remains too close to the rollout start.",
+    "unstable_overshoot": "The prediction changes more aggressively than the recorded transition or leaves plausible health bounds.",
+    "visibility_transition_failure": "Enemy error rises around natural visibility changes or while the enemy is hidden."
+  },
+  "position_indices": {
+    "ally": [
+      2,
+      3
+    ],
+    "enemy": [
+      1,
+      2
+    ]
+  },
+  "health_indices": {
+    "ally": [
+      0,
+      4
+    ],
+    "enemy": [
+      0
+    ]
+  }
+}

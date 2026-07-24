@@ -1,0 +1,36 @@
+{
+  "obs_mode": "structured",
+  "units": 256,
+  "deter": 2048,
+  "batch_size": 16,
+  "batch_length": 64,
+  "imag_horizon": 5,
+  "max_episode_steps": 200,
+  "gamma": 0.997,
+  "reward_name": "dense_v3",
+  "padding": {
+    "max_agents": 9,
+    "max_enemies": 10,
+    "max_actions": 16,
+    "max_obs_size": 255
+  },
+  "dataset_tag": "configs",
+  "explicit_folders": true,
+  "validation_seeds": [
+    0,
+    1,
+    2
+  ],
+  "maps_folder": "configs/maps/r2_2100/configs/train",
+  "world_model_backend": "jepa",
+  "jepa_checkpoint": "checkpoints/jepa/model_exp40.pt",
+  "jepa_checkpoint_sha256": "18a71016c788006fbe32afb376b363cf46ec981eafe37c0bb4dbaa8cd77af909",
+  "jepa_visibility": {
+    "enemy_visibility_mask": true,
+    "enemy_sight_range": 9.0,
+    "visibility_xy_indices": [
+      2,
+      3
+    ]
+  }
+}

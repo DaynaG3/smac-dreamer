@@ -1,3 +1,4 @@
+# TACTICAL_MIXTURE_V1_2_CENTERED_TRUST_REGION
 import copy
 import math
 from collections import OrderedDict
@@ -15,6 +16,21 @@ import tools
 from networks import Projector
 from optim import LaProp, clip_grad_agc_
 from tools import to_f32
+from tactical_policy import TacticalMixturePolicy
+from hierarchical_dreamer import (
+    apply_hierarchy_gradient_guards,
+    build_hierarchical_modules, clone_and_freeze_hierarchy,
+    hierarchical_act_logits, hierarchical_auxiliary_loss,
+    hierarchy_state_dict_fields, hierarchy_training_state,
+    load_hierarchy_training_state, load_hierarchical_compatible_state,
+    update_slow_option_critic,
+)
+
+# OPTION_CRITIC_HIERARCHY_V2
+# OPTION_CRITIC_P0P1_HOTFIX_V3
+
+# TACTICAL_MIXTURE_V1
+# TACTICAL_MIXTURE_HARDENING_V1_1
 try:
     from smacdreamer.jepa.state import unpack_state as _jepa_unpack_state
 except Exception:  # smacdreamer may be absent for non-SMAClite RSSM users.
@@ -136,6 +152,28 @@ class Dreamer(nn.Module):
         self._actor_unimix = (
             float(getattr(config.actor.dist, "unimix_ratio", 0.0)) if self.act_discrete else 0.0
         )
+        _tactical_cfg = getattr(config, 'tactical_mixture', None)
+        self.tactical_enabled = bool(
+            getattr(_tactical_cfg, 'enabled', False)
+            if _tactical_cfg is not None else False
+        )
+        self.tactical_policy = None
+        if self.tactical_enabled:
+            if self.world_model_backend != 'jepa':
+                raise NotImplementedError(
+                    'Tactical Mixture v1 is validated only for JEPA'
+                )
+            if not self.action_masking or not self.act_discrete:
+                raise ValueError(
+                    'Tactical Mixture v1 requires masked discrete actions'
+                )
+            self.tactical_policy = TacticalMixturePolicy(
+                self.feat_size, sum(self._actor_shape), _tactical_cfg
+            )
+            self.tactical_policy.assert_legacy_equivalence_ready()
+
+        build_hierarchical_modules(self, config)
+
         # P0.2: prob threshold for the predicted availability mask -> logit cut.
         _p = min(max(float(getattr(config, "mask_threshold", 0.7)), 1e-4), 1 - 1e-4)
         self._mask_threshold = _p
@@ -168,6 +206,8 @@ class Dreamer(nn.Module):
             "reward": self.reward,
             "cont": self.cont,
         }
+        if self.tactical_enabled:
+            modules["tactical_policy"] = self.tactical_policy
         if self.world_model_backend == "rssm":
             modules["rssm"] = self.rssm
             modules["encoder"] = self.encoder
@@ -226,12 +266,37 @@ class Dreamer(nn.Module):
                 "ema_encoder": self._ema_encoder,
                 "ema_obs_proj": self._ema_obs_proj,
             })
+        if self.tactical_enabled:
+            _tactical_settings = self.tactical_policy.settings
+            if _tactical_settings.freeze_base_actor:
+                for _param in self.actor.parameters():
+                    _param.requires_grad_(False)
+                modules.pop('actor', None)
+                print(' tactical safety: inherited base actor frozen')
+            if _tactical_settings.freeze_feature_adapter:
+                if self.world_model_backend != 'jepa':
+                    raise RuntimeError(
+                        'freeze_feature_adapter requires JEPA backend'
+                    )
+                for _param in (
+                    self.jepa_world_model.feature_adapter.parameters()
+                ):
+                    _param.requires_grad_(False)
+                modules.pop('jepa_feature_adapter', None)
+                print(' tactical safety: inherited JEPA adapter frozen')
         # count number of parameters in each module
         for key, module in modules.items():
             if isinstance(module, nn.Parameter):
                 print(f"{module.numel():>14,}: {key}")
             else:
                 print(f"{sum(p.numel() for p in module.parameters()):>14,}: {key}")
+        if self.hierarchical_enabled:
+            modules["hierarchical_options"] = self.hierarchical_options
+            modules["option_critic"] = self.option_critic
+            if self.hierarchical_options.settings.freeze_base_actor:
+                modules.pop("actor", None)
+            if self.hierarchical_options.settings.freeze_feature_adapter:
+                modules.pop("jepa_feature_adapter", None)
         self._named_params = OrderedDict()
         for name, module in modules.items():
             if isinstance(module, nn.Parameter):
@@ -240,6 +305,26 @@ class Dreamer(nn.Module):
                 for param_name, param in module.named_parameters():
                     self._named_params[f"{name}.{param_name}"] = param
         print(f"Optimizer has: {sum(p.numel() for p in self._named_params.values())} parameters.")
+        _optimizer_param_ids = [
+            id(param) for param in self._named_params.values()
+        ]
+        if len(_optimizer_param_ids) != len(set(_optimizer_param_ids)):
+            raise RuntimeError(
+                'optimizer parameter registry contains duplicates'
+            )
+        if self.tactical_enabled:
+            _tactical_param_ids = {
+                id(param) for param in self.tactical_policy.parameters()
+            }
+            _registered_tactical_ids = {
+                id(param)
+                for name, param in self._named_params.items()
+                if name.startswith('tactical_policy.')
+            }
+            if _registered_tactical_ids != _tactical_param_ids:
+                raise RuntimeError(
+                    'tactical parameters are not registered exactly once'
+                )
 
         def _agc(params):
             clip_grad_agc_(params, float(config.agc), float(config.pmin), foreach=True)
@@ -292,6 +377,7 @@ class Dreamer(nn.Module):
             "return_ema": self.return_ema.state_dict() if hasattr(self.return_ema, "state_dict") else None,
             "torch_rng": torch.get_rng_state(),
             "torch_cuda_rng": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
+            "hierarchical_options": hierarchy_training_state(self),
         }
 
     def load_training_state_dict(self, state):
@@ -303,6 +389,176 @@ class Dreamer(nn.Module):
         self._slow_value_updates = int(state.get("slow_value_updates", self._slow_value_updates))
         if state.get("return_ema") is not None and hasattr(self.return_ema, "load_state_dict"):
             self.return_ema.load_state_dict(state["return_ema"])
+        load_hierarchy_training_state(self, state)
+
+    def tactical_metadata(self):
+        if not self.tactical_enabled:
+            return {
+                "schema_version": 2,
+                "architecture": "legacy",
+                "enabled": False,
+            }
+        metadata = self.tactical_policy.metadata()
+        metadata["enabled"] = True
+        return metadata
+
+    def load_tactical_compatible_state_dict(
+        self,
+        state_dict,
+        checkpoint_metadata=None,
+    ):
+        """Strict tactical resume or allowlisted migration from legacy.
+
+        Metadata-less tactical best checkpoints from v1 are accepted only when
+        their live tactical keys load shape-strictly. This repairs the original
+        best-checkpoint metadata omission without relaxing legacy migration.
+        """
+        if not self.tactical_enabled:
+            self.load_state_dict(state_dict, strict=True)
+            self.clone_and_freeze()
+            return {"migrated_legacy": False, "strict": True}
+
+        state_keys = tuple(state_dict.keys())
+        has_live_tactical = any(
+            key.startswith("tactical_policy.") for key in state_keys
+        )
+
+        metadata_is_legacy = bool(
+            checkpoint_metadata is not None
+            and (
+                checkpoint_metadata.get("enabled") is False
+                or checkpoint_metadata.get("architecture") == "legacy"
+            )
+        )
+        if metadata_is_legacy and has_live_tactical:
+            raise RuntimeError(
+                "checkpoint metadata declares a legacy policy but tactical "
+                "parameter keys are present"
+            )
+
+        if checkpoint_metadata is not None and not metadata_is_legacy:
+            architecture = checkpoint_metadata.get("architecture")
+            if architecture not in (
+                "tactical_mixture_v1",
+                "tactical_mixture_v1_1",
+                "tactical_mixture_v1_2",
+            ):
+                raise RuntimeError(
+                    f"unsupported tactical checkpoint architecture: {architecture!r}"
+                )
+            expected = self.tactical_metadata()
+            for key in (
+                "num_tactics",
+                "embedding_dim",
+                "hidden_dim",
+                "duration",
+                "feature_dim",
+                "action_logit_dim",
+                "eval_confidence_threshold",
+                "freeze_base_actor",
+                "freeze_feature_adapter",
+                "max_residual_to_base",
+                "max_abs_residual_logit",
+                "selector_symmetry_break_std",
+                "residual_scale",
+                "min_selector_mi_normalized",
+                "base_kl_target",
+                "base_kl_scale",
+            ):
+                if key in checkpoint_metadata and (
+                    checkpoint_metadata.get(key) != expected.get(key)
+                ):
+                    raise RuntimeError(
+                        f"tactical metadata mismatch for {key}: "
+                        f"{checkpoint_metadata.get(key)!r} "
+                        f"!= {expected.get(key)!r}"
+                    )
+            self.load_state_dict(state_dict, strict=True)
+            self.clone_and_freeze()
+            return {
+                "migrated_legacy": False,
+                "strict": True,
+                "checkpoint_architecture": architecture,
+            }
+
+        if has_live_tactical:
+            incompatible = self.load_state_dict(state_dict, strict=False)
+            illegal_missing = [
+                key
+                for key in incompatible.missing_keys
+                if not key.startswith("_frozen_tactical_policy.")
+            ]
+            if illegal_missing or incompatible.unexpected_keys:
+                raise RuntimeError(
+                    "metadata-less tactical checkpoint is incompatible: "
+                    f"illegal_missing={illegal_missing}, "
+                    f"unexpected={list(incompatible.unexpected_keys)}"
+                )
+            self.clone_and_freeze()
+            return {
+                "migrated_legacy": False,
+                "strict": not bool(incompatible.missing_keys),
+                "metadata_inferred": True,
+            }
+
+        incompatible = self.load_state_dict(state_dict, strict=False)
+        allowed_prefixes = (
+            "tactical_policy.",
+            "_frozen_tactical_policy.",
+        )
+        illegal_missing = [
+            key
+            for key in incompatible.missing_keys
+            if not key.startswith(allowed_prefixes)
+        ]
+        if illegal_missing or incompatible.unexpected_keys:
+            raise RuntimeError(
+                "legacy tactical migration found incompatible keys: "
+                f"illegal_missing={illegal_missing}, "
+                f"unexpected={list(incompatible.unexpected_keys)}"
+            )
+        if not incompatible.missing_keys:
+            raise RuntimeError(
+                "checkpoint has no tactical metadata and no missing tactical keys"
+            )
+        self.tactical_policy.assert_legacy_equivalence_ready()
+        self.clone_and_freeze()
+        return {
+            "migrated_legacy": True,
+            "strict": False,
+            "missing_keys": list(incompatible.missing_keys),
+        }
+
+    def set_hierarchy_training_step(self, step):
+        if not self.hierarchical_enabled:
+            return
+        self.hierarchical_options.set_training_step(step)
+        if getattr(self, "_frozen_hierarchical_options", None) is not None:
+            self._frozen_hierarchical_options.set_training_step(step)
+
+    def hierarchical_metadata(self):
+        if not self.hierarchical_enabled:
+            return {
+                "schema_version": 1,
+                "architecture": "legacy",
+                "enabled": False,
+            }
+        metadata = self.hierarchical_options.metadata()
+        metadata["enabled"] = True
+        return metadata
+
+    def load_hierarchical_compatible_state_dict(
+        self,
+        state_dict,
+        checkpoint_metadata=None,
+        tactical_metadata=None,
+    ):
+        return load_hierarchical_compatible_state(
+            self,
+            state_dict,
+            checkpoint_metadata=checkpoint_metadata,
+            tactical_metadata=tactical_metadata,
+        )
 
     def _update_slow_target(self):
         """Update slow-moving value target network."""
@@ -312,6 +568,7 @@ class Dreamer(nn.Module):
                 for v, s in zip(self.value.parameters(), self._slow_value.parameters()):
                     s.data.copy_(mix * v.data + (1 - mix) * s.data)
         self._slow_value_updates += 1
+        update_slow_option_critic(self)
 
     def train(self, mode=True):
         super().train(mode)
@@ -319,6 +576,15 @@ class Dreamer(nn.Module):
         self._slow_value.train(False)
         if self.world_model_backend == "jepa":
             self.jepa_world_model.train(False)
+        if self.tactical_enabled and hasattr(
+            self, '_frozen_tactical_policy'
+        ):
+            self._frozen_tactical_policy.train(False)
+        if self.hierarchical_enabled and hasattr(
+            self, "_frozen_hierarchical_options"
+        ):
+            self._frozen_hierarchical_options.train(False)
+            self._slow_option_critic.train(False)
         return self
 
     def clone_and_freeze(self):
@@ -370,6 +636,20 @@ class Dreamer(nn.Module):
             param_new.data = param_orig.data
             param_new.requires_grad_(False)
 
+        if self.tactical_enabled:
+            self._frozen_tactical_policy = copy.deepcopy(
+                self.tactical_policy
+            )
+            for (name_orig, param_orig), (name_new, param_new) in zip(
+                self.tactical_policy.named_parameters(),
+                self._frozen_tactical_policy.named_parameters(),
+            ):
+                assert name_orig == name_new
+                param_new.data = param_orig.data
+                param_new.requires_grad_(False)
+            self._frozen_tactical_policy.train(False)
+        else:
+            self._frozen_tactical_policy = None
         self._frozen_value = copy.deepcopy(self.value)
         for (name_orig, param_orig), (name_new, param_new) in zip(
             self.value.named_parameters(), self._frozen_value.named_parameters()
@@ -397,6 +677,7 @@ class Dreamer(nn.Module):
                     pn.data = po.data
                     pn.requires_grad_(False)
                 setattr(self, _name, _frozen)
+        clone_and_freeze_hierarchy(self)
 
     def to(self, *args, **kwargs):
         super().to(*args, **kwargs)
@@ -427,11 +708,38 @@ class Dreamer(nn.Module):
             stoch, deter, _ = self._frozen_rssm.obs_step(prev_stoch, prev_deter, prev_action, embed, obs["is_first"])
             # (B, F)
             feat = self._frozen_rssm.get_feat(stoch, deter)
+        option_fields = {}
         if self.action_masking:
             # Real masking: invalid actions can never be requested; padded/dead -> NOOP. Uses
             # the RAW (un-preprocessed) avail + agent masks from the structured obs.
             from smacdreamer.masked_actions import MaskedMultiOneHotDist, build_action_mask
-            raw_logits = self._frozen_actor.last(self._frozen_actor.mlp(feat))
+            raw_logits = self._frozen_actor.last(
+                self._frozen_actor.mlp(feat)
+            )
+            if self.tactical_enabled:
+                if eval:
+                    (
+                        raw_logits,
+                        tactic,
+                        tactic_confidence,
+                        tactic_applied,
+                    ) = self._frozen_tactical_policy.eval_combined_logits(
+                        raw_logits, feat
+                    )
+                else:
+                    tactic = self._frozen_tactical_policy.select_tactic(
+                        feat, deterministic=False
+                    )
+                    raw_logits = (
+                        self._frozen_tactical_policy.combine_logits(
+                            raw_logits, feat, tactic
+                        )
+                    )
+            if self.hierarchical_enabled:
+                raw_logits, option_fields = hierarchical_act_logits(
+                    self, feat, raw_logits, state, obs,
+                    deterministic=eval,
+                )
             agent_active = obs["agent_slot_mask"] * obs["agent_alive_mask"]
             amask, aactive = build_action_mask(
                 obs["avail_actions"], agent_active, self._mask_A, self._mask_C)
@@ -442,7 +750,7 @@ class Dreamer(nn.Module):
         # (B, A)
         action = action_dist.mode if eval else action_dist.rsample()
         return action, TensorDict(
-            {"stoch": stoch, "deter": deter, "prev_action": action},
+            {"stoch": stoch, "deter": deter, "prev_action": action, **option_fields},
             batch_size=state.batch_size,
         )
 
@@ -453,7 +761,13 @@ class Dreamer(nn.Module):
         else:
             stoch, deter = self.rssm.initial(B)
         action = torch.zeros(B, self.act_dim, dtype=torch.float32, device=self.device)
-        return TensorDict({"stoch": stoch, "deter": deter, "prev_action": action}, batch_size=(B,))
+        initial_state = TensorDict({"stoch": stoch, "deter": deter, "prev_action": action}, batch_size=(B,))
+        if self.hierarchical_enabled:
+            for key, value in hierarchy_state_dict_fields(
+                B, self.device
+            ).items():
+                initial_state[key] = value
+        return initial_state
 
     @torch.no_grad()
     def video_pred(self, data, initial):
@@ -491,7 +805,14 @@ class Dreamer(nn.Module):
 
     def update(self, replay_buffer):
         """Sample a batch from replay and perform one optimization step."""
-        data, index, initial = replay_buffer.sample()
+        data, sample_info, initial = replay_buffer.sample()
+        importance_weights = getattr(sample_info, 'importance_weights', None)
+        self._priority_sequence_weights = (
+            importance_weights.to(self.device) if importance_weights is not None else None
+        )
+        self._priority_sequence_priorities = None
+        self._priority_map_feedback = None
+        # UNIFIED_PRIORITY_V1
         torch.compiler.cudagraph_mark_step_begin()
         p_data = self.preprocess(data)
         self._update_slow_target()
@@ -503,6 +824,17 @@ class Dreamer(nn.Module):
         amp_enabled = self.device.type == "cuda" and self._amp_dtype in (torch.float16, torch.bfloat16)
         with autocast(device_type=self.device.type, dtype=self._amp_dtype, enabled=amp_enabled):
             (stoch, deter), mets = self._cal_grad(p_data, initial)
+            if self.hierarchical_enabled:
+                hierarchy_loss, hierarchy_metrics = (
+                    hierarchical_auxiliary_loss(
+                        self, data, stoch, deter
+                    )
+                )
+                self._scaler.scale(hierarchy_loss).backward()
+                mets.update(hierarchy_metrics)
+                mets["option/total_loss"] = hierarchy_loss.detach()
+        if self.hierarchical_enabled:
+            apply_hierarchy_gradient_guards(self)
         self._scaler.unscale_(self._optimizer)  # unscale grads in params
         if self.rep_loss == "dreamerpro" and self._ema_updates < self.freeze_prototypes_iters:
             self._prototypes.grad.zero_()
@@ -528,7 +860,26 @@ class Dreamer(nn.Module):
             mets["opt/update_rms"] = update_rms
         metrics.update(mets)
         # update latent vectors in replay buffer
-        replay_buffer.update(index, stoch.detach(), deter.detach())
+        transition_indices = getattr(sample_info, 'transition_indices', sample_info)
+        replay_buffer.update(transition_indices, stoch.detach(), deter.detach())
+        if (
+            hasattr(sample_info, 'sequence_uids')
+            and self._priority_sequence_priorities is not None
+            and hasattr(replay_buffer, 'update_priorities')
+        ):
+            replay_buffer.update_priorities(
+                sample_info.sequence_uids,
+                self._priority_sequence_priorities,
+            )
+        if self._priority_map_feedback is not None:
+            controller = getattr(replay_buffer, 'priority_controller', None)
+            if controller is not None:
+                map_ids, errors, valid = self._priority_map_feedback
+                controller.record_critic_feedback(
+                    map_ids, errors, valid,
+                    env_step=(replay_buffer.current_env_step()
+                              if hasattr(replay_buffer, 'current_env_step') else None),
+                )
         return metrics
 
     def _cal_grad(self, data, initial):
@@ -780,6 +1131,20 @@ class Dreamer(nn.Module):
         losses = {}
         metrics = {}
         B, T = data.shape
+        _seq_is = self._priority_sequence_weights
+        if _seq_is is None:
+            _seq_is = torch.ones(B, dtype=torch.float32, device=self.device)
+        _seq_is = _seq_is.to(device=self.device, dtype=torch.float32).reshape(B)
+        def _priority_weighted_mean(term):
+            if term.shape[0] == B:
+                per_sequence = term.reshape(B, -1).mean(-1)
+            elif term.shape[0] == B * T:
+                per_sequence = term.reshape(B, T, -1).mean((1, 2))
+            else:
+                raise RuntimeError(
+                    f'cannot align PER weights: leading dim {term.shape[0]}, B={B}, T={T}'
+                )
+            return (per_sequence * _seq_is).sum() / _seq_is.sum().clamp_min(1e-8)
         encoded = self.jepa_world_model.encode_obs(data)
         post_stoch, post_deter = self.jepa_world_model.observe(
             encoded,
@@ -789,12 +1154,18 @@ class Dreamer(nn.Module):
         )
         feat = self.jepa_world_model.get_feat(post_stoch, post_deter)
 
-        losses["rew"] = torch.mean(-self.reward(feat).log_prob(to_f32(data["reward"])))
+        losses["rew"] = _priority_weighted_mean(
+            -self.reward(feat).log_prob(to_f32(data["reward"]))
+        )
         cont = 1.0 - to_f32(data["is_terminal"])
-        losses["con"] = torch.mean(-self.cont(feat).log_prob(cont))
+        losses["con"] = _priority_weighted_mean(-self.cont(feat).log_prob(cont))
         if self.action_masking:
-            losses["avail"] = torch.mean(-self.avail_head(feat).log_prob(to_f32(data["avail_actions"])))
-            losses["alive"] = torch.mean(-self.alive_head(feat).log_prob(to_f32(data["agent_alive_mask"])))
+            losses["avail"] = _priority_weighted_mean(
+                -self.avail_head(feat).log_prob(to_f32(data["avail_actions"]))
+            )
+            losses["alive"] = _priority_weighted_mean(
+                -self.alive_head(feat).log_prob(to_f32(data["agent_alive_mask"]))
+            )
             from smacdreamer.masked_actions import mask_quality_metrics
             _avail_logits = self.avail_head.last(self.avail_head.mlp(feat)).detach()
             _mq = mask_quality_metrics(
@@ -807,8 +1178,15 @@ class Dreamer(nn.Module):
             post_stoch.reshape(-1, *post_stoch.shape[2:]).detach(),
             post_deter.reshape(-1, post_deter.shape[-1]).detach(),
         )
-        imag_feat, imag_action = self._imagine(start, self.imag_horizon + 1)
-        imag_feat, imag_action = imag_feat.detach(), imag_action.detach()
+        imag_out = self._imagine(start, self.imag_horizon + 1)
+        if self.tactical_enabled:
+            imag_feat, imag_action, imag_tactic = imag_out
+            imag_tactic = imag_tactic.detach()
+        else:
+            imag_feat, imag_action = imag_out
+            imag_tactic = None
+        imag_feat = imag_feat.detach()
+        imag_action = imag_action.detach()
         imag_reward = self._frozen_reward(imag_feat).mode()
         imag_cont = self._frozen_cont(imag_feat).mean
         imag_value = self._frozen_value(imag_feat).mode()
@@ -827,7 +1205,23 @@ class Dreamer(nn.Module):
             from smacdreamer.masked_actions import (
                 MaskedMultiOneHotDist, invalid_mass_and_greedy_rate, empty_mask_rate,
                 hard_mask_from_logits)
-            policy_logits = self.actor.last(self.actor.mlp(imag_feat))
+            base_policy_logits = self.actor.last(
+                self.actor.mlp(imag_feat)
+            )
+            if self.tactical_enabled:
+                tactic_logits = self.tactical_policy.selector_logits(
+                    imag_feat
+                )
+                tactic_dist = torch.distributions.Categorical(
+                    logits=tactic_logits
+                )
+                policy_logits = self.tactical_policy.combine_logits(
+                    base_policy_logits, imag_feat, imag_tactic
+                )
+            else:
+                tactic_logits = None
+                tactic_dist = None
+                policy_logits = base_policy_logits
             _amask, _aactive = self._predicted_action_mask(imag_feat)
             policy = MaskedMultiOneHotDist(
                 policy_logits, _amask, _aactive, self._actor_shape, self._actor_unimix)
@@ -845,10 +1239,140 @@ class Dreamer(nn.Module):
             policy = self.actor(imag_feat)
         logpi = policy.log_prob(imag_action)[:, :-1].unsqueeze(-1)
         entropy = policy.entropy()[:, :-1].unsqueeze(-1)
-        losses["policy"] = torch.mean(weight[:, :-1].detach() * -(logpi * adv.detach() + self.act_entropy * entropy))
+        primitive_policy_loss = _priority_weighted_mean(
+            weight[:, :-1].detach()
+            * -(logpi * adv.detach() + self.act_entropy * entropy)
+        )
+        if self.tactical_enabled:
+            tactic_logpi = tactic_dist.log_prob(imag_tactic)[
+                :, :-1
+            ].unsqueeze(-1)
+            tactic_entropy = tactic_dist.entropy()[
+                :, :-1
+            ].unsqueeze(-1)
+            tactical = self.tactical_policy.settings
+            tactic_policy_loss = _priority_weighted_mean(
+                weight[:, :-1].detach()
+                * -(
+                    tactical.tactic_pg_scale
+                    * tactic_logpi
+                    * adv.detach()
+                    + tactical.tactic_entropy_scale * tactic_entropy
+                )
+            )
+            start_is = _seq_is[:, None].expand(B, T).reshape(
+                B * T, 1
+            )
+            tactic_aux_weight = (
+                weight[:, :-1, 0].detach() * start_is
+            )
+            tactic_stats = self.tactical_policy.usage_statistics(
+                tactic_logits[:, :-1],
+                sampled_tactic=imag_tactic[:, :-1],
+                state_weights=tactic_aux_weight,
+            )
+            collapse_loss = tactic_stats["collapse_loss"]
+            effect_stats = self.tactical_policy.effect_statistics(
+                imag_feat[:, :-1].detach(),
+                base_policy_logits[:, :-1].detach(),
+                _amask[:, :-1].detach(),
+                _aactive[:, :-1].detach(),
+                self._actor_shape,
+                tactic_aux_weight,
+            )
+            effect_js = effect_stats["js_mean"]
+            effect_loss = torch.relu(
+                torch.as_tensor(
+                    tactical.effect_target,
+                    device=effect_js.device,
+                    dtype=effect_js.dtype,
+                )
+                - effect_js
+            )
+            residual_ratio = (
+                effect_stats["residual_rms"]
+                / effect_stats["base_rms"].clamp_min(1e-6)
+            )
+            residual_guard_loss = torch.relu(
+                residual_ratio
+                - torch.as_tensor(
+                    tactical.max_residual_to_base,
+                    device=residual_ratio.device,
+                    dtype=residual_ratio.dtype,
+                )
+            ).square()
+            base_kl_loss = effect_stats["base_kl_loss"]
+            losses["policy"] = (
+                primitive_policy_loss
+                + tactic_policy_loss
+                + tactical.collapse_loss_scale * collapse_loss
+                + tactical.effect_loss_scale * effect_loss
+                + tactical.residual_guard_scale * residual_guard_loss
+                + tactical.base_kl_scale * base_kl_loss
+            )
+            metrics["tactic/policy_loss"] = tactic_policy_loss
+            metrics["tactic/entropy"] = tactic_entropy.mean()
+            metrics["tactic/entropy_normalized"] = (
+                tactic_entropy.mean()
+                / math.log(self.tactical_policy.num_tactics)
+            )
+            metrics["tactic/conditional_entropy"] = tactic_stats[
+                "conditional_entropy"
+            ]
+            metrics["tactic/marginal_entropy"] = tactic_stats[
+                "marginal_entropy"
+            ]
+            metrics["tactic/mutual_information"] = tactic_stats[
+                "mutual_information"
+            ]
+            metrics["tactic/mutual_information_normalized"] = tactic_stats[
+                "mutual_information_normalized"
+            ]
+            metrics["tactic/selector_max_probability"] = tactic_stats[
+                "selector_max_probability"
+            ]
+            metrics["tactic/selector_logit_std"] = tactic_stats[
+                "selector_logit_std"
+            ]
+            metrics["tactic/collapse_loss"] = collapse_loss
+            # Compatibility panel name; semantics are now collapse-only.
+            metrics["tactic/balance_loss"] = collapse_loss
+            metrics["tactic/effect_loss"] = effect_loss
+            metrics["tactic/effect_js"] = effect_js
+            metrics["tactic/effect_js_min"] = effect_stats["js_min"]
+            metrics["tactic/effect_js_max"] = effect_stats["js_max"]
+            metrics["tactic/residual_rms"] = effect_stats["residual_rms"]
+            metrics["tactic/residual_to_base_ratio"] = residual_ratio
+            metrics["tactic/residual_guard_loss"] = residual_guard_loss
+            metrics["tactic/base_kl_loss"] = base_kl_loss
+            metrics["tactic/base_kl_mean"] = effect_stats["base_kl_mean"]
+            metrics["tactic/base_kl_max"] = effect_stats["base_kl_max"]
+            metrics["tactic/action_flip_rate"] = effect_stats[
+                "action_flip_rate"
+            ]
+            metrics["tactic/mi_shortfall"] = tactic_stats["mi_shortfall"]
+            metrics["tactic/usage_max"] = tactic_stats["usage_max"]
+            metrics["tactic/effective_count"] = tactic_stats[
+                "effective_count"
+            ]
+            for tactic_index in range(self.tactical_policy.num_tactics):
+                metrics[f"tactic/usage_{tactic_index}"] = tactic_stats[
+                    "marginal"
+                ][tactic_index]
+                metrics[
+                    f"tactic/sampled_usage_{tactic_index}"
+                ] = tactic_stats["sampled_usage"][tactic_index]
+                metrics[
+                    f"tactic/argmax_usage_{tactic_index}"
+                ] = tactic_stats["argmax_usage"][tactic_index]
+                metrics[
+                    f"tactic/residual_rms_{tactic_index}"
+                ] = effect_stats[f"residual_rms_{tactic_index}"]
+        else:
+            losses["policy"] = primitive_policy_loss
         imag_value_dist = self.value(imag_feat)
         tar_padded = torch.cat([ret, 0 * ret[:, -1:]], 1)
-        losses["value"] = torch.mean(
+        losses["value"] = _priority_weighted_mean(
             weight[:, :-1].detach()
             * (-imag_value_dist.log_prob(tar_padded.detach()) - imag_value_dist.log_prob(imag_slow_value.detach()))[
                 :, :-1
@@ -863,10 +1387,30 @@ class Dreamer(nn.Module):
         ret_replay = self._lambda_return(last, term, reward, value, boot, disc, self.lamb)
         ret_padded = torch.cat([ret_replay, 0 * ret_replay[:, -1:]], 1)
         value_dist = self.value(feat)
-        losses["repval"] = torch.mean(
+        losses["repval"] = _priority_weighted_mean(
             weight_replay[:, :-1]
-            * (-value_dist.log_prob(ret_padded.detach()) - value_dist.log_prob(slow_value.detach()))[:, :-1].unsqueeze(-1)
+            * (-value_dist.log_prob(ret_padded.detach()) - value_dist.log_prob(slow_value.detach()))[
+                :, :-1
+            ].unsqueeze(-1)
         )
+        _priority_value = value_dist.mode()
+        _priority_error = (ret_replay.detach() - _priority_value[:, :-1].detach()).abs()
+        _priority_valid = weight_replay[:, :-1].detach()
+        _priority_num = (_priority_error * _priority_valid).reshape(B, -1).sum(-1)
+        _priority_den = _priority_valid.reshape(B, -1).sum(-1).clamp_min(1.0)
+        self._priority_sequence_priorities = _priority_num / _priority_den
+        if "log_map_id" in data:
+            _map_ids = data["log_map_id"][:, :_priority_error.shape[1]].detach()
+            _map_feedback_valid = (
+                _priority_valid * _seq_is.reshape(B, 1, 1)
+            )
+            self._priority_map_feedback = (
+                _map_ids, _priority_error, _map_feedback_valid
+            )
+            metrics["priority/map_feedback_is_weight_mean"] = _seq_is.mean()
+        metrics["priority/critic_error_mean"] = _priority_error.mean()
+        metrics["priority/sequence_priority_mean"] = self._priority_sequence_priorities.mean()
+        metrics["priority/sequence_priority_max"] = self._priority_sequence_priorities.max()
         if self.action_masking:
             from smacdreamer.masked_actions import (
                 MaskedMultiOneHotDist, build_action_mask, invalid_mass_and_greedy_rate)
@@ -889,8 +1433,21 @@ class Dreamer(nn.Module):
         metrics["jepa/feature_norm"] = feat.detach().float().norm(dim=-1).mean()
         metrics["jepa/frozen_parameter_count"] = torch.tensor(
             float(sum(p.numel() for p in self.jepa_world_model.parameters_frozen())), device=feat.device)
+        metrics["jepa/adapter_total_parameter_count"] = torch.tensor(
+            float(sum(
+                p.numel()
+                for p in self.jepa_world_model.feature_adapter.parameters()
+            )),
+            device=feat.device,
+        )
         metrics["jepa/trainable_adapter_parameter_count"] = torch.tensor(
-            float(sum(p.numel() for p in self.jepa_world_model.feature_adapter.parameters())), device=feat.device)
+            float(sum(
+                p.numel()
+                for p in self.jepa_world_model.feature_adapter.parameters()
+                if p.requires_grad
+            )),
+            device=feat.device,
+        )
         metrics["ret"] = torch.mean((ret - ret_offset) / ret_scale)
         metrics["ret_005"] = self.return_ema.ema_vals[0]
         metrics["ret_095"] = self.return_ema.ema_vals[1]
@@ -907,6 +1464,12 @@ class Dreamer(nn.Module):
         metrics.update(tools.tensorstats(value, "value_replay"))
         metrics.update(tools.tensorstats(slow_value, "slow_value_replay"))
 
+        if self.hierarchical_enabled:
+            for legacy_key in ("policy", "value", "repval"):
+                losses.pop(legacy_key, None)
+            metrics["option/legacy_behavior_losses_disabled"] = (
+                torch.ones((), device=feat.device)
+            )
         total_loss = sum([v * self._loss_scales[k] for k, v in losses.items()])
         self._scaler.scale(total_loss).backward()
         metrics.update({f"loss/{name}": loss for name, loss in losses.items()})
@@ -967,6 +1530,7 @@ class Dreamer(nn.Module):
         # (B, S, K), (B, D)
         feats = []
         actions = []
+        tactics = []
         stoch, deter = start
         for _ in range(imag_horizon):
             # (B, F)
@@ -977,7 +1541,16 @@ class Dreamer(nn.Module):
             # (B, A)
             if self.action_masking:
                 from smacdreamer.masked_actions import MaskedMultiOneHotDist
-                raw_logits = self._frozen_actor.last(self._frozen_actor.mlp(feat))
+                raw_logits = self._frozen_actor.last(
+                    self._frozen_actor.mlp(feat)
+                )
+                if self.tactical_enabled:
+                    tactic = self._frozen_tactical_policy.select_tactic(
+                        feat
+                    )
+                    raw_logits = self._frozen_tactical_policy.combine_logits(
+                        raw_logits, feat, tactic
+                    )
                 amask, aactive = self._predicted_action_mask(feat)
                 action = MaskedMultiOneHotDist(
                     raw_logits, amask, aactive, self._actor_shape, self._actor_unimix).rsample()
@@ -986,6 +1559,8 @@ class Dreamer(nn.Module):
             # Append feat and its corresponding sampled action at the same time step.
             feats.append(feat)
             actions.append(action)
+            if self.tactical_enabled:
+                tactics.append(tactic)
             if self.world_model_backend == "jepa":
                 stoch, deter = self._frozen_jepa_world_model.img_step(stoch, deter, action)
             else:
@@ -993,6 +1568,12 @@ class Dreamer(nn.Module):
 
         # Stack along sequence dim T_imag.
         # (B, T_imag, F), (B, T_imag, A)
+        if self.tactical_enabled:
+            return (
+                torch.stack(feats, dim=1),
+                torch.stack(actions, dim=1),
+                torch.stack(tactics, dim=1),
+            )
         return torch.stack(feats, dim=1), torch.stack(actions, dim=1)
 
     @torch.no_grad()

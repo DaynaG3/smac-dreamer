@@ -1,0 +1,24 @@
+[eval] ORDINARY_EVAL=/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33_anchored.py
+[eval] HIDDEN_EVAL=/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_hidden_belief_exp31_exp33.py
+[eval-cmd] python /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33_anchored.py --checkpoint /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/runs/rnn_seqmem_exp41_hidden_change_gate_5ep_20260709_083104/checkpoint.pt --manifest splits/r2_general_2100.json --split eval --device cuda --batch-size 16 --num-workers 4 --out-dir /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp41_hidden_change_gate_5ep/ordinary_rollout --out /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp41_hidden_change_gate_5ep/ordinary_rollout/eval_metrics.json --summary-out /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp41_hidden_change_gate_5ep/ordinary_rollout/summary.csv --eval-rollout-horizon 5 --target-mode full --window-mode sequential --enemy-visibility-mask --diagnostics --probe-decoder --probe-epochs 5 --probe-max-batches-per-epoch 100 --probe-samples-per-epoch 8000 --thresholds 0.01 0.05 0.10 --max-batches 300
+Evaluating 1 checkpoint(s) split=eval device=cuda
+evaluating /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/runs/rnn_seqmem_exp41_hidden_change_gate_5ep_20260709_083104/checkpoint.pt
+/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33.py:1131: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  scaler = torch.cuda.amp.GradScaler(enabled=amp_enabled)
+training independent probe decoder module=decoder signature=[(192, 512), (512, 26)] epochs=5 max_batches_per_epoch=100
+/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33.py:1161: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  torch.cuda.amp.autocast(enabled=amp_enabled)
+probe epoch=1/5 updates=100 train_mse=0.012031
+probe epoch=2/5 updates=200 train_mse=0.002212
+probe epoch=3/5 updates=300 train_mse=0.001477
+probe epoch=4/5 updates=400 train_mse=0.001159
+probe epoch=5/5 updates=500 train_mse=0.000971
+saved probe decoder /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp41_hidden_change_gate_5ep/ordinary_rollout/eval_metrics.json/probe_decoders/rnn_seqmem_exp41_hidden_change_gate_5ep_20260709_083104_checkpoint_meaningful_features_v2_probe_decoder.pt
+/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33.py:2009: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  torch.cuda.amp.autocast(enabled=amp_enabled)
+WARNING: no hidden target entities occurred in the evaluated subset. Overall, probe, action, memory, presence, and rollout metrics remain valid; hidden-only metrics are unavailable.
+done saved_epoch=5 global_step=15625 eval_metric_latent_mse=0.566587 eval_metric_latent_error_growth_ratio=1.322873 eval_corrected_native_dynamic_mae=0.036879 eval_corrected_native_dynamic_target_std_normalized_rmse=0.194406 eval_corrected_native_dynamic_coord_acc_0p05=0.776290 eval_corrected_native_dynamic_entity_acc_0p05=0.372981 eval_corrected_native_static_mae=0.018250 eval_corrected_native_vs_persistence_dynamic_mae_relative_improvement=-3.907708 eval_corrected_native_enemy_dynamic_mae=0.010702 eval_metric_presence_f1=0.994855 eval_metric_variance_normalized_latent_mse=0.883645 eval_metric_target_latent_std_mean=0.767874 eval_metric_pred_to_target_std_ratio=1.038408 eval_probe_reconstruction_mse=0.001340 eval_probe_rollout_mse=0.031637 eval_probe_rollout_gap_mse=0.030297 eval_probe_rollout_acc_0p05=0.464708 eval_probe_accuracy_drop_0p05=0.423674 eval_diagnostic_wrong_action_latent_penalty=0.017878 eval_diagnostic_memory_latent_gain=0.007987 eval_diagnostic_oracle_mask_latent_advantage=-0.000396
+wrote /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp41_hidden_change_gate_5ep/ordinary_rollout/eval_metrics.json/eval_rnn_seqmem_exp41_hidden_change_gate_5ep_20260709_083104_checkpoint.json
+wrote /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp41_hidden_change_gate_5ep/ordinary_rollout/eval_metrics.json/eval_rnn_seqmem_exp41_hidden_change_gate_5ep_20260709_083104_checkpoint.csv
+wrote summary /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp41_hidden_change_gate_5ep/ordinary_rollout/summary.csv
+wrote summary /home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_outputs/exp41_hidden_change_gate_5ep/ordinary_rollout/summary.jsonl

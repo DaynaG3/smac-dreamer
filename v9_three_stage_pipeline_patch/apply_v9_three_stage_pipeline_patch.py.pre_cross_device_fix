@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+
+from omegaconf import OmegaConf
+
+BUNDLE = Path(__file__).resolve().parent
+PAYLOAD = BUNDLE / "payload"
+MANIFEST = BUNDLE / "MANIFEST.sha256.json"
+INTRODUCED = (
+    "configs/r2_2100_jepa_tactical_mixture_v1_2_actor_critic_h15_800k.yaml",
+    "scripts/audit_actor_critic_h15_800k.py",
+    "scripts/static_audit_actor_critic_h15_800k.sh",
+    "scripts/run_actor_critic_h15_800k.sh",
+    "scripts/run_forecast_then_actor_critic_h15_then_option_critic_v9.sh",
+)
+
+
+def die(msg: str) -> None:
+    raise SystemExit(f"[FAIL] {msg}")
+
+
+def sha(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def verify_bundle() -> None:
+    data = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    if data.get("schema_version") != 1 or not isinstance(data.get("files"), dict):
+        die("invalid manifest")
+    for rel, expected in data["files"].items():
+        p = BUNDLE / rel
+        if not p.is_file() or sha(p) != expected:
+            die(f"bundle hash mismatch: {rel}")
+    print(f"[OK] verified {len(data['files'])} bundle hashes")
+
+
+def validate_payload(rel: str) -> None:
+    p = PAYLOAD / rel
+    if not p.is_file():
+        die(f"payload missing: {rel}")
+    if p.suffix == ".py":
+        compile(p.read_text(encoding="utf-8"), str(p), "exec")
+    elif p.suffix == ".sh":
+        r = subprocess.run(["bash", "-n", str(p)], capture_output=True, text=True)
+        if r.returncode:
+            die(f"shell syntax failed: {rel}: {r.stderr.strip()}")
+
+
+def build_config(repo: Path):
+    source_path = repo / "configs/r2_2100_jepa_tactical_mixture_v1_2.yaml"
+    v9_path = repo / "configs/r2_2100_jepa_option_critic_8_v9_anchor_safe_h15_800k.yaml"
+    if not source_path.is_file(): die("missing Tactical-v1.2 source config")
+    if not v9_path.is_file(): die("missing installed v9 config")
+    cfg = OmegaConf.load(source_path)
+    v9 = OmegaConf.load(v9_path)
+    if not bool(cfg.tactical_mixture.enabled):
+        die("source config does not enable Tactical Mixture v1.2")
+    h = OmegaConf.to_container(v9.hierarchical_options, resolve=True)
+    if not isinstance(h, dict): die("v9 hierarchy block did not resolve")
+    h["enabled"] = False
+    cfg.hierarchical_options = OmegaConf.create(h)
+    cfg.tactical_mixture.enabled = True
+    cfg.imag_horizon = 15
+    cfg.buffer.scratch_dir = "replay_tactical_v12_actor_critic_h15_800k"
+    cfg.validation.run_at_start = True
+    cfg.validation.every = 200_000
+    if "compile" in cfg: cfg.compile = False
+    if "model" in cfg and "compile" in cfg.model: cfg.model.compile = False
+    if "wandb" in cfg: cfg.wandb.run_name = "tactical_v12_actor_critic_h15_800k"
+    OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
+    return cfg
+
+
+def validate_repo(repo: Path) -> None:
+    required = [
+        "external/r2dreamer/hierarchical_options.py",
+        "configs/r2_2100_jepa_tactical_mixture_v1_2.yaml",
+        "configs/r2_2100_jepa_option_critic_8_v9_anchor_safe_h15_800k.yaml",
+        "scripts/run_exp45_full_train_eval_resilient.sh",
+        "scripts/run_option_critic_v9_anchor_safe_800k.sh",
+        "scripts/static_audit_option_critic_v9_anchor_safe.sh",
+    ]
+    for rel in required:
+        if not (repo / rel).is_file(): die(f"required installed-v9 path missing: {rel}")
+    marker = (repo / "external/r2dreamer/hierarchical_options.py").read_text(encoding="utf-8")
+    if "dreamer_option_critic_v9_anchor_safe_8slot" not in marker:
+        die("Option-Critic v9 marker missing; install/audit v9 first")
+    existing = [rel for rel in INTRODUCED if (repo / rel).exists()]
+    if existing: die(f"three-stage patch paths already exist: {existing}")
+    for rel in INTRODUCED[1:]: validate_payload(rel)
+
+
+def install(repo: Path, cfg) -> None:
+    with tempfile.TemporaryDirectory(prefix="v9_three_stage_") as td:
+        stage = Path(td)
+        config_rel = INTRODUCED[0]
+        config_path = stage / config_rel
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        OmegaConf.save(cfg, config_path)
+        OmegaConf.to_container(OmegaConf.load(config_path), resolve=True, throw_on_missing=True)
+        staged = {config_rel: config_path}
+        for rel in INTRODUCED[1:]:
+            src = PAYLOAD / rel
+            dst = stage / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+            staged[rel] = dst
+        created: list[Path] = []
+        try:
+            for rel in INTRODUCED:
+                dst = repo / rel
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                if dst.exists(): die(f"refusing to overwrite: {rel}")
+                os.replace(staged[rel], dst)
+                created.append(dst)
+                if dst.suffix in {".py", ".sh"}: dst.chmod(0o755)
+        except BaseException:
+            for p in reversed(created):
+                p.unlink(missing_ok=True)
+            raise
+    print("[OK] installed three-stage forecast -> AC H15 -> Option-Critic v9 pipeline patch")
+    for rel in INTRODUCED: print(f"[OK] {repo / rel}")
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--repo", required=True)
+    ap.add_argument("--dry-run", action="store_true")
+    args = ap.parse_args()
+    repo = Path(args.repo).resolve()
+    if not repo.is_dir(): die(f"repo missing: {repo}")
+    verify_bundle()
+    validate_repo(repo)
+    cfg = build_config(repo)
+    if args.dry_run:
+        print("[OK] three-stage patch dry-run matched installed v9 and resolved the ordinary Tactical-v1.2 H=15 baseline config")
+    else:
+        install(repo, cfg)
+
+if __name__ == "__main__": main()

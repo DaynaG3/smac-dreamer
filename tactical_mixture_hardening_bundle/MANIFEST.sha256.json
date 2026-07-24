@@ -1,0 +1,18 @@
+{
+  "files": {
+    "AUDIT_FINDINGS.md": "54911b9c4677db0e9cfded9f7b5120e25f9cb2d4c2337afcc4e97ea863e3d42b",
+    "BUNDLE_VALIDATION.txt": "513cfc2efa586d1060435c4f4df36fe7c575832231a4fc3dfcafefcc45891ac7",
+    "INSTALL_COMMANDS.txt": "2100e55357af6efb437a562dd7dd8a7594255ba0fb0947af3b696431c8fd9ccc",
+    "README.md": "0603a18e03a8ab94b08260f32ae1736ff07a1e4768fcccfdb544cc95e00c256f",
+    "bundle_tests/test_tactical_hardening_installer.py": "2421e6714aa2b01a147555916b22b2dacf1bd777d1251e2dd9fc385a9cbffcad",
+    "install_tactical_hardening.py": "2766a0069f661f600cf5fd48db5f5954a40833500bcab22301647624819b34b0",
+    "payload/external/r2dreamer/tactical_policy.py": "83129f40d056307f51a41a1e831d096cbc1d81d30fd5a6aa7a0d388a38373fa8",
+    "payload/scripts/assert_tactical_hardened_metrics.py": "4aa15251b5503c52dc10b220b88dde9d6beee45de2dd3823063021345e17258c",
+    "payload/scripts/audit_tactical_hardening.py": "d43a2092025ad80ae6799c5c1c5b99d4d3c1838a08e3a9af553cf3dcfaf6ef59",
+    "payload/scripts/run_tactical_hardened_2m.sh": "e110f93fb04f3d405c4ede7e195ec5fe2841de99aad0ba372768e6367dc15fed",
+    "payload/scripts/static_audit_tactical_hardening.sh": "1f99711f3a186638631c832a99f95991e575892389befb9a409731e984b845ec",
+    "payload/tests/test_tactical_policy_hardened.py": "be4d73866a21fc9bdd6d430f32c808f8c649a5c0424da9c2560bf7c672e15d66",
+    "restore_tactical_hardening_backup.sh": "d213c2aa75d08195f129cdaca64618051f61f35583cbc1d5294678f815367cd8"
+  },
+  "schema_version": 1
+}

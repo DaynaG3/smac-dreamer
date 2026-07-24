@@ -1,0 +1,10 @@
+Preflight REAL Exp39/40/41 files and eval discovery	OK	rc=0
+Train Exp39 probe+action	OK	rc=0
+Ordinary rollout metrics Exp39	OK	rc=0
+Hidden belief metrics Exp39	OK	rc=0
+Train Exp40 event-balanced	OK	rc=0
+Ordinary rollout metrics Exp40	OK	rc=0
+Hidden belief metrics Exp40	OK	rc=0
+Train Exp41 hidden-change-gate	OK	rc=0
+Ordinary rollout metrics Exp41	OK	rc=0
+Hidden belief metrics Exp41	OK	rc=0

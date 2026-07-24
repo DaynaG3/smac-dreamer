@@ -1,0 +1,671 @@
+diff --git a/smac-dreamer/external/r2dreamer/dreamer.py b/smac-dreamer/external/r2dreamer/dreamer.py
+index af838b3..cd8be47 100644
+--- a/smac-dreamer/external/r2dreamer/dreamer.py
++++ b/smac-dreamer/external/r2dreamer/dreamer.py
+@@ -491,7 +491,14 @@ class Dreamer(nn.Module):
+ 
+     def update(self, replay_buffer):
+         """Sample a batch from replay and perform one optimization step."""
+-        data, index, initial = replay_buffer.sample()
++        data, sample_info, initial = replay_buffer.sample()
++        importance_weights = getattr(sample_info, 'importance_weights', None)
++        self._priority_sequence_weights = (
++            importance_weights.to(self.device) if importance_weights is not None else None
++        )
++        self._priority_sequence_priorities = None
++        self._priority_map_feedback = None
++        # UNIFIED_PRIORITY_V1
+         torch.compiler.cudagraph_mark_step_begin()
+         p_data = self.preprocess(data)
+         self._update_slow_target()
+@@ -528,7 +535,26 @@ class Dreamer(nn.Module):
+             mets["opt/update_rms"] = update_rms
+         metrics.update(mets)
+         # update latent vectors in replay buffer
+-        replay_buffer.update(index, stoch.detach(), deter.detach())
++        transition_indices = getattr(sample_info, 'transition_indices', sample_info)
++        replay_buffer.update(transition_indices, stoch.detach(), deter.detach())
++        if (
++            hasattr(sample_info, 'sequence_uids')
++            and self._priority_sequence_priorities is not None
++            and hasattr(replay_buffer, 'update_priorities')
++        ):
++            replay_buffer.update_priorities(
++                sample_info.sequence_uids,
++                self._priority_sequence_priorities,
++            )
++        if self._priority_map_feedback is not None:
++            controller = getattr(replay_buffer, 'priority_controller', None)
++            if controller is not None:
++                map_ids, errors, valid = self._priority_map_feedback
++                controller.record_critic_feedback(
++                    map_ids, errors, valid,
++                    env_step=(replay_buffer.current_env_step()
++                              if hasattr(replay_buffer, 'current_env_step') else None),
++                )
+         return metrics
+ 
+     def _cal_grad(self, data, initial):
+@@ -780,6 +806,20 @@ class Dreamer(nn.Module):
+         losses = {}
+         metrics = {}
+         B, T = data.shape
++        _seq_is = self._priority_sequence_weights
++        if _seq_is is None:
++            _seq_is = torch.ones(B, dtype=torch.float32, device=self.device)
++        _seq_is = _seq_is.to(device=self.device, dtype=torch.float32).reshape(B)
++        def _priority_weighted_mean(term):
++            if term.shape[0] == B:
++                per_sequence = term.reshape(B, -1).mean(-1)
++            elif term.shape[0] == B * T:
++                per_sequence = term.reshape(B, T, -1).mean((1, 2))
++            else:
++                raise RuntimeError(
++                    f'cannot align PER weights: leading dim {term.shape[0]}, B={B}, T={T}'
++                )
++            return (per_sequence * _seq_is).sum() / _seq_is.sum().clamp_min(1e-8)
+         encoded = self.jepa_world_model.encode_obs(data)
+         post_stoch, post_deter = self.jepa_world_model.observe(
+             encoded,
+@@ -789,12 +829,18 @@ class Dreamer(nn.Module):
+         )
+         feat = self.jepa_world_model.get_feat(post_stoch, post_deter)
+ 
+-        losses["rew"] = torch.mean(-self.reward(feat).log_prob(to_f32(data["reward"])))
++        losses["rew"] = _priority_weighted_mean(
++            -self.reward(feat).log_prob(to_f32(data["reward"]))
++        )
+         cont = 1.0 - to_f32(data["is_terminal"])
+-        losses["con"] = torch.mean(-self.cont(feat).log_prob(cont))
++        losses["con"] = _priority_weighted_mean(-self.cont(feat).log_prob(cont))
+         if self.action_masking:
+-            losses["avail"] = torch.mean(-self.avail_head(feat).log_prob(to_f32(data["avail_actions"])))
+-            losses["alive"] = torch.mean(-self.alive_head(feat).log_prob(to_f32(data["agent_alive_mask"])))
++            losses["avail"] = _priority_weighted_mean(
++                -self.avail_head(feat).log_prob(to_f32(data["avail_actions"]))
++            )
++            losses["alive"] = _priority_weighted_mean(
++                -self.alive_head(feat).log_prob(to_f32(data["agent_alive_mask"]))
++            )
+             from smacdreamer.masked_actions import mask_quality_metrics
+             _avail_logits = self.avail_head.last(self.avail_head.mlp(feat)).detach()
+             _mq = mask_quality_metrics(
+@@ -845,10 +891,13 @@ class Dreamer(nn.Module):
+             policy = self.actor(imag_feat)
+         logpi = policy.log_prob(imag_action)[:, :-1].unsqueeze(-1)
+         entropy = policy.entropy()[:, :-1].unsqueeze(-1)
+-        losses["policy"] = torch.mean(weight[:, :-1].detach() * -(logpi * adv.detach() + self.act_entropy * entropy))
++        losses["policy"] = _priority_weighted_mean(
++            weight[:, :-1].detach()
++            * -(logpi * adv.detach() + self.act_entropy * entropy)
++        )
+         imag_value_dist = self.value(imag_feat)
+         tar_padded = torch.cat([ret, 0 * ret[:, -1:]], 1)
+-        losses["value"] = torch.mean(
++        losses["value"] = _priority_weighted_mean(
+             weight[:, :-1].detach()
+             * (-imag_value_dist.log_prob(tar_padded.detach()) - imag_value_dist.log_prob(imag_slow_value.detach()))[
+                 :, :-1
+@@ -863,10 +912,30 @@ class Dreamer(nn.Module):
+         ret_replay = self._lambda_return(last, term, reward, value, boot, disc, self.lamb)
+         ret_padded = torch.cat([ret_replay, 0 * ret_replay[:, -1:]], 1)
+         value_dist = self.value(feat)
+-        losses["repval"] = torch.mean(
++        losses["repval"] = _priority_weighted_mean(
+             weight_replay[:, :-1]
+-            * (-value_dist.log_prob(ret_padded.detach()) - value_dist.log_prob(slow_value.detach()))[:, :-1].unsqueeze(-1)
++            * (-value_dist.log_prob(ret_padded.detach()) - value_dist.log_prob(slow_value.detach()))[
++                :, :-1
++            ].unsqueeze(-1)
+         )
++        _priority_value = value_dist.mode()
++        _priority_error = (ret_replay.detach() - _priority_value[:, :-1].detach()).abs()
++        _priority_valid = weight_replay[:, :-1].detach()
++        _priority_num = (_priority_error * _priority_valid).reshape(B, -1).sum(-1)
++        _priority_den = _priority_valid.reshape(B, -1).sum(-1).clamp_min(1.0)
++        self._priority_sequence_priorities = _priority_num / _priority_den
++        if "log_map_id" in data:
++            _map_ids = data["log_map_id"][:, :_priority_error.shape[1]].detach()
++            _map_feedback_valid = (
++                _priority_valid * _seq_is.reshape(B, 1, 1)
++            )
++            self._priority_map_feedback = (
++                _map_ids, _priority_error, _map_feedback_valid
++            )
++            metrics["priority/map_feedback_is_weight_mean"] = _seq_is.mean()
++        metrics["priority/critic_error_mean"] = _priority_error.mean()
++        metrics["priority/sequence_priority_mean"] = self._priority_sequence_priorities.mean()
++        metrics["priority/sequence_priority_max"] = self._priority_sequence_priorities.max()
+         if self.action_masking:
+             from smacdreamer.masked_actions import (
+                 MaskedMultiOneHotDist, build_action_mask, invalid_mass_and_greedy_rate)
+diff --git a/smac-dreamer/external/r2dreamer/trainer.py b/smac-dreamer/external/r2dreamer/trainer.py
+index 3026af1..3159c20 100644
+--- a/smac-dreamer/external/r2dreamer/trainer.py
++++ b/smac-dreamer/external/r2dreamer/trainer.py
+@@ -10,6 +10,9 @@ class OnlineTrainer:
+         self.train_envs = train_envs
+         self.eval_envs = eval_envs
+         self.steps = int(config.steps)
++        self.start_step = int(getattr(config, 'start_step', 0) or 0)
++        self.current_step = self.start_step
++        # UNIFIED_PRIORITY_V1
+         self.pretrain = int(config.pretrain)
+         self.eval_every = int(config.eval_every)
+         self.eval_episode_num = int(config.eval_episode_num)
+@@ -110,7 +113,10 @@ class OnlineTrainer:
+         """
+         envs = self.train_envs
+         video_cache = []
+-        step = self.replay_buffer.count() * self._action_repeat
++        step = self.start_step + self.replay_buffer.count() * self._action_repeat
++        self.current_step = int(step)
++        if hasattr(self.replay_buffer, 'set_env_step'):
++            self.replay_buffer.set_env_step(step)
+         update_count = 0
+         # (B,)
+         done = torch.ones(envs.env_num, dtype=torch.bool, device=agent.device)
+@@ -156,6 +162,9 @@ class OnlineTrainer:
+                         self.logger.write(step + i)  # to show all values on tensorboard
+                         returns[i] = lengths[i] = 0
+             step += int((~done).sum()) * self._action_repeat  # step is based on env side
++            self.current_step = int(step)
++            if hasattr(self.replay_buffer, 'set_env_step'):
++                self.replay_buffer.set_env_step(step)
+             lengths += ~done
+ 
+             # Step environments.  Each env backend handles device placement
+@@ -183,28 +192,48 @@ class OnlineTrainer:
+             trans["episode"] = episode_ids  # Don't lift dim
+             if "image" in trans:
+                 video_cache.append(trans["image"][0])
++            if hasattr(self.replay_buffer, 'record_collection'):
++                self.replay_buffer.record_collection(trans, env_step=step)
+             self.replay_buffer.add_transition(trans.detach())
+             returns += trans["reward"][:, 0]
+             # Update models after enough data has accumulated
+-            if step // (envs.env_num * self._action_repeat) > self.batch_length + 1:
++            # Resume uses a new replay, so warm-up must depend on replay contents,
++            # never on the restored absolute environment step.
++            if self.replay_buffer.count() // envs.env_num > self.batch_length + 1:
+                 if self._should_pretrain():
+                     update_num = self.pretrain
+                 else:
+                     update_num = self._updates_needed(step)
++
+                 for _ in range(update_num):
+                     _metrics = agent.update(self.replay_buffer)
+                     train_metrics = _metrics
++
+                 update_count += update_num
+-                # Log training metrics
+-                if self._should_log(step):
+-                    for name, value in train_metrics.items():
+-                        value = tools.to_np(value) if isinstance(value, torch.Tensor) else value
+-                        self.logger.scalar(f"train/{name}", value)
+-                    self.logger.scalar("train/opt/updates", update_count)
+-                    if self.video_pred_log:
+-                        data, _, initial = self.replay_buffer.sample()
+-                        self.logger.video("open_loop", tools.to_np(agent.video_pred(data, initial)))
+-                    if self.params_hist_log:
+-                        for name, param in agent._named_params.items():
+-                            self.logger.histogram(name, tools.to_np(param))
+-                    self.logger.write(step, fps=True)
++            # Log training metrics
++            if self._should_log(step):
++                if hasattr(self.replay_buffer, "metrics"):
++                    train_metrics.update(self.replay_buffer.metrics())
++
++                for name, value in train_metrics.items():
++                    value = (
++                        tools.to_np(value)
++                        if isinstance(value, torch.Tensor)
++                        else value
++                    )
++                    self.logger.scalar(f"train/{name}", value)
++
++                self.logger.scalar("train/opt/updates", update_count)
++
++                if self.video_pred_log:
++                    data, _, initial = self.replay_buffer.sample()
++                    self.logger.video(
++                        "open_loop",
++                        tools.to_np(agent.video_pred(data, initial)),
++                    )
++
++                if self.params_hist_log:
++                    for name, param in agent._named_params.items():
++                        self.logger.histogram(name, tools.to_np(param))
++
++                self.logger.write(step, fps=True)
+diff --git a/smac-dreamer/scripts/train_r2dreamer_smaclite_multimap.py b/smac-dreamer/scripts/train_r2dreamer_smaclite_multimap.py
+index 1db9c57..b14abd6 100644
+--- a/smac-dreamer/scripts/train_r2dreamer_smaclite_multimap.py
++++ b/smac-dreamer/scripts/train_r2dreamer_smaclite_multimap.py
+@@ -26,8 +26,11 @@ import hashlib
+ import json
+ import os
+ import pathlib
++import random
+ import sys
+ 
++import numpy as np
++
+ ROOT = pathlib.Path(__file__).resolve().parent.parent
+ for _p in (
+     str(ROOT / "src"),
+@@ -41,8 +44,10 @@ import torch
+ from omegaconf import OmegaConf
+ 
+ import tools
+-from buffer import Buffer
++from adaptive_buffer import AdaptiveBuffer
+ from dreamer import Dreamer
++from smacdreamer.adaptive_priority import AdaptivePriorityController
++# UNIFIED_PRIORITY_V1
+ from smacdreamer.r2dreamer_factory import make_smaclite_multimap_envs
+ from smacdreamer.envs.map_discovery import discover, discover_folders, SplitSpec
+ from smacdreamer.validation_trainer import ValidationTrainer
+@@ -116,6 +121,11 @@ def main():
+     ap.add_argument("--wandb-mode", default=None, choices=("online", "offline", "disabled"),
+                     help="override W&B mode")
+     ap.add_argument("--resume", default=None, help="checkpoint path to resume model/training state")
++    ap.add_argument(
++        "--resume-start-step", type=int, default=None,
++        help=("trusted absolute environment step for an old checkpoint; "
++              "overrides checkpoint['step'] when supplied"),
++    )
+     ap.add_argument("--jepa-checkpoint", default=None, help="override world_model.jepa.checkpoint")
+     args = ap.parse_args()
+ 
+@@ -154,6 +164,11 @@ def main():
+     if not scratch_path.is_absolute():
+         scratch_path = logdir / scratch_path
+     config.buffer.scratch_dir = str(scratch_path)
++    _adaptive_cfg = cfg.get('adaptive_priority') or OmegaConf.create({})
++    config.buffer.adaptive_priority = OmegaConf.create(
++        OmegaConf.to_container(_adaptive_cfg, resolve=True)
++        if _adaptive_cfg else {}
++    )
+ 
+     # --- Observation mode (flat | structured) ----------------------------------
+     obs_mode = str(cfg.observation.mode) if cfg.get("observation") else "flat"
+@@ -257,6 +272,9 @@ def main():
+     print(f"{'='*64}\n")
+ 
+     tools.set_seed_everywhere(int(cfg.seed))
++    priority_controller = AdaptivePriorityController.from_entries(
++        train_entries, _adaptive_cfg
++    )
+ 
+     # --- Train envs ONLY (validation handled by ValidationTrainer; no worker-eval pool) -
+     env_lifecycle = OmegaConf.to_container(cfg.get("env_lifecycle", {}), resolve=True) or {}
+@@ -278,6 +296,8 @@ def main():
+         env_lifecycle=env_lifecycle,
+         include_jepa_obs=(wm_backend == "jepa"),
+         jepa_visibility_config=jepa_visibility_config,
++        shared_map_probabilities=priority_controller.shared_probabilities,
++        shared_map_version=priority_controller.shared_version,
+     )
+     print(f"  obs keys : {sorted(obs_space.spaces)}")
+ 
+@@ -297,6 +317,7 @@ def main():
+         "n_validation_maps": len(val_entries),
+         "model": config.model,
+         "world_model": config.model.world_model,
++        "adaptive_priority": _adaptive_cfg,
+     })
+ 
+     # Reconstruction metadata for standalone checkpoint eval: the EXACT obs mode + model dims
+@@ -353,38 +374,94 @@ def main():
+         )
+ 
+     try:
+-        replay_buffer = Buffer(config.buffer)
++        replay_buffer = AdaptiveBuffer(config.buffer, priority_controller)
+ 
+         # --- Agent -------------------------------------------------------------
+         print("\nBuilding Dreamer agent...")
+         agent = Dreamer(config.model, obs_space, act_space).to(config.device)
+         print(f"  Parameters : {sum(p.numel() for p in agent.parameters()):,}")
++        resume_step = 0
+         if args.resume:
+             ckpt = torch.load(args.resume, map_location=str(cfg.device), weights_only=False)
++            checkpoint_step = int(ckpt.get('step', 0))
++            resume_step = int(
++                args.resume_start_step
++                if args.resume_start_step is not None
++                else checkpoint_step
++            )
++            if resume_step < 0:
++                raise ValueError(f'resume start step must be non-negative, got {resume_step}')
++            if args.resume_start_step is not None:
++                print(
++                    f' [resume] trusted step override: {resume_step:,} '
++                    f'(checkpoint stored {checkpoint_step:,})'
++                )
++            config.trainer.start_step = resume_step
++            replay_buffer.set_env_step(resume_step)
+             agent.load_state_dict(ckpt["agent_state_dict"])
+             if ckpt.get("agent_training_state") and hasattr(agent, "load_training_state_dict"):
+                 agent.load_training_state_dict(ckpt["agent_training_state"])
+                 print(f"  [resume] restored model + optimizer/scheduler/scaler state from {args.resume}")
+             else:
+                 print(f"  [resume] restored model weights only from {args.resume}")
+-            print("  [resume] replay memmap restore is not implemented; replay will refill before updates.")
+-
+-        # --- Checkpointing -----------------------------------------------------
+-        checkpointer = None
+-        if float(cfg.get("checkpoint_every_minutes", 0)) > 0:
+-            checkpointer = PeriodicCheckpointer(
+-                agent, logdir,
+-                interval_seconds=float(cfg.checkpoint_every_minutes) * 60.0,
+-                step_fn=lambda: replay_buffer.count() * config.trainer.action_repeat,
+-            )
+-            attach_checkpointing(agent, checkpointer)
+-            print(f"  Checkpoints : every {cfg.checkpoint_every_minutes:g} min -> {logdir/'latest.pt'}")
++            _rng = ckpt.get('rng_state')
++            if _rng:
++                if _rng.get('python') is not None:
++                    random.setstate(_rng['python'])
++                if _rng.get('numpy') is not None:
++                    np.random.set_state(_rng['numpy'])
++                if _rng.get('torch') is not None:
++                    def _as_cpu_byte_rng_state(state):
++                        """Normalize RNG state after checkpoint map_location."""
++                        if isinstance(state, torch.Tensor):
++                            return state.detach().to(
++                                device="cpu",
++                                dtype=torch.uint8,
++                            ).contiguous()
++                        return torch.as_tensor(
++                            state,
++                            dtype=torch.uint8,
++                            device="cpu",
++                        ).contiguous()
++
++                    torch.set_rng_state(
++                        _as_cpu_byte_rng_state(_rng["torch"])
++                    )
++                if torch.cuda.is_available() and _rng.get('torch_cuda') is not None:
++                    _cuda_rng_states = [
++                        _as_cpu_byte_rng_state(state)
++                        for state in _rng["torch_cuda"]
++                    ]
++                    _cuda_device_count = torch.cuda.device_count()
++                    if len(_cuda_rng_states) == _cuda_device_count:
++                        torch.cuda.set_rng_state_all(_cuda_rng_states)
++                    else:
++                        # Restore every matching device safely if GPU count changed.
++                        for device_index, state in enumerate(
++                            _cuda_rng_states[:_cuda_device_count]
++                        ):
++                            torch.cuda.set_rng_state(
++                                state,
++                                device=device_index,
++                            )
++                        print(
++                            " [resume] WARN: checkpoint CUDA RNG state count "
++                            f"{len(_cuda_rng_states)} differs from current GPU "
++                            f"count {_cuda_device_count}; restored matching devices.",
++                            flush=True,
++                        )
++                print('  [resume] restored Python/NumPy/Torch RNG state')
++            if ckpt.get('adaptive_priority_state') is not None:
++                priority_controller.load_state_dict(
++                    ckpt['adaptive_priority_state'], strict=True
++                )
++                print(' [resume] restored adaptive map-priority state')
++            else:
++                print(' [resume] old checkpoint has no adaptive state; maps start uniform')
++            print(' [resume] replay is intentionally new; sequence priorities refill with it.')
++            print(f' [resume] absolute environment step restored to {resume_step:,}')
+ 
+-        # --- Train -------------------------------------------------------------
+-        print(f"\nStarting multimap training ({steps} env steps)...\n")
+-        # ValidationTrainer replaces the old worker-based periodic evaluator: every `val_every`
+-        # steps it runs map×seed validation, logs macro/micro metrics, and saves
+-        # best_val_macro_winrate.pt (macro win rate; macro original return as tie-breaker).
++        # --- Trainer + checkpointing -------------------------------------------
+         trainer = ValidationTrainer(
+             config.trainer, replay_buffer, logger, logdir, train_envs,
+             validation_entries=val_entries, pad_dims=pad_dims, seeds=val_seeds,
+@@ -393,13 +470,25 @@ def main():
+             run_at_start=val_run_at_start,
+             shutdown_timeout_seconds=float(env_lifecycle.get("shutdown_timeout_seconds", 5.0)),
+         )
+-        trainer.begin(agent)
++        def _extra_checkpoint_state():
++            return {
++                'adaptive_priority_schema': 1,
++                'adaptive_priority_state': priority_controller.state_dict(),
++            }
++        checkpointer = PeriodicCheckpointer(
++            agent, logdir,
++            interval_seconds=max(1.0, float(cfg.get('checkpoint_every_minutes', 0) or 0) * 60.0),
++            step_fn=lambda: int(trainer.current_step),
++            extra_state_fn=_extra_checkpoint_state,
++        )
++        if float(cfg.get('checkpoint_every_minutes', 0) or 0) > 0:
++            attach_checkpointing(agent, checkpointer)
++            print(f"  Checkpoints : every {cfg.checkpoint_every_minutes:g} min -> {logdir/'latest.pt'}")
+ 
+-        if checkpointer is not None:
+-            checkpointer.save(final=True)
+-        else:
+-            torch.save({"agent_state_dict": agent.state_dict()}, logdir / "latest.pt")
+-            print(f"\nCheckpoint saved -> {logdir/'latest.pt'}")
++        # --- Train -------------------------------------------------------------
++        print(f"\nStarting multimap training ({steps} absolute env steps; resume={resume_step})...\n")
++        trainer.begin(agent)
++        checkpointer.save(final=True)
+         print("\nMultimap training complete.")
+     finally:
+         if train_envs is not None:
+diff --git a/smac-dreamer/src/smacdreamer/checkpointing.py b/smac-dreamer/src/smacdreamer/checkpointing.py
+index 94506c0..741d049 100644
+--- a/smac-dreamer/src/smacdreamer/checkpointing.py
++++ b/smac-dreamer/src/smacdreamer/checkpointing.py
+@@ -44,12 +44,17 @@ class PeriodicCheckpointer:
+                        in addition to overwriting latest.pt
+     """
+ 
+-    def __init__(self, agent, logdir, interval_seconds, step_fn=None, keep_snapshots=False):
++    def __init__(
++        self, agent, logdir, interval_seconds, step_fn=None,
++        keep_snapshots=False, extra_state_fn=None,
++    ):
++        # UNIFIED_PRIORITY_V1
+         self._agent = agent
+         self._logdir = pathlib.Path(logdir)
+         self._interval = float(interval_seconds)
+         self._step_fn = step_fn
+         self._keep_snapshots = bool(keep_snapshots)
++        self._extra_state_fn = extra_state_fn
+         # Start the clock now so the first save lands one interval in, not at t=0.
+         self._last_save_time = time.time()
+         self._save_count = 0
+@@ -86,6 +91,13 @@ class PeriodicCheckpointer:
+             },
+         }
+ 
++        if self._extra_state_fn is not None:
++            extra = self._extra_state_fn()
++            if extra:
++                overlap = set(payload).intersection(extra)
++                if overlap:
++                    raise KeyError(f'extra checkpoint state overwrites keys: {sorted(overlap)}')
++                payload.update(extra)
+         latest = self._logdir / "latest.pt"
+         self._atomic_torch_save(payload, latest)
+ 
+diff --git a/smac-dreamer/src/smacdreamer/envs/map_sampler.py b/smac-dreamer/src/smacdreamer/envs/map_sampler.py
+index ec69ffe..646047e 100644
+--- a/smac-dreamer/src/smacdreamer/envs/map_sampler.py
++++ b/smac-dreamer/src/smacdreamer/envs/map_sampler.py
+@@ -6,6 +6,10 @@ Phase 4:  shuffled_round_robin / uniform_map / uniform_family / weighted / curri
+ """
+ import pathlib
+ import random
++import math
++import torch
++
++# UNIFIED_PRIORITY_V1
+ from collections import defaultdict
+ from dataclasses import dataclass, field
+ from typing import Dict, List, Optional
+@@ -150,10 +154,13 @@ class MapSampler:
+     MODES = (
+         'fixed', 'round_robin', 'seeded_random',
+         'shuffled_round_robin', 'uniform_map', 'uniform_family',
+-        'weighted', 'curriculum',
++        'weighted', 'curriculum', 'adaptive_priority',
+     )
+ 
+-    def __init__(self, maps: List[MapEntry], mode: str = 'round_robin', seed: int = 0):
++    def __init__(
++        self, maps: List[MapEntry], mode: str = 'round_robin', seed: int = 0,
++        shared_probabilities=None, shared_version=None,
++    ):
+         if mode not in self.MODES:
+             raise ValueError(
+                 f"MapSampler mode must be one of {self.MODES}, got {mode!r}"
+@@ -164,6 +171,8 @@ class MapSampler:
+         self.mode = mode
+         self._idx = 0
+         self._rng = random.Random(seed)
++        self._shared_probabilities = shared_probabilities
++        self._shared_version = shared_version
+ 
+         # seeded_random: pre-generate the first choice so peek() is stable
+         self._next_random: Optional[MapEntry] = (
+@@ -219,8 +228,25 @@ class MapSampler:
+             return self._rng.choice(self._by_family[fam])
+         if mode == 'weighted':
+             return self._rng.choices(self.maps, weights=self._weights, k=1)[0]
++        if mode == 'adaptive_priority':
++            return self._rng.choices(self.maps, weights=self._adaptive_weights(), k=1)[0]
+         return self.maps[0]
+ 
++    def _adaptive_weights(self):
++        probs = self._shared_probabilities
++        if probs is None:
++            return [1.0] * len(self.maps)
++        try:
++            vals = probs.detach().to(dtype=torch.float64, device='cpu').reshape(-1)
++        except Exception:
++            return [1.0] * len(self.maps)
++        if vals.numel() != len(self.maps):
++            return [1.0] * len(self.maps)
++        vals = torch.nan_to_num(vals, nan=0.0, posinf=0.0, neginf=0.0).clamp_min(0)
++        if not torch.isfinite(vals).all() or float(vals.sum()) <= 0:
++            return [1.0] * len(self.maps)
++        return vals.tolist()
++
+     def _update_coverage(self, entry: MapEntry) -> None:
+         mid = id(entry)
+         self.maps_seen_this_cycle += 1
+@@ -276,6 +302,9 @@ class MapSampler:
+         elif mode == 'weighted':
+             entry = self._peek_cache
+             wrapped = False
++        elif mode == 'adaptive_priority':
++            entry = self._peek_cache
++            wrapped = False
+         else:
+             entry = self.maps[0]
+             wrapped = False
+@@ -322,6 +351,8 @@ class MapSampler:
+             return self._rng.choice(self._by_family[fam])
+         if mode == 'weighted':
+             return self._rng.choices(self.maps, weights=self._weights, k=1)[0]
++        if mode == 'adaptive_priority':
++            return self._rng.choices(self.maps, weights=self._adaptive_weights(), k=1)[0]
+         return self.maps[0]
+ 
+     # ------------------------------------------------------------------
+@@ -334,6 +365,8 @@ class MapSampler:
+         entries: List[MapEntry],
+         mode: str = 'shuffled_round_robin',
+         seed: int = 0,
++        shared_probabilities=None,
++        shared_version=None,
+     ) -> 'MapSampler':
+         """Build a sampler directly from a list of MapEntry (no manifest file).
+ 
+@@ -341,7 +374,11 @@ class MapSampler:
+         own sampler from the discovered entries + a worker-offset seed. Thin convenience
+         over ``MapSampler(maps=entries, mode=mode, seed=seed)``.
+         """
+-        return cls(maps=list(entries), mode=mode, seed=seed)
++        return cls(
++            maps=list(entries), mode=mode, seed=seed,
++            shared_probabilities=shared_probabilities,
++            shared_version=shared_version,
++        )
+ 
+     @classmethod
+     def from_manifest(
+diff --git a/smac-dreamer/src/smacdreamer/r2dreamer_factory.py b/smac-dreamer/src/smacdreamer/r2dreamer_factory.py
+index 45238d2..3b8b17d 100644
+--- a/smac-dreamer/src/smacdreamer/r2dreamer_factory.py
++++ b/smac-dreamer/src/smacdreamer/r2dreamer_factory.py
+@@ -112,7 +112,9 @@ def make_smaclite_multimap_env(
+     reward_name, reward_params, gamma, max_episode_steps, obs_mode="flat",
+     worker_generation=0, completed_episode_offset=0, include_jepa_obs=False,
+     jepa_visibility_config=None,
++    shared_map_probabilities=None, shared_map_version=None,
+ ):
++    # UNIFIED_PRIORITY_V1
+     """Construct one R2-Dreamer-compatible multimap SMAClite env (worker-side).
+ 
+     Reconstructs the MapSampler + resolved reward callable inside the worker from picklable
+@@ -129,10 +131,18 @@ def make_smaclite_multimap_env(
+     from smacdreamer.envs.map_sampler import MapSampler
+     from smacdreamer.envs.reward_registry import resolve
+ 
+-    sampler_seed = _worker_seed(base_seed, worker_idx, 0)
++    sampler_seed = _worker_seed(
++        base_seed, worker_idx,
++        worker_generation if sampling_mode == 'adaptive_priority' else 0,
++    )
+     simulator_seed = _worker_seed(base_seed, worker_idx, worker_generation)
+-    sampler = MapSampler.from_entries(entries, mode=sampling_mode, seed=sampler_seed)
+-    sampler.advance(int(completed_episode_offset))
++    sampler = MapSampler.from_entries(
++        entries, mode=sampling_mode, seed=sampler_seed,
++        shared_probabilities=shared_map_probabilities,
++        shared_version=shared_map_version,
++    )
++    if sampling_mode != 'adaptive_priority':
++        sampler.advance(int(completed_episode_offset))
+     reward_fn = resolve(reward_name, reward_params)
+     print(
+         f"[env_lifecycle] constructing smaclite worker idx={worker_idx} "
+@@ -176,6 +186,8 @@ def make_smaclite_multimap_envs(
+     env_lifecycle=None,
+     include_jepa_obs=False,
+     jepa_visibility_config=None,
++    shared_map_probabilities=None,
++    shared_map_version=None,
+ ):
+     """Create multimap train + held-out eval ParallelEnv pools.
+ 
+@@ -221,12 +233,16 @@ def make_smaclite_multimap_envs(
+             completed_episode_offset=completed_episode_offset,
+             include_jepa_obs=include_jepa_obs,
+             jepa_visibility_config=jepa_visibility_config,
++            shared_map_probabilities=shared_map_probabilities,
++            shared_map_version=shared_map_version,
+         )
+ 
+     # Eval pool: held-out TEST maps, SAME padding, ORIGINAL reward (smaclite_default).
+     def eval_ctor(idx, generation=0, completed_episode_offset=0):
+         return lambda: make_smaclite_multimap_env(
+-            test_entries, pad_dims, sampling_mode, seed + 10_000, idx,
++            test_entries, pad_dims,
++            ('shuffled_round_robin' if sampling_mode == 'adaptive_priority' else sampling_mode),
++            seed + 10_000, idx,
+             "smaclite_default", {}, gamma, max_episode_steps, obs_mode=obs_mode,
+             worker_generation=generation,
+             completed_episode_offset=completed_episode_offset,

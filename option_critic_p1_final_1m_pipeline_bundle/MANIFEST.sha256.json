@@ -1,0 +1,24 @@
+{
+  "files": {
+    "BUNDLE_VALIDATION.txt": "67ae42cae5417b4b5a5e7b1258b0fe3be86446b036a4f1309becce24e7b5909e",
+    "INSTALL_AND_RUN.md": "f2063c0db684801018a861da17ac8391b5c92b2c64c3256451a112a5df57f483",
+    "README.md": "006a0b273640ca0e2f673c3075c837c5953df63c9bae83a65fced9eb0a1ec8bc",
+    "apply_option_critic_p1_final_hotfix.py": "5f4ccdb83bf42b2e134d7a2a83012b402ff937e39eeaf9f1e8c4d4185e863184",
+    "payload/external/r2dreamer/hierarchical_dreamer.py": "6ba3ecbc53e00a1a1dfa8138c978249230738232715d8aa1c5b8bf0f4e73aca4",
+    "payload/external/r2dreamer/hierarchical_options.py": "a949c62afe90706621be2ff6e0075071b864fc8bdf72ea4c3b4359e7ef7f5ea1",
+    "payload/external/r2dreamer/option_critic.py": "bd8945742c4d16995e8ec68f3d2097605af96e7342108ecfa95cb2f6f551e5e2",
+    "payload/scripts/assert_option_critic_p1_final_metrics.py": "305802769a6c783e9588a378446fd848f6714fc8fc7f8f6156e9b9855c81606f",
+    "payload/scripts/audit_option_critic_p1_final.py": "cb818cf409e52ebf54cc19842f93f663fbd36d8d5d386daccdb33507a61c4615",
+    "payload/scripts/run_exp45_full_train_eval_original.sh": "044237d6a61be14c88fef698658fcb009f5859652e6ad063e39fd218ce8d357f",
+    "payload/scripts/run_exp45_full_train_eval_resilient.sh": "fedc08fef8232801042b0d97f5c43d39a80f1a2e94b6c67042452d6d39eea1ba",
+    "payload/scripts/run_option_critic_1m_then_exp45_pipeline.sh": "22d9d6a4a84cdf06ea403ea32c4f5488035e1eb9b99d8c988befa5747a5828d4",
+    "payload/scripts/run_option_critic_p1_final_1m.sh": "3620515c9a16c921f96f6a331a3ba9d8422700cf822e723bb3d12a1d958d6378",
+    "payload/scripts/static_audit_option_critic_p1_final.sh": "83321a48b3408e9c1404902db48dc1542a659aa8751bc22d2f9d7a50214c5621",
+    "payload/tests/test_hierarchical_auxiliary.py": "3f8fc4754bb86e121aee16d8b488989e6a48669382bb29f89bc5de41dcde5ed1",
+    "payload/tests/test_hierarchical_options.py": "32cd7d24a1eb5ad3029696cf048d4fc9861ed621b25a4905d9f13d6da317037b",
+    "payload/tests/test_hierarchy_migration.py": "8b8c90658cf24651dc7614ec09dc8dcfb9b359a56bb63f8a5aacdaa5b9282d4f",
+    "payload/tests/test_option_critic_math.py": "651e00001b137be5501d3cc88d25494acb9196767fc0d592d7aee393f8583899",
+    "restore_option_critic_p1_final_hotfix.sh": "95eeebd3829ddaac8973be317d692c53e914ec5b00014c9a0617f18cc079d090"
+  },
+  "schema_version": 1
+}

@@ -26,7 +26,10 @@ import hashlib
 import json
 import os
 import pathlib
+import random
 import sys
+
+import numpy as np
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 for _p in (
@@ -41,8 +44,14 @@ import torch
 from omegaconf import OmegaConf
 
 import tools
+from adaptive_buffer import AdaptiveBuffer
 from buffer import Buffer
 from dreamer import Dreamer
+from smacdreamer.adaptive_priority import AdaptivePriorityController
+# UNIFIED_PRIORITY_V1
+# TACTICAL_MIXTURE_V1
+# OPTION_CRITIC_HIERARCHY_V2
+# TACTICAL_MIXTURE_HARDENING_V1_1
 from smacdreamer.r2dreamer_factory import make_smaclite_multimap_envs
 from smacdreamer.envs.map_discovery import discover, discover_folders, SplitSpec
 from smacdreamer.validation_trainer import ValidationTrainer
@@ -116,6 +125,11 @@ def main():
     ap.add_argument("--wandb-mode", default=None, choices=("online", "offline", "disabled"),
                     help="override W&B mode")
     ap.add_argument("--resume", default=None, help="checkpoint path to resume model/training state")
+    ap.add_argument(
+        "--resume-start-step", type=int, default=None,
+        help=("trusted absolute environment step for an old checkpoint; "
+              "overrides checkpoint['step'] when supplied"),
+    )
     ap.add_argument("--jepa-checkpoint", default=None, help="override world_model.jepa.checkpoint")
     args = ap.parse_args()
 
@@ -154,6 +168,11 @@ def main():
     if not scratch_path.is_absolute():
         scratch_path = logdir / scratch_path
     config.buffer.scratch_dir = str(scratch_path)
+    _adaptive_cfg = cfg.get('adaptive_priority') or OmegaConf.create({})
+    config.buffer.adaptive_priority = OmegaConf.create(
+        OmegaConf.to_container(_adaptive_cfg, resolve=True)
+        if _adaptive_cfg else {}
+    )
 
     # --- Observation mode (flat | structured) ----------------------------------
     obs_mode = str(cfg.observation.mode) if cfg.get("observation") else "flat"
@@ -172,6 +191,18 @@ def main():
         raise ValueError(f"world_model.backend must be 'rssm' or 'jepa', got {wm_backend!r}")
     config.model.world_model = OmegaConf.create(OmegaConf.to_container(wm_cfg, resolve=True) if wm_cfg else {})
     config.model.world_model.backend = wm_backend
+    tactical_cfg = cfg.get('tactical_mixture') or OmegaConf.create(
+        {'enabled': False}
+    )
+    config.model.tactical_mixture = OmegaConf.create(
+        OmegaConf.to_container(tactical_cfg, resolve=True)
+    )
+    hierarchy_cfg = cfg.get('hierarchical_options') or OmegaConf.create(
+        {'enabled': False}
+    )
+    config.model.hierarchical_options = OmegaConf.create(
+        OmegaConf.to_container(hierarchy_cfg, resolve=True)
+    )
     jepa_visibility_config = None
     jepa_live_metadata = None
     if wm_backend == "jepa":
@@ -250,6 +281,20 @@ def main():
         print(f"  jepa ckpt  : {config.model.world_model.jepa.checkpoint}")
         print(f"  jepa vis   : {jepa_visibility_config}")
     print(f"  amp_dtype  : {config.model.amp_dtype}")
+    print(
+        ' hierarchy: enabled='
+        f"{bool(config.model.hierarchical_options.get('enabled', False))} "
+        f"K={int(config.model.hierarchical_options.get('num_options', 8))} "
+        f"duration={int(config.model.hierarchical_options.get('min_duration', 3))}-"
+        f"{int(config.model.hierarchical_options.get('max_duration', 20))}"
+    )
+    print(
+        ' tactical : enabled='
+        f"{bool(config.model.tactical_mixture.get('enabled', False))} "
+        f"K={int(config.model.tactical_mixture.get('num_tactics', 4))} "
+        f"embed={int(config.model.tactical_mixture.get('embedding_dim', 16))} "
+        f"duration={int(config.model.tactical_mixture.get('duration', 1))}"
+    )
     print(f"  replay     : backend={config.buffer.storage_backend} capacity={config.buffer.max_size} "
           f"storage_device={config.buffer.storage_device} scratch={config.buffer.scratch_dir}")
     print(f"  steps      : {steps}   env_num: {cfg.env_num}   device: {cfg.device}")
@@ -257,6 +302,9 @@ def main():
     print(f"{'='*64}\n")
 
     tools.set_seed_everywhere(int(cfg.seed))
+    priority_controller = AdaptivePriorityController.from_entries(
+        train_entries, _adaptive_cfg
+    )
 
     # --- Train envs ONLY (validation handled by ValidationTrainer; no worker-eval pool) -
     env_lifecycle = OmegaConf.to_container(cfg.get("env_lifecycle", {}), resolve=True) or {}
@@ -278,6 +326,8 @@ def main():
         env_lifecycle=env_lifecycle,
         include_jepa_obs=(wm_backend == "jepa"),
         jepa_visibility_config=jepa_visibility_config,
+        shared_map_probabilities=priority_controller.shared_probabilities,
+        shared_map_version=priority_controller.shared_version,
     )
     print(f"  obs keys : {sorted(obs_space.spaces)}")
 
@@ -297,6 +347,7 @@ def main():
         "n_validation_maps": len(val_entries),
         "model": config.model,
         "world_model": config.model.world_model,
+        "adaptive_priority": _adaptive_cfg,
     })
 
     # Reconstruction metadata for standalone checkpoint eval: the EXACT obs mode + model dims
@@ -313,6 +364,12 @@ def main():
         "validation_seeds": val_seeds,
         "maps_folder": str(maps_cfg.get("train", cfg.get("maps_folder", ""))),
         "world_model_backend": wm_backend,
+        "hierarchical_options": OmegaConf.to_container(
+            config.model.hierarchical_options, resolve=True
+        ),
+        "tactical_mixture": OmegaConf.to_container(
+            config.model.tactical_mixture, resolve=True
+        ),
     }
     if wm_backend == "jepa":
         from smacdreamer.jepa.checkpoint import sha256_file
@@ -353,38 +410,142 @@ def main():
         )
 
     try:
-        replay_buffer = Buffer(config.buffer)
+        _adaptive_map = bool(
+            (_adaptive_cfg.get('map') or {}).get('enabled', False)
+        )
+        _adaptive_sequence = bool(
+            (_adaptive_cfg.get('sequence') or {}).get('enabled', False)
+        )
+        _adaptive_any = bool(
+            _adaptive_cfg.get('enabled', False)
+            or _adaptive_map
+            or _adaptive_sequence
+        )
+        if _adaptive_any:
+            replay_buffer = AdaptiveBuffer(
+                config.buffer, priority_controller
+            )
+        else:
+            replay_buffer = Buffer(config.buffer)
+            print(
+                ' [replay] adaptive priority disabled; using original uniform SliceSampler',
+                flush=True,
+            )
 
         # --- Agent -------------------------------------------------------------
         print("\nBuilding Dreamer agent...")
         agent = Dreamer(config.model, obs_space, act_space).to(config.device)
         print(f"  Parameters : {sum(p.numel() for p in agent.parameters()):,}")
+        resume_step = 0
         if args.resume:
             ckpt = torch.load(args.resume, map_location=str(cfg.device), weights_only=False)
-            agent.load_state_dict(ckpt["agent_state_dict"])
-            if ckpt.get("agent_training_state") and hasattr(agent, "load_training_state_dict"):
-                agent.load_training_state_dict(ckpt["agent_training_state"])
-                print(f"  [resume] restored model + optimizer/scheduler/scaler state from {args.resume}")
-            else:
-                print(f"  [resume] restored model weights only from {args.resume}")
-            print("  [resume] replay memmap restore is not implemented; replay will refill before updates.")
-
-        # --- Checkpointing -----------------------------------------------------
-        checkpointer = None
-        if float(cfg.get("checkpoint_every_minutes", 0)) > 0:
-            checkpointer = PeriodicCheckpointer(
-                agent, logdir,
-                interval_seconds=float(cfg.checkpoint_every_minutes) * 60.0,
-                step_fn=lambda: replay_buffer.count() * config.trainer.action_repeat,
+            checkpoint_step = int(ckpt.get('step', 0))
+            resume_step = int(
+                args.resume_start_step
+                if args.resume_start_step is not None
+                else checkpoint_step
             )
-            attach_checkpointing(agent, checkpointer)
-            print(f"  Checkpoints : every {cfg.checkpoint_every_minutes:g} min -> {logdir/'latest.pt'}")
+            if resume_step < 0:
+                raise ValueError(f'resume start step must be non-negative, got {resume_step}')
+            if args.resume_start_step is not None:
+                print(
+                    f' [resume] trusted step override: {resume_step:,} '
+                    f'(checkpoint stored {checkpoint_step:,})'
+                )
+            config.trainer.start_step = resume_step
+            if hasattr(replay_buffer, "set_env_step"):
+                replay_buffer.set_env_step(resume_step)
+            hierarchy_load = agent.load_hierarchical_compatible_state_dict(
+                ckpt["agent_state_dict"],
+                checkpoint_metadata=ckpt.get("hierarchical_options_metadata"),
+                tactical_metadata=ckpt.get("tactical_mixture_metadata"),
+            )
+            tactical_load = {
+                'migrated_legacy': bool(hierarchy_load.get('migrated', False))
+            }
+            can_restore_training = (
+                not tactical_load.get("migrated_legacy", False)
+                and ckpt.get("agent_training_state")
+                and hasattr(agent, "load_training_state_dict")
+            )
+            if can_restore_training:
+                agent.load_training_state_dict(
+                    ckpt["agent_training_state"]
+                )
+                print(
+                    f" [resume] restored tactical model + optimizer state from {args.resume}"
+                )
+            elif tactical_load.get("migrated_legacy", False):
+                print(
+                    " [resume] migrated legacy weights; tactical modules use bounded symmetry-break init"
+                )
+                print(
+                    " [resume] optimizer/scheduler/return EMA start fresh"
+                )
+            else:
+                print(
+                    f" [resume] restored model weights only from {args.resume}"
+                )
+            _rng = ckpt.get('rng_state')
+            if _rng:
+                if _rng.get('python') is not None:
+                    random.setstate(_rng['python'])
+                if _rng.get('numpy') is not None:
+                    np.random.set_state(_rng['numpy'])
+                if _rng.get('torch') is not None:
+                    def _as_cpu_byte_rng_state(state):
+                        """Normalize RNG state after checkpoint map_location."""
+                        if isinstance(state, torch.Tensor):
+                            return state.detach().to(
+                                device="cpu",
+                                dtype=torch.uint8,
+                            ).contiguous()
+                        return torch.as_tensor(
+                            state,
+                            dtype=torch.uint8,
+                            device="cpu",
+                        ).contiguous()
 
-        # --- Train -------------------------------------------------------------
-        print(f"\nStarting multimap training ({steps} env steps)...\n")
-        # ValidationTrainer replaces the old worker-based periodic evaluator: every `val_every`
-        # steps it runs map×seed validation, logs macro/micro metrics, and saves
-        # best_val_macro_winrate.pt (macro win rate; macro original return as tie-breaker).
+                    torch.set_rng_state(
+                        _as_cpu_byte_rng_state(_rng["torch"])
+                    )
+                if torch.cuda.is_available() and _rng.get('torch_cuda') is not None:
+                    _cuda_rng_states = [
+                        _as_cpu_byte_rng_state(state)
+                        for state in _rng["torch_cuda"]
+                    ]
+                    _cuda_device_count = torch.cuda.device_count()
+                    if len(_cuda_rng_states) == _cuda_device_count:
+                        torch.cuda.set_rng_state_all(_cuda_rng_states)
+                    else:
+                        # Restore every matching device safely if GPU count changed.
+                        for device_index, state in enumerate(
+                            _cuda_rng_states[:_cuda_device_count]
+                        ):
+                            torch.cuda.set_rng_state(
+                                state,
+                                device=device_index,
+                            )
+                        print(
+                            " [resume] WARN: checkpoint CUDA RNG state count "
+                            f"{len(_cuda_rng_states)} differs from current GPU "
+                            f"count {_cuda_device_count}; restored matching devices.",
+                            flush=True,
+                        )
+                print('  [resume] restored Python/NumPy/Torch RNG state')
+            if _adaptive_any and ckpt.get('adaptive_priority_state') is not None:
+                priority_controller.load_state_dict(
+                    ckpt['adaptive_priority_state'], strict=True
+                )
+                print(' [resume] restored adaptive map-priority state')
+            elif _adaptive_any:
+                print(' [resume] old checkpoint has no adaptive state; maps start uniform')
+            else:
+                print(' [resume] adaptive priority disabled; source priority state skipped')
+            print(' [resume] replay is intentionally new; sequence priorities refill with it.')
+            print(f' [resume] absolute environment step restored to {resume_step:,}')
+
+        # --- Trainer + checkpointing -------------------------------------------
         trainer = ValidationTrainer(
             config.trainer, replay_buffer, logger, logdir, train_envs,
             validation_entries=val_entries, pad_dims=pad_dims, seeds=val_seeds,
@@ -393,13 +554,31 @@ def main():
             run_at_start=val_run_at_start,
             shutdown_timeout_seconds=float(env_lifecycle.get("shutdown_timeout_seconds", 5.0)),
         )
-        trainer.begin(agent)
+        def _extra_checkpoint_state():
+            state = {
+                'tactical_mixture_metadata': agent.tactical_metadata(),
+                'hierarchical_options_metadata': agent.hierarchical_metadata(),
+            }
+            if _adaptive_any:
+                state.update({
+                    'adaptive_priority_schema': 1,
+                    'adaptive_priority_state': priority_controller.state_dict(),
+                })
+            return state
+        checkpointer = PeriodicCheckpointer(
+            agent, logdir,
+            interval_seconds=max(1.0, float(cfg.get('checkpoint_every_minutes', 0) or 0) * 60.0),
+            step_fn=lambda: int(trainer.current_step),
+            extra_state_fn=_extra_checkpoint_state,
+        )
+        if float(cfg.get('checkpoint_every_minutes', 0) or 0) > 0:
+            attach_checkpointing(agent, checkpointer)
+            print(f"  Checkpoints : every {cfg.checkpoint_every_minutes:g} min -> {logdir/'latest.pt'}")
 
-        if checkpointer is not None:
-            checkpointer.save(final=True)
-        else:
-            torch.save({"agent_state_dict": agent.state_dict()}, logdir / "latest.pt")
-            print(f"\nCheckpoint saved -> {logdir/'latest.pt'}")
+        # --- Train -------------------------------------------------------------
+        print(f"\nStarting multimap training ({steps} absolute env steps; resume={resume_step})...\n")
+        trainer.begin(agent)
+        checkpointer.save(final=True)
         print("\nMultimap training complete.")
     finally:
         if train_envs is not None:

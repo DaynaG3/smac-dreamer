@@ -1,0 +1,14 @@
+REAL Exp39/40/41 audit
+--event-dynamics-weight                      FOUND
+--delta-loss-weight                          FOUND
+--inverse-dynamics-weight                    FOUND
+--event-balanced-sampling                    FOUND
+--hidden-change-residual-weight              FOUND
+--hidden-change-gate-weight                  FOUND
+hidden_change_residual_loss                  FOUND
+hidden_change_gate_loss                      FOUND
+Exp39 inverse-dynamics restriction removed: YES
+Exp40 inverse-dynamics restriction removed: YES
+Exp41 inverse-dynamics restriction removed: YES
+Exp40 event-balanced restriction removed: YES
+PASS: real Exp39/40/41 runners and Exp41 hidden-change patch are installed.

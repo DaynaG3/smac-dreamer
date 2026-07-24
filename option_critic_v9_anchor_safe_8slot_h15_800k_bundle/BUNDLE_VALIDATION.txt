@@ -1,0 +1,100 @@
+Option-Critic v9 anchor-safe eight-slot H=15 / 800k validation
+================================================================
+
+Supersession
+------------
+Do not use v7 or v8.
+
+The final v8 re-audit found these additional defects/design hazards:
+- critical: the no-grad hierarchy used by real acting and imagination was a
+  non-aliased step-zero snapshot, so optimizer updates to the live slot manager
+  and child worker were not executed;
+- the Exp45 installer was invoked without the real workspace ROOT and could
+  install under the root user's HOME;
+- the initial within-group prior placed 75% of collection on unproven children;
+- child output and worker loss used the same warm-up factor, accidentally
+  squaring the effective ramp;
+- option critics could split identical child values through identity-specific
+  Monte-Carlo noise before children had causal action differences;
+- worker trust-region diagnostics could leave tiny floating-point gradients at
+  exact source equality during the intended critic-only warm-up;
+- runtime assertions could combine stale values from old metric rows with the
+  current global step;
+- the launcher did not fail closed on the exact source checkpoint hash;
+- a failed forecast wrapper could leave a GPU child alive before RL launch.
+
+v9 corrections
+--------------
+- The online no-grad hierarchy view intentionally shares live parameter storage,
+  matching R2-Dreamer's actor/world-model frozen-view semantics.
+- The permanent source reference remains a true non-aliased deep copy.
+- All eight identities are active with a 40% conditional anchor floor; the
+  zero-logit prior is approximately 54.7/15.1/15.1/15.1 per source group.
+- Child action scale is fixed and bounded; worker PG is the sole learning ramp.
+- Child option values are tied to the detached anchor during worker warm-up and
+  the consistency term decays to zero as child policies become causal.
+- Worker trust-region objectives are absent from the graph when worker PG is
+  exactly zero.
+- Runtime assertions track each metric's own most recent step and reject stale
+  values.
+- Forecast installation propagates ROOT and verifies all required installed
+  files.
+- The master pipeline refuses concurrent RL when an Exp45 child remains active.
+- The RL launcher enforces the exact Tactical-v1.2 best-checkpoint SHA-256 and
+  resets the fresh phase to step zero.
+
+Final test state
+----------------
+- 53 still-applicable legacy mathematical/migration/masking/BF16/replay tests
+  passed.
+- 12 legacy tests were intentionally deselected because they require mechanisms
+  removed from this controlled run: progressive locks, learned/cumulative-hazard
+  termination, or the old reselection curriculum.
+- 27 targeted v9 tests passed.
+
+Targeted coverage includes:
+- exact H=15 and 800k launch contract;
+- all eight identities active from migration;
+- exact source primitive policy for every child at migration;
+- anchor-floor probability transform and child reachability;
+- online no-grad view updates immediately after a live optimizer step;
+- permanent source reference non-aliasing;
+- immutable source group router and worker anchors;
+- zero worker/manager gradients during their actual warm-up phases;
+- finite child/manager/critic/value gradients under anomaly detection at staged
+  schedule points;
+- AdamW warm-up cannot alter primitive behavior;
+- exact real/imagination/Bellman interruption equality;
+- group-restricted switch values;
+- 1000-step randomized state-machine invariants;
+- option critic consistency gradient only on children;
+- disabled-objective and exact-zero-RMS numerical safety;
+- forecast ROOT propagation through a complete fake install/train/eval pipeline;
+- stale runtime metric rejection.
+
+Fixture/install validation
+--------------------------
+- Python compilation passed.
+- Shell syntax passed.
+- 17-file bundle manifest passed.
+- Fail-closed installer dry-run passed on a clean integrated-v6 fixture.
+- Full transactional installation passed.
+- Tactical-v1.2-derived config resolved.
+- Complete post-install audit passed:
+
+    53 passed, 12 deselected
+    27 passed
+    [OK] Option-Critic v9 anchor-safe source/config audit passed
+    [OK] Option-Critic v9 anchor-safe static audit passed
+
+- The audit compares the complete resolved Tactical-v1.2 configuration and
+  allows only explicit hierarchy, validation, log, and replay-path changes.
+- Exact rollback restored every replaced hash and removed every introduced path.
+- ZIP re-extraction and all packaged hashes passed.
+
+Validation boundary
+-------------------
+The packaging environment cannot execute the user's full CUDA/SMACLite learner,
+forecast workload, or prove that stochastic RL improves validation win rate.
+The real-repository audit is mandatory. Startup and 200k validation, plus the
+runtime assertion script, remain required empirical safety checks.

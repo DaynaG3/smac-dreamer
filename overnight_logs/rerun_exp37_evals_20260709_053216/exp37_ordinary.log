@@ -1,0 +1,30 @@
+Evaluating 1 checkpoint(s) split=eval device=cuda
+evaluating runs/rnn_seqmem_exp37_probe_clean_real_5ep_20260708_090932/checkpoint.pt
+/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33.py:1131: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  scaler = torch.cuda.amp.GradScaler(enabled=amp_enabled)
+training independent probe decoder module=decoder signature=[(192, 512), (512, 26)] epochs=20 max_batches_per_epoch=300
+/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33.py:1161: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  torch.cuda.amp.autocast(enabled=amp_enabled)
+probe epoch=1/20 updates=300 train_mse=0.006514
+probe epoch=2/20 updates=600 train_mse=0.001619
+probe epoch=3/20 updates=900 train_mse=0.001108
+probe epoch=4/20 updates=1200 train_mse=0.000863
+probe epoch=5/20 updates=1500 train_mse=0.000721
+probe epoch=6/20 updates=1800 train_mse=0.000630
+probe epoch=7/20 updates=2100 train_mse=0.000566
+probe epoch=8/20 updates=2400 train_mse=0.000517
+probe epoch=9/20 updates=2700 train_mse=0.000479
+probe epoch=10/20 updates=3000 train_mse=0.000446
+probe epoch=11/20 updates=3300 train_mse=0.000418
+probe epoch=12/20 updates=3600 train_mse=0.000393
+probe epoch=13/20 updates=3900 train_mse=0.000372
+probe epoch=14/20 updates=4200 train_mse=0.000352
+probe epoch=15/20 updates=4500 train_mse=0.000335
+probe epoch=16/20 updates=4800 train_mse=0.000320
+probe epoch=17/20 updates=5100 train_mse=0.000307
+probe epoch=18/20 updates=5400 train_mse=0.000294
+probe epoch=19/20 updates=5700 train_mse=0.000284
+probe epoch=20/20 updates=6000 train_mse=0.000274
+saved probe decoder eval_outputs/exp37_probe_clean_real_5ep/ordinary_rollout/eval_metrics.json/probe_decoders/rnn_seqmem_exp37_probe_clean_real_5ep_20260708_090932_checkpoint_meaningful_features_v2_probe_decoder.pt
+/home/jovyan/workspace/dreamer/combined-upload/smac-jepa-wm/eval_jepa_exp31_exp33.py:2009: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  torch.cuda.amp.autocast(enabled=amp_enabled)

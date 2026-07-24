@@ -1,0 +1,34 @@
+...............................................                                                                                                                     [100%]
+47 passed in 2.74s
+[OK] Option-Critic P0/P1 source/config audit passed
+{
+  "repo": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer",
+  "config": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/configs/r2_2100_jepa_option_critic_8_v3_p0p1.yaml",
+  "checkpoint": {
+    "path": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/adaptive_best_tactical_v1_2_2m_20260716_101741/best_val_macro_winrate.pt",
+    "sha256": "74875c693150d4cd21be27201e332cb0d8d4f6648c10701761154dcd6588d99e",
+    "step": 800004,
+    "val_macro_win_rate": 0.375,
+    "val_macro_original_return": 12.359741715341801
+  },
+  "checks": {
+    "world_model_jepa": true,
+    "dense_reward_unchanged": true,
+    "hierarchy_enabled": true,
+    "eight_option_capacity": true,
+    "trajectory_preserving_duration": true,
+    "commitment_schedule": true,
+    "source_preserving_manager": true,
+    "source_preserving_worker": true,
+    "smooth_termination": true,
+    "task_agnostic_regularizers_disabled": true,
+    "full_source_trust_region": true,
+    "world_model_exactly_frozen": true,
+    "variable_horizon": true,
+    "startup_validation": true,
+    "fresh_uniform_replay": true,
+    "source_ast": true,
+    "migration_lineage": true
+  }
+}
+[OK] Option-Critic P0/P1 hotfix static audit passed

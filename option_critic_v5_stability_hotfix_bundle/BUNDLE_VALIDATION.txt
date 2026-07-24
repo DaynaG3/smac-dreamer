@@ -1,0 +1,48 @@
+Option-Critic v5 Stability Hotfix — Packaging Validation
+========================================================
+
+Validated package target
+------------------------
+Source installation: dreamer_option_critic_v4_p1_final
+New architecture:    dreamer_option_critic_v5_stability
+Training phase:      fresh 1,000,000 environment steps
+Source checkpoint:   Tactical Mixture v1.2 best validation checkpoint
+Validation cadence:  startup and every 200,000 steps
+Option capacity:     2
+
+Completed checks
+----------------
+[PASS] 59 mathematical/state-machine/migration/gradient/integration tests
+[PASS] call-and-return bootstrap boundary and mixture identities
+[PASS] option lambda-return hand calculation for lambda=0 and lambda=1
+[PASS] manager gradients occur only at option boundaries
+[PASS] termination gradient sign and eligibility masking
+[PASS] randomized 200-step call-and-return state-machine invariant test
+[PASS] exact v1.2 two-option manager migration
+[PASS] exact v1.2 two-option worker-residual migration
+[PASS] exact per-state source reselection at migration step zero
+[PASS] episode-start manager task-gradient routing
+[PASS] forward KL(source || live) source-action protection
+[PASS] always-on source-action distillation inside hinge thresholds
+[PASS] always-on source-manager distillation inside hinge thresholds
+[PASS] real posterior and imagined-state source trust-region gradients
+[PASS] smooth bounded termination with no cap-rescaling increase
+[PASS] fixed 0.30 termination-cap schedule
+[PASS] reactive reselection floor remains 0.25
+[PASS] variable imagination horizon range is directly auditable
+[PASS] Python compilation for installer, payload, audits, assertions, and tests
+[PASS] shell syntax for restore, launcher, static audit, forecast, and master pipeline
+[PASS] fail-closed installer dry-run on synthetic integrated-v4 fixture
+[PASS] full installer run on synthetic integrated-v4 fixture
+[PASS] generated v5 configuration resolution
+[PASS] exact rollback and introduced-file removal on fixture
+[PASS] master pipeline continues to Exp45 after an injected RL failure
+[PASS] local package manifest verification
+
+Important boundary
+------------------
+The packaging environment cannot execute the real CUDA/SMACLite learner or the
+user's full repository integration. Before launch, the included real-repository
+static audit must pass against the original Tactical Mixture v1.2 checkpoint.
+No finite test suite can guarantee monotonic RL performance or prove the absence
+of every possible runtime bug.

@@ -1,0 +1,22 @@
+{
+  "files": {
+    "BUNDLE_VALIDATION.txt": "0787a9eeb6f31eb1a2633696ef122f8827d609623d960d66d9a4bd2fde944825",
+    "INSTALL_COMMANDS.txt": "ecc998277da0617c7b40519eeef235d15355218062b30f335412aacd9d5a280e",
+    "README.md": "718a57afc19ac9dc4a230b24c906734afdd2e642dc3b3b4815f7289eb2f9262d",
+    "install_option_critic_hierarchy.py": "44a543c19add2fd77553c414040d6795e8f973c4592aafce8acdb7e4c2e3acd5",
+    "payload/external/r2dreamer/hierarchical_dreamer.py": "8195e4b497ad0c0735a9de53650fe566ca954d79e9e08e4ab4f8965acb28edc4",
+    "payload/external/r2dreamer/hierarchical_options.py": "a9450e03d15ef4efabab4d2da7aa5b2e883f3d3b3837eefe68d89b061a4c21a3",
+    "payload/external/r2dreamer/option_critic.py": "bd8945742c4d16995e8ec68f3d2097605af96e7342108ecfa95cb2f6f551e5e2",
+    "payload/scripts/assert_option_critic_metrics.py": "22d76d1813853e1160b566d15328d8f0c94d1a5404c2d6859f2539b45971111f",
+    "payload/scripts/audit_option_critic_hierarchy.py": "8c0463f825aba4a05faf2d429f8109bcaad74e4ebadce094ffffc90926cfa1a2",
+    "payload/scripts/run_option_critic_2m.sh": "387a165f177b4e95013bf0f7d1f1ef81fe439f8235b551db1740b2212b56536d",
+    "payload/scripts/static_audit_option_critic_hierarchy.sh": "579cf4b212305bdbad6ff081742399ecf2c6396b434393413f26316930ebc33e",
+    "payload/tests/test_hierarchical_auxiliary.py": "b0c3e175a79f5fce0fc418a4181516056d7498ffad184d7dcc65603d26f89e8d",
+    "payload/tests/test_hierarchical_options.py": "4480ca2880562ebb3f224830aa8905527c715e1c2cde568dc9cdc0c016813101",
+    "payload/tests/test_hierarchy_migration.py": "c30a3df045e5e1bd71c46e35e3965153117a467fa949433dcc5d8342940f40d3",
+    "payload/tests/test_option_critic_math.py": "651e00001b137be5501d3cc88d25494acb9196767fc0d592d7aee393f8583899",
+    "preserve_before_option_critic.sh": "b773fae9048cc3a7cd90a82dfe31dc7ca04b8eef6576fe9e3cc5c6b7b036f1d0",
+    "restore_option_critic_backup.sh": "c350ecd8dff9ed1f73e4ba0a305060c27fb4efa65e1f3a85a825fd4396f6ec3d"
+  },
+  "schema_version": 1
+}

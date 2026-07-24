@@ -1,0 +1,13 @@
+{
+  "files": {
+    "INSTALL.md": "510a161cd6485e8e8d61fcc0cc77040894a1c467b80c3c698574fc5abf47d2a1",
+    "README.md": "567a2481bab97fa3ed3b8aaec82267449e5606be59cf365e38e416a9d3a7e2a4",
+    "apply_v9_three_stage_pipeline_patch.py": "36fd2fdc9e384bf6cd4c278a9ede661f34ff94c969bb65810843c2f37fefabcc",
+    "payload/scripts/audit_actor_critic_h15_800k.py": "34b1513873e0e723f42479a7a8d99fe808647a5576d1bce07ff32e6b7c7646a1",
+    "payload/scripts/run_actor_critic_h15_800k.sh": "9278629ead59afaad19278d21010527fb68d709a0943ad7791436b621c198dde",
+    "payload/scripts/run_forecast_then_actor_critic_h15_then_option_critic_v9.sh": "04e0b341946cf83dfd0810c4e90f07650dddcbda276748b60a78c1811c4d2c40",
+    "payload/scripts/static_audit_actor_critic_h15_800k.sh": "e1ee81b54cebd314eac95cc1ea0b566492a97f543acb9fff73cc7a46a48efb8b",
+    "tests/test_bundle.py": "66f69044794f2070f56aa1d11285edb51277f6436f851acff3f4ae3440d59267"
+  },
+  "schema_version": 1
+}

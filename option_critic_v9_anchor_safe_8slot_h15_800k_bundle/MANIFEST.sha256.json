@@ -1,0 +1,22 @@
+{
+  "files": {
+    "BUNDLE_VALIDATION.txt": "5ba22cdc323de198391f6931ecfd3724111ece195e12f5e9fb532013a668f3ba",
+    "INSTALL_AND_RUN.md": "c8f8296c5d257047c4d3b28fedea4f8c12ba346b87a1157d43d71422a6e3dcb4",
+    "README.md": "144733ebdf63cec4b7e7e8f7e1d6cf4c150165868e04c7ee3b09f15f9e639be0",
+    "apply_option_critic_v9_anchor_safe_hotfix.py": "606fa2633f44e43aeceacfbecb98b122496f24a4a616f195a1d5ea4ac09662af",
+    "payload/external/r2dreamer/hierarchical_dreamer.py": "68b76186e01bca62869bd8d4f30566c374e4905242614620b9316fcc5e71db68",
+    "payload/external/r2dreamer/hierarchical_options.py": "79b8693b5d50261883f2dbdee0fd57a54b24817b310f3e2f82185f255489dea2",
+    "payload/external/r2dreamer/option_critic.py": "17c2580531bbfd02478a3b703ca30adb10461e679dc18bd7b2a6d6299a50684c",
+    "payload/scripts/assert_option_critic_v9_metrics.py": "4428d46614aa6d0156175274e9f3c56f7ea63dc5a5a26bccdf93ed6d62f29ddb",
+    "payload/scripts/audit_option_critic_v9_anchor_safe.py": "4e3aac178527bcdee1378c7677ac4562012ee65317960e3e306f526520fd50d7",
+    "payload/scripts/run_exp45_full_train_eval_resilient.sh": "c822bb072cc98a9f46741c105b5bf288ad2c6abb4e5bcc4f043de181d49d3926",
+    "payload/scripts/run_forecast_first_then_option_critic_v9_800k.sh": "bac5c3857f6f538d8a1db52fbead2cb50d75bdcda010cece3f3e5a2696655b9e",
+    "payload/scripts/run_option_critic_v9_anchor_safe_800k.sh": "d4bfff13fe6aa0e2921bf1a0609d4f940e90d34d8aca24dd3cb016b9612c8a20",
+    "payload/scripts/static_audit_option_critic_v9_anchor_safe.sh": "3e93a44d5a65db1dd181c0d2df06e26063f63b2fc329b74a9d625c8ce7b40079",
+    "payload/tests/test_option_critic_v9_auxiliary.py": "d26f02fc3a7fafc829d9e044801e3a13109cefb4e32ebf373f4a3cc9adea721a",
+    "payload/tests/test_option_critic_v9_core.py": "875afc68d94a3ef2c82cb7797ac6e329ea25d07769d0a47bf5a0892a4b67cc2c",
+    "payload/tests/test_option_critic_v9_migration.py": "abe858efea0e62c88eed59f315824cd744304a8c0e0c9a7bbdd47126bd5d0eed",
+    "restore_option_critic_v9_anchor_safe_hotfix.sh": "e855c53e32db639cd5331a17baa54b4732624d22b76cf10cf3ee5e5318be8a2b"
+  },
+  "schema_version": 1
+}

@@ -1,0 +1,78 @@
+# Place option_critic_hierarchy_bundle.zip in combined-upload first.
+
+cd /home/jovyan/workspace/dreamer/combined-upload
+unzip option_critic_hierarchy_bundle.zip
+
+export ROOT=/home/jovyan/workspace/dreamer/combined-upload
+export REPO="$ROOT/smac-dreamer"
+export PY="$ROOT/.venv/bin/python"
+export BUNDLE="$ROOT/option_critic_hierarchy_bundle"
+export TACTICAL_V12_RUN="$(cat "$ROOT/CURRENT_TACTICAL_V1_2_RUN.txt")"
+export SOURCE_CHECKPOINT="$TACTICAL_V12_RUN/best_val_macro_winrate.pt"
+export SOURCE_RUN_META="$TACTICAL_V12_RUN/run_meta.json"
+
+# Stop any current trainer before continuing.
+pgrep -af 'train_r2dreamer_smaclite_multimap.py' || true
+
+# Verify v1.2 best source.
+"$PY" - "$SOURCE_CHECKPOINT" <<'PY'
+import sys,torch
+c=torch.load(sys.argv[1],map_location='cpu',weights_only=False)
+print('step:',c.get('step'))
+print('macro win:',c.get('val_macro_win_rate'))
+print('metadata:',c.get('tactical_mixture_metadata'))
+assert float(c.get('val_macro_win_rate',-1)) >= .3749
+assert (c.get('tactical_mixture_metadata') or {}).get('architecture') == 'tactical_mixture_v1_2'
+assert int((c.get('tactical_mixture_metadata') or {}).get('num_tactics',-1)) == 2
+PY
+
+# Preserve source and checkpoint.
+"$BUNDLE/preserve_before_option_critic.sh" "$REPO" "$SOURCE_CHECKPOINT"
+export PRESERVE_DIR="$(ls -dt "$ROOT"/preserve_before_option_critic_* | head -1)"
+sha256sum "$SOURCE_CHECKPOINT" "$PRESERVE_DIR/source_checkpoint.pt"
+
+# Fail-closed dry-run, then install.
+"$PY" "$BUNDLE/install_option_critic_hierarchy.py" \
+  --repo "$REPO" \
+  --source-config configs/r2_2100_jepa_tactical_mixture_v1_2.yaml \
+  --dry-run
+
+"$PY" "$BUNDLE/install_option_critic_hierarchy.py" \
+  --repo "$REPO" \
+  --source-config configs/r2_2100_jepa_tactical_mixture_v1_2.yaml
+
+export OPTION_CRITIC_BACKUP="$(ls -dt "$ROOT"/smac-dreamer_option_critic_backup_* | head -1)"
+cat "$OPTION_CRITIC_BACKUP/option_critic_backup_manifest.json"
+
+# Fast audit. Must end with 38 passed and both [OK] lines.
+cd "$REPO"
+REPO="$REPO" PY="$PY" \
+CONFIG=configs/r2_2100_jepa_option_critic_8_v2.yaml \
+CHECKPOINT="$SOURCE_CHECKPOINT" \
+SOURCE_RUN_META="$SOURCE_RUN_META" \
+bash scripts/static_audit_option_critic_hierarchy.sh
+
+# Launch in tmux.
+tmux new -s r2_option_critic
+
+# Inside tmux:
+export ROOT=/home/jovyan/workspace/dreamer/combined-upload
+export REPO="$ROOT/smac-dreamer"
+export PY="$ROOT/.venv/bin/python"
+export TACTICAL_V12_RUN="$(cat "$ROOT/CURRENT_TACTICAL_V1_2_RUN.txt")"
+source "$ROOT/.venv/bin/activate"
+cd "$REPO"
+ROOT="$ROOT" REPO="$REPO" PY="$PY" \
+TACTICAL_V12_RUN="$TACTICAL_V12_RUN" FINAL_STEP=2000000 \
+bash scripts/run_option_critic_2m.sh
+
+# Detach: Ctrl-b then d
+
+# Monitor from another shell.
+export OPTION_RUN="$(cat "$ROOT/CURRENT_OPTION_CRITIC_RUN.txt")"
+tail -f "$OPTION_RUN/train.log"
+"$PY" "$REPO/scripts/assert_option_critic_metrics.py" "$OPTION_RUN"
+
+# Restore if required.
+PY="$PY" bash "$BUNDLE/restore_option_critic_backup.sh" \
+  "$OPTION_CRITIC_BACKUP" "$REPO"

@@ -20,6 +20,10 @@ from trainer import OnlineTrainer  # requires external/r2dreamer on sys.path
 
 from smacdreamer.evaluation import evaluate_heldout, is_validation_improvement
 
+# OPTION_CRITIC_HIERARCHY_V2
+
+# TACTICAL_MIXTURE_HARDENING_V1_1
+
 # Non-None sentinel: the base training loop only calls self.eval() when eval_envs is not None
 # (and eval_episode_num > 0). We pass this up and override eval(); eval_envs is never used.
 _VALIDATION_SENTINEL = object()
@@ -96,6 +100,8 @@ class ValidationTrainer(OnlineTrainer):
     def eval(self, agent, train_step):
         from smacdreamer.system_metrics import log_system_metrics, rss_bytes
 
+        if getattr(agent, 'hierarchical_enabled', False):
+            agent.set_hierarchy_training_step(train_step)
         agent.eval()
         before_rss = rss_bytes()
         log_system_metrics(
@@ -133,10 +139,23 @@ class ValidationTrainer(OnlineTrainer):
         wr, ret = float(macro["win_rate"]), float(macro["original_return"])
         if is_validation_improvement(wr, ret, self._best_macro_wr, self._best_macro_ret):
             self._best_macro_wr, self._best_macro_ret = wr, ret
+            best_payload = {
+                "agent_state_dict": agent.state_dict(),
+                "val_macro_win_rate": wr,
+                "val_macro_original_return": ret,
+                "step": int(train_step),
+                "obs_mode": self._val_obs_mode,
+            }
+            if hasattr(agent, "tactical_metadata"):
+                best_payload["tactical_mixture_metadata"] = (
+                    agent.tactical_metadata()
+                )
+            if hasattr(agent, "hierarchical_metadata"):
+                best_payload["hierarchical_options_metadata"] = (
+                    agent.hierarchical_metadata()
+                )
             torch.save(
-                {"agent_state_dict": agent.state_dict(),
-                 "val_macro_win_rate": wr, "val_macro_original_return": ret,
-                 "step": int(train_step), "obs_mode": self._val_obs_mode},
+                best_payload,
                 self._logdir / "best_val_macro_winrate.pt",
             )
             print(f"  [val step {train_step}] NEW BEST macro win_rate={wr:.3f} "

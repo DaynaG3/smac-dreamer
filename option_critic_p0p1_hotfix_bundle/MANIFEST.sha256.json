@@ -1,0 +1,22 @@
+{
+  "files": {
+    "BUNDLE_VALIDATION.txt": "881cbbdb40750855ad5f77c51555b66cc2c0041e57945dcfe122210491daad45",
+    "INSTALL_AND_RUN.md": "4423cbf29c2ac734d6f86b47f98866e4770e35e771b00fa51573de62d694e9cc",
+    "README.md": "fe6d8ea94699e18edbd173588243fe3a596f159fd31f8b6b7b58fb3f842c4dcf",
+    "apply_option_critic_p0p1_hotfix.py": "8d64e8ed029fef8ad2e72e0cf1c1382b990d7bf36db69a78847cc1180becf9f6",
+    "payload/external/r2dreamer/hierarchical_dreamer.py": "76cffb5c6d601266cc2a275b292473e14081c9c19d36733092ebb1c7207cfb31",
+    "payload/external/r2dreamer/hierarchical_options.py": "ef6767557678179c8394b3d12042f752904299cc5e907478e454ce87a810e2b4",
+    "payload/external/r2dreamer/option_critic.py": "bd8945742c4d16995e8ec68f3d2097605af96e7342108ecfa95cb2f6f551e5e2",
+    "payload/scripts/assert_option_critic_p0p1_metrics.py": "22f6279e02288ec1815145a76b9dd47799bccea6128d577efea32995db84f1bd",
+    "payload/scripts/audit_option_critic_p0p1.py": "015c9757d9fa8e1e9bda0136d702096f8966915a3a1a6fa5fd84dada61514534",
+    "payload/scripts/check_option_critic_win_guard.py": "468a3f37db5552e7664311996aa4af0cca3b021e83734ee7279db2a4bdad8f8b",
+    "payload/scripts/run_option_critic_p0p1_2m.sh": "ec232788acea9a6e1dffb1e7242ee8e5ea0e237c8186863f034c5a2a0e6dfd32",
+    "payload/scripts/static_audit_option_critic_p0p1.sh": "cc461cf30af7e38dcc9681644e94c1b697c88fc6ef9238ff1c952a6540fda4d1",
+    "payload/tests/test_hierarchical_auxiliary.py": "12859c0af94c78ec1772f0f255602986b28a8294f8c93b416d93c7855aa2d2b5",
+    "payload/tests/test_hierarchical_options.py": "c4d9f1236b2aab2b3d7e2ce576f4dc7a284fd6fbefd9e1adeb00e8afe35315fc",
+    "payload/tests/test_hierarchy_migration.py": "8b8c90658cf24651dc7614ec09dc8dcfb9b359a56bb63f8a5aacdaa5b9282d4f",
+    "payload/tests/test_option_critic_math.py": "651e00001b137be5501d3cc88d25494acb9196767fc0d592d7aee393f8583899",
+    "restore_option_critic_p0p1_hotfix.sh": "ccd17258bb7da27c7e0a5594b086c9619c9675efa77af62136055971bda59d90"
+  },
+  "schema_version": 1
+}

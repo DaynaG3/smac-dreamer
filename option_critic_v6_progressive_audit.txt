@@ -1,0 +1,29 @@
+.................................................................       [100%]
+65 passed in 3.60s
+[OK] Option-Critic v6 progressive source/config audit passed
+{
+  "repo": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer",
+  "config": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/configs/r2_2100_jepa_option_critic_8_v6_progressive_1m.yaml",
+  "checkpoint": {
+    "path": "/home/jovyan/workspace/dreamer/combined-upload/smac-dreamer/logs/r2dreamer/adaptive_best_tactical_v1_2_2m_20260716_101741/best_val_macro_winrate.pt",
+    "sha256": "74875c693150d4cd21be27201e332cb0d8d4f6648c10701761154dcd6588d99e",
+    "step": 800004,
+    "val_macro_win_rate": 0.375
+  },
+  "checks": {
+    "jepa_dense": true,
+    "eight_slots_two_groups": true,
+    "progressive_unlock": true,
+    "bounded_child_delta": true,
+    "reactive_floor": true,
+    "staged_pg": true,
+    "late_termination": true,
+    "source_trust": true,
+    "no_forced_diversity": true,
+    "world_model_frozen": true,
+    "horizon": true,
+    "validation_200k": true,
+    "fresh_uniform": true
+  }
+}
+[OK] Option-Critic v6 progressive 8-slot static audit passed

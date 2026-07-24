@@ -1,0 +1,67 @@
+Unified Adaptive Priority Bundle — Validation Report
+Date: 2026-07-14 (Asia/Singapore)
+Target: DaynaG3/smac-dreamer, branch combined-jepa-dreamer
+
+Scope
+-----
+The bundle installs both requested mechanisms together:
+1. automatic adaptive map collection from critic-error statistics;
+2. recurrent candidate-pool sequence PER with importance-sampling correction.
+
+Sanity-check corrections included
+---------------------------------
+- Resume progress no longer derives solely from the newly empty replay buffer.
+- A trusted absolute-step override is available because old checkpoint step values
+  could be bounded by replay capacity.
+- Replay refill, not restored absolute progress, gates the first learner update.
+- Priority error compares replay return targets with the current trainable critic,
+  not the frozen/slow critic used for stable targets.
+- Importance-sampling weights apply to JEPA replay losses and imagined actor/critic
+  starts; map feedback is also IS-weighted to avoid compounding replay bias.
+- Map feedback uses per-timestep log_map_id, so a recurrent window that crosses an
+  episode/map boundary updates each map separately.
+- Equal map statistics receive equal ranks; initial tied/unseen maps remain uniform.
+- Held-out evaluation workers never receive adaptive probabilities or feedback.
+- Python, NumPy, Torch, CUDA RNG, optimizer/scheduler/scaler state, absolute step,
+  and adaptive map state are handled on checkpoint continuation.
+- Sequence-priority cache is not restored without the exact matching replay.
+- Adaptive worker recycling uses a generation-specific sampler seed.
+- The generated YAML is derived from the exact source YAML and the preflight
+  requires validation.every == 200000.
+
+Tests completed in the artifact environment
+-------------------------------------------
+PASS: Python syntax compilation for installer, new modules, and scripts.
+PASS: Bash syntax checks for preservation, restore, audit, smoke, and full runners.
+PASS: 7 pure controller/PER-math tests.
+PASS: 2 patched MapSampler runtime tests using shared-memory probabilities.
+PASS: exact-source patch matching, AST parsing, and idempotence for:
+      - src/smacdreamer/envs/map_sampler.py
+      - src/smacdreamer/r2dreamer_factory.py
+      - src/smacdreamer/checkpointing.py
+      - scripts/train_r2dreamer_smaclite_multimap.py
+PASS: Dreamer/trainer patch AST and idempotence fixtures using the live branch's
+      exact replacement anchors and JEPA loss structure.
+PASS: installer dry-run, installer execution, payload placement, generated-config
+      preservation, and post-install compilation in a clean fixture repository.
+PASS: automatic smoke-metric gate against synthetic active metrics.
+
+Not executable in this artifact environment
+-------------------------------------------
+SKIPPED: the TorchRL/TensorDict recurrent-buffer runtime test because TorchRL is not
+installed in this artifact environment. The test is included as
+`tests/test_adaptive_buffer_torchrl.py` and the installed preflight imports the real
+AdaptiveBuffer. It must pass in the repository's existing `.venv` before any GPU run.
+
+Required user-side gates
+------------------------
+1. Preserve repository/worktree/checkpoint with preserve_before_unified_priority.sh.
+2. Run installer --dry-run, then installer.
+3. Run scripts/static_audit_unified_priority.sh in the real venv.
+4. Run all tests/test_adaptive_*.py in the real venv; no skips/failures for TorchRL.
+5. Infer and verify the trusted absolute source step.
+6. Run checkpoint/config/source-run preflight.
+7. Complete smoke 1 from the original checkpoint.
+8. Complete smoke 2 from smoke 1 latest.pt to test adaptive-state restore.
+9. Start the full clean continuation from the original checkpoint, not a smoke
+   checkpoint, and write to a new run directory.

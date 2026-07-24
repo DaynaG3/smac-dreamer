@@ -1,0 +1,27 @@
+{
+  "files": {
+    "BUNDLE_VALIDATION.txt": "4b979a147daf19a3df2b43a5ee9d4243cf4a33b5c7f561d64f6730247a65f272",
+    "INSTALL_AND_RUN.md": "2fe43e4456232119eb6d6b9a7d01815a480f004de5957b70d8680c2ba2371dfb",
+    "README.md": "5fd32ce331395babf09d9207084e37e44bfc667f90084daf65ddd03a546df0bc",
+    "apply_option_critic_v6_progressive_hotfix.py": "90567cd66222e0371b1f34d811a387aa8b0310f4cae305051e13c1090c98bb56",
+    "payload/.pytest_cache/.gitignore": "3ed731b65d06150c138e2dadb0be0697550888a6b47eb8c45ecc9adba8b8e9bd",
+    "payload/.pytest_cache/CACHEDIR.TAG": "37dc88ef9a0abeddbe81053a6dd8fdfb13afb613045ea1eb4a5c815a74a3bde4",
+    "payload/.pytest_cache/README.md": "73fd6fccdd802c419a6b2d983d6c3173b7da97558ac4b589edec2dfe443db9ad",
+    "payload/.pytest_cache/v/cache/lastfailed": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "payload/.pytest_cache/v/cache/nodeids": "ad8912f2a35510b757c1b05a1574440e02e4bb4aafa2f59dc6ada4a6e1471ffb",
+    "payload/external/r2dreamer/hierarchical_dreamer.py": "71a5a958549a47cb40a516a560b092580a85f3552df8fe9c727cb676469de166",
+    "payload/external/r2dreamer/hierarchical_options.py": "bd53acf87a6b67aa15af12c1c7bf21a7d73a09154d3ad6259e628bfdaec0f729",
+    "payload/external/r2dreamer/option_critic.py": "bd8945742c4d16995e8ec68f3d2097605af96e7342108ecfa95cb2f6f551e5e2",
+    "payload/scripts/assert_option_critic_v6_metrics.py": "bce98a081cfa89ce8b00bd1cfdebc277db00194d7ce285f17b015ae709664214",
+    "payload/scripts/audit_option_critic_v6_progressive.py": "bbccefe36c7d003dfee4f0c3780300e4520e9c6cf227be862bbb4a9a3d513165",
+    "payload/scripts/run_option_critic_v6_1m_then_exp45_pipeline.sh": "04854f9a7253a2d164c2523eaba95c961451bd62597b171823242d97a47bf7e5",
+    "payload/scripts/run_option_critic_v6_progressive_1m.sh": "4f3aec6dd6fabd7a5b69e6aa00e9b9d18d914b88ffbbe1f18a2fc471e6842a9d",
+    "payload/scripts/static_audit_option_critic_v6_progressive.sh": "124860babb56b66a13548749350849ec308c1b578845db9977b93c2ade0447dc",
+    "payload/tests/test_hierarchical_auxiliary.py": "f6d2f9def065692ef45822955e199f4795a0626f1197b1f80f789e20c9e8e839",
+    "payload/tests/test_hierarchical_options.py": "9f0acf70b9767a659feb5bef643b996cc0612ae59a9786b720db159a51e20149",
+    "payload/tests/test_hierarchy_migration.py": "b3db1041c3a613e37ff7050afce2e9dfe4cfc497eb1307eb641890199ac6df0e",
+    "payload/tests/test_option_critic_math.py": "651e00001b137be5501d3cc88d25494acb9196767fc0d592d7aee393f8583899",
+    "restore_option_critic_v6_progressive_hotfix.sh": "dfecbe436b69ac0ea4a4f54597abd82ff4b017c0ce2bf0ca640f42075df5e448"
+  },
+  "schema_version": 1
+}
