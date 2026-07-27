@@ -323,6 +323,8 @@ def make_single_map_env(ctx: VizContext, entry, *, capture=False,
 
 @dataclass
 class EpisodeResult:
+    """Output of one driven episode: per-step JSONL records, an episode summary, and
+    optionally the captured RGB frames (empty when frame capture wasn't requested)."""
     records: List[dict] = field(default_factory=list)
     summary: dict = field(default_factory=dict)
     frames: List[object] = field(default_factory=list)

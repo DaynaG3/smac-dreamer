@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 @dataclass
 class RewardShapingConfig:
+    """Legacy v2 shaping knobs (terminal win/loss + per-step combat deltas + step penalty)."""
     enabled: bool = False
 
     # Terminal outcome shaping (applied exactly once on the terminal step)
