@@ -1,0 +1,58 @@
+{
+  "name": "r2_3v2_basic_blind_iid_0080_protoss_mixed_equal",
+  "num_allied_units": 3,
+  "num_enemy_units": 2,
+  "groups": [
+    {
+      "x": 14.208,
+      "y": 17.898,
+      "faction": "ALLY",
+      "units": {
+        "STALKER": 2
+      }
+    },
+    {
+      "x": 13.662,
+      "y": 16.288,
+      "faction": "ALLY",
+      "units": {
+        "ZEALOT": 1
+      }
+    },
+    {
+      "x": 18.983,
+      "y": 16.278,
+      "faction": "ENEMY",
+      "units": {
+        "STALKER": 1
+      }
+    },
+    {
+      "x": 18.437,
+      "y": 14.668,
+      "faction": "ENEMY",
+      "units": {
+        "ZEALOT": 1
+      }
+    }
+  ],
+  "attack_point": [
+    14.043,
+    17.345
+  ],
+  "terrain_preset": "OCTAGON",
+  "num_unit_types": 9,
+  "ally_has_shields": true,
+  "enemy_has_shields": true,
+  "unit_type_ids": {
+    "BANELING": 0,
+    "COLOSSUS": 1,
+    "MARAUDER": 2,
+    "MARINE": 3,
+    "MEDIVAC": 4,
+    "SPINE_CRAWLER": 5,
+    "STALKER": 6,
+    "ZEALOT": 7,
+    "ZERGLING": 8
+  }
+}

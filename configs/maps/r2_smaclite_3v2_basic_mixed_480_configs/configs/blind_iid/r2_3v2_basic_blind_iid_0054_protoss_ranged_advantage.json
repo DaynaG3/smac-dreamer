@@ -1,0 +1,58 @@
+{
+  "name": "r2_3v2_basic_blind_iid_0054_protoss_ranged_advantage",
+  "num_allied_units": 3,
+  "num_enemy_units": 2,
+  "groups": [
+    {
+      "x": 12.15,
+      "y": 17.67,
+      "faction": "ALLY",
+      "units": {
+        "STALKER": 2
+      }
+    },
+    {
+      "x": 11.861,
+      "y": 15.994,
+      "faction": "ALLY",
+      "units": {
+        "ZEALOT": 1
+      }
+    },
+    {
+      "x": 19.81,
+      "y": 16.273,
+      "faction": "ENEMY",
+      "units": {
+        "ZEALOT": 1
+      }
+    },
+    {
+      "x": 19.546,
+      "y": 14.746,
+      "faction": "ENEMY",
+      "units": {
+        "ZEALOT": 1
+      }
+    }
+  ],
+  "attack_point": [
+    12.07,
+    17.095
+  ],
+  "terrain_preset": "SIMPLE",
+  "num_unit_types": 9,
+  "ally_has_shields": true,
+  "enemy_has_shields": true,
+  "unit_type_ids": {
+    "BANELING": 0,
+    "COLOSSUS": 1,
+    "MARAUDER": 2,
+    "MARINE": 3,
+    "MEDIVAC": 4,
+    "SPINE_CRAWLER": 5,
+    "STALKER": 6,
+    "ZEALOT": 7,
+    "ZERGLING": 8
+  }
+}

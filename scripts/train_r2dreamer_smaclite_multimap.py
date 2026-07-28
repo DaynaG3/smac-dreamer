@@ -49,6 +49,7 @@ from smacdreamer.validation_trainer import ValidationTrainer
 from smacdreamer.wandb_logger import WandbLogger
 from smacdreamer.checkpointing import PeriodicCheckpointer, attach_checkpointing
 from smacdreamer.envs.reward_registry import resolved_params
+from smacdreamer.sight_range import configure_train_sight_range
 from smacdreamer.cuda_preflight import resolve_amp_dtype, run_cuda_preflight
 
 # Reuse the exact Dreamer/buffer/trainer config from the debug script.
@@ -161,6 +162,14 @@ def main():
     if obs_mode not in ("flat", "structured"):
         raise ValueError(f"observation.mode must be 'flat' or 'structured', got {obs_mode!r}")
 
+    # --- Full-observability ablation: optional sight-range override -------------
+    # Set/clear SMACLITE_SIGHT_RANGE BEFORE any env/discovery is built; spawn children (train
+    # workers, validation env children, discovery probes) inherit it and apply the override via
+    # smacdreamer.sight_range.maybe_override_sight_range(). When the config does NOT request full
+    # visibility, any stale SMACLITE_SIGHT_RANGE from the shell is cleared so a partial-obs run
+    # never accidentally becomes full-vis. Absent -> partial obs (sight 9).
+    sight_range = configure_train_sight_range(cfg)
+
     # --- Action masking (P0.1/P0.2): requires structured obs (per-agent avail + masks) -----
     action_masking = bool(cfg.get("action_masking", False))
     if action_masking and obs_mode != "structured":
@@ -169,6 +178,17 @@ def main():
     config.model.mask_threshold = float(cfg.get("mask_threshold", 0.7))
     config.model.amp_dtype = resolve_amp_dtype(str(cfg.get("amp_dtype", "bfloat16")), str(cfg.device))
     run_cuda_preflight(str(cfg.device), str(config.model.amp_dtype))
+
+    # --- Optional per-run loss-scale overrides (e.g. repval) --------------------
+    # Any key under cfg.loss_scales is applied onto config.model.loss_scales BEFORE the agent is
+    # built. Unknown keys fail loudly (guards typos). Captured in run_config via config.model.
+    if cfg.get("loss_scales"):
+        for k, v in OmegaConf.to_container(cfg.loss_scales, resolve=True).items():
+            if k not in config.model.loss_scales:
+                raise ValueError(f"loss_scales override: unknown key {k!r}; valid keys: "
+                                 f"{sorted(config.model.loss_scales.keys())}")
+            config.model.loss_scales[k] = float(v)
+            print(f"  [loss_scales] override {k} -> {float(v)}")
 
     # --- Continuation / resume settings (mode, global-step offset, actor warm-up) -----
     resume_cfg = cfg.get("resume") or {}
@@ -288,6 +308,7 @@ def main():
         "reward_params_resolved": resolved,
         "reward_hash": rhash,
         "obs_mode": obs_mode,
+        "sight_range": sight_range,
         "dataset_tag": dataset_tag,
         "explicit_folders": explicit,
         "padding": discovery["padding"],
@@ -304,6 +325,7 @@ def main():
     # regardless of which --config is passed later.
     run_meta = {
         "obs_mode": obs_mode,
+        "sight_range": sight_range,
         "units": int(cfg.units), "deter": int(cfg.deter),
         "batch_size": int(cfg.batch_size), "batch_length": int(cfg.batch_length),
         "imag_horizon": int(cfg.imag_horizon),

@@ -4,6 +4,11 @@ from __future__ import annotations
 
 
 def resolve_amp_dtype(requested: str, device: str, torch_module=None) -> str:
+    """Normalise ``requested`` to a canonical amp_dtype string, failing loudly on bad combos.
+
+    Raises rather than silently downgrading bfloat16 to float16 on a non-BF16 CUDA device
+    (fp16 overflows on the large structured SMAClite observation — see CLAUDE.md).
+    """
     torch = torch_module
     if torch is None:
         import torch as torch  # type: ignore

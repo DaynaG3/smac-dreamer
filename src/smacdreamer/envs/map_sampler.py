@@ -15,6 +15,7 @@ import ruamel.yaml as yaml
 
 @dataclass
 class MapEntry:
+    """One map's manifest entry: identity, source (builtin/custom), sampling family/weight."""
     name: str
     type: str                   # 'builtin' or 'custom'
     path: Optional[str] = None  # required when type='custom'

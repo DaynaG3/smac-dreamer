@@ -1,0 +1,277 @@
+{
+  "families": [
+    {
+      "family_id": "protoss_stalker_mirror",
+      "archetype": "protoss_basic",
+      "ally": {
+        "STALKER": 3
+      },
+      "enemy": {
+        "STALKER": 2
+      },
+      "heldout_compositional": false,
+      "ally_value": 375.0,
+      "enemy_value": 250.0,
+      "static_value_ratio": 1.5,
+      "ally_has_shields": true,
+      "enemy_has_shields": true
+    },
+    {
+      "family_id": "protoss_zealot_mirror",
+      "archetype": "protoss_basic",
+      "ally": {
+        "ZEALOT": 3
+      },
+      "enemy": {
+        "ZEALOT": 2
+      },
+      "heldout_compositional": false,
+      "ally_value": 300.0,
+      "enemy_value": 200.0,
+      "static_value_ratio": 1.5,
+      "ally_has_shields": true,
+      "enemy_has_shields": true
+    },
+    {
+      "family_id": "protoss_mixed_equal",
+      "archetype": "protoss_basic",
+      "ally": {
+        "STALKER": 2,
+        "ZEALOT": 1
+      },
+      "enemy": {
+        "STALKER": 1,
+        "ZEALOT": 1
+      },
+      "heldout_compositional": false,
+      "ally_value": 350.0,
+      "enemy_value": 225.0,
+      "static_value_ratio": 1.5556,
+      "ally_has_shields": true,
+      "enemy_has_shields": true
+    },
+    {
+      "family_id": "protoss_zealot_heavy",
+      "archetype": "protoss_basic",
+      "ally": {
+        "STALKER": 1,
+        "ZEALOT": 2
+      },
+      "enemy": {
+        "STALKER": 1,
+        "ZEALOT": 1
+      },
+      "heldout_compositional": false,
+      "ally_value": 325.0,
+      "enemy_value": 225.0,
+      "static_value_ratio": 1.4444,
+      "ally_has_shields": true,
+      "enemy_has_shields": true
+    },
+    {
+      "family_id": "protoss_ranged_advantage",
+      "archetype": "protoss_basic",
+      "ally": {
+        "STALKER": 2,
+        "ZEALOT": 1
+      },
+      "enemy": {
+        "ZEALOT": 2
+      },
+      "heldout_compositional": false,
+      "ally_value": 350.0,
+      "enemy_value": 200.0,
+      "static_value_ratio": 1.75,
+      "ally_has_shields": true,
+      "enemy_has_shields": true
+    },
+    {
+      "family_id": "protoss_melee_vs_ranged",
+      "archetype": "protoss_basic",
+      "ally": {
+        "STALKER": 1,
+        "ZEALOT": 2
+      },
+      "enemy": {
+        "STALKER": 2
+      },
+      "heldout_compositional": false,
+      "ally_value": 325.0,
+      "enemy_value": 250.0,
+      "static_value_ratio": 1.3,
+      "ally_has_shields": true,
+      "enemy_has_shields": true
+    },
+    {
+      "family_id": "terran_marine_mirror",
+      "archetype": "terran_basic",
+      "ally": {
+        "MARINE": 3
+      },
+      "enemy": {
+        "MARINE": 2
+      },
+      "heldout_compositional": false,
+      "ally_value": 150.0,
+      "enemy_value": 100.0,
+      "static_value_ratio": 1.5,
+      "ally_has_shields": false,
+      "enemy_has_shields": false
+    },
+    {
+      "family_id": "terran_marauder_mirror",
+      "archetype": "terran_basic",
+      "ally": {
+        "MARAUDER": 3
+      },
+      "enemy": {
+        "MARAUDER": 2
+      },
+      "heldout_compositional": false,
+      "ally_value": 300.0,
+      "enemy_value": 200.0,
+      "static_value_ratio": 1.5,
+      "ally_has_shields": false,
+      "enemy_has_shields": false
+    },
+    {
+      "family_id": "terran_mixed_light",
+      "archetype": "terran_basic",
+      "ally": {
+        "MARINE": 2,
+        "MARAUDER": 1
+      },
+      "enemy": {
+        "MARINE": 1,
+        "MARAUDER": 1
+      },
+      "heldout_compositional": false,
+      "ally_value": 200.0,
+      "enemy_value": 150.0,
+      "static_value_ratio": 1.3333,
+      "ally_has_shields": false,
+      "enemy_has_shields": false
+    },
+    {
+      "family_id": "terran_mixed_heavy",
+      "archetype": "terran_basic",
+      "ally": {
+        "MARINE": 1,
+        "MARAUDER": 2
+      },
+      "enemy": {
+        "MARINE": 1,
+        "MARAUDER": 1
+      },
+      "heldout_compositional": false,
+      "ally_value": 250.0,
+      "enemy_value": 150.0,
+      "static_value_ratio": 1.6667,
+      "ally_has_shields": false,
+      "enemy_has_shields": false
+    },
+    {
+      "family_id": "terran_marine_advantage",
+      "archetype": "terran_basic",
+      "ally": {
+        "MARINE": 2,
+        "MARAUDER": 1
+      },
+      "enemy": {
+        "MARINE": 2
+      },
+      "heldout_compositional": false,
+      "ally_value": 200.0,
+      "enemy_value": 100.0,
+      "static_value_ratio": 2.0,
+      "ally_has_shields": false,
+      "enemy_has_shields": false
+    },
+    {
+      "family_id": "terran_marauder_advantage",
+      "archetype": "terran_basic",
+      "ally": {
+        "MARINE": 1,
+        "MARAUDER": 2
+      },
+      "enemy": {
+        "MARAUDER": 2
+      },
+      "heldout_compositional": false,
+      "ally_value": 250.0,
+      "enemy_value": 200.0,
+      "static_value_ratio": 1.25,
+      "ally_has_shields": false,
+      "enemy_has_shields": false
+    },
+    {
+      "family_id": "swarm_zergling_mirror",
+      "archetype": "swarm_basic",
+      "ally": {
+        "ZERGLING": 3
+      },
+      "enemy": {
+        "ZERGLING": 2
+      },
+      "heldout_compositional": false,
+      "ally_value": 75.0,
+      "enemy_value": 50.0,
+      "static_value_ratio": 1.5,
+      "ally_has_shields": false,
+      "enemy_has_shields": false
+    },
+    {
+      "family_id": "bio_zergling_light",
+      "archetype": "bio_swarm_basic",
+      "ally": {
+        "MARINE": 2,
+        "ZERGLING": 1
+      },
+      "enemy": {
+        "MARINE": 1,
+        "ZERGLING": 1
+      },
+      "heldout_compositional": false,
+      "ally_value": 125.0,
+      "enemy_value": 75.0,
+      "static_value_ratio": 1.6667,
+      "ally_has_shields": false,
+      "enemy_has_shields": false
+    },
+    {
+      "family_id": "bio_zergling_melee",
+      "archetype": "bio_swarm_basic",
+      "ally": {
+        "MARINE": 1,
+        "ZERGLING": 2
+      },
+      "enemy": {
+        "ZERGLING": 2
+      },
+      "heldout_compositional": false,
+      "ally_value": 100.0,
+      "enemy_value": 50.0,
+      "static_value_ratio": 2.0,
+      "ally_has_shields": false,
+      "enemy_has_shields": false
+    },
+    {
+      "family_id": "bio_marauder_zergling",
+      "archetype": "bio_swarm_basic",
+      "ally": {
+        "MARAUDER": 1,
+        "ZERGLING": 2
+      },
+      "enemy": {
+        "MARAUDER": 1,
+        "ZERGLING": 1
+      },
+      "heldout_compositional": false,
+      "ally_value": 150.0,
+      "enemy_value": 125.0,
+      "static_value_ratio": 1.2,
+      "ally_has_shields": false,
+      "enemy_has_shields": false
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "name": "r2_3v2_basic_train_0209_bio_marauder_zergling",
+  "num_allied_units": 3,
+  "num_enemy_units": 2,
+  "groups": [
+    {
+      "x": 10.373,
+      "y": 15.201,
+      "faction": "ALLY",
+      "units": {
+        "MARAUDER": 1
+      }
+    },
+    {
+      "x": 10.924,
+      "y": 13.593,
+      "faction": "ALLY",
+      "units": {
+        "ZERGLING": 2
+      }
+    },
+    {
+      "x": 20.78,
+      "y": 18.765,
+      "faction": "ENEMY",
+      "units": {
+        "MARAUDER": 1
+      }
+    },
+    {
+      "x": 21.331,
+      "y": 17.156,
+      "faction": "ENEMY",
+      "units": {
+        "ZERGLING": 1
+      }
+    }
+  ],
+  "attack_point": [
+    10.757,
+    14.112
+  ],
+  "terrain_preset": "OCTAGON",
+  "num_unit_types": 9,
+  "ally_has_shields": false,
+  "enemy_has_shields": false,
+  "unit_type_ids": {
+    "BANELING": 0,
+    "COLOSSUS": 1,
+    "MARAUDER": 2,
+    "MARINE": 3,
+    "MEDIVAC": 4,
+    "SPINE_CRAWLER": 5,
+    "STALKER": 6,
+    "ZEALOT": 7,
+    "ZERGLING": 8
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "name": "r2_3v2_basic_blind_iid_0063_swarm_zergling_mirror",
+  "num_allied_units": 3,
+  "num_enemy_units": 2,
+  "groups": [
+    {
+      "x": 23.552,
+      "y": 21.082,
+      "faction": "ALLY",
+      "units": {
+        "ZERGLING": 2
+      }
+    },
+    {
+      "x": 22.416,
+      "y": 21.764,
+      "faction": "ALLY",
+      "units": {
+        "ZERGLING": 1
+      }
+    },
+    {
+      "x": 23.727,
+      "y": 10.538,
+      "faction": "ENEMY",
+      "units": {
+        "ZERGLING": 1
+      }
+    },
+    {
+      "x": 22.614,
+      "y": 9.82,
+      "faction": "ENEMY",
+      "units": {
+        "ZERGLING": 1
+      }
+    }
+  ],
+  "attack_point": [
+    23.19,
+    21.293
+  ],
+  "terrain_preset": "NARROW",
+  "num_unit_types": 9,
+  "ally_has_shields": false,
+  "enemy_has_shields": false,
+  "unit_type_ids": {
+    "BANELING": 0,
+    "COLOSSUS": 1,
+    "MARAUDER": 2,
+    "MARINE": 3,
+    "MEDIVAC": 4,
+    "SPINE_CRAWLER": 5,
+    "STALKER": 6,
+    "ZEALOT": 7,
+    "ZERGLING": 8
+  }
+}

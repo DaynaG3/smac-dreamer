@@ -1,0 +1,58 @@
+{
+  "name": "r2_3v2_basic_train_0017_protoss_stalker_mirror",
+  "num_allied_units": 3,
+  "num_enemy_units": 2,
+  "groups": [
+    {
+      "x": 12.795,
+      "y": 17.449,
+      "faction": "ALLY",
+      "units": {
+        "STALKER": 2
+      }
+    },
+    {
+      "x": 11.913,
+      "y": 16.049,
+      "faction": "ALLY",
+      "units": {
+        "STALKER": 1
+      }
+    },
+    {
+      "x": 20.618,
+      "y": 16.489,
+      "faction": "ENEMY",
+      "units": {
+        "STALKER": 1
+      }
+    },
+    {
+      "x": 20.424,
+      "y": 14.951,
+      "faction": "ENEMY",
+      "units": {
+        "STALKER": 1
+      }
+    }
+  ],
+  "attack_point": [
+    12.518,
+    16.966
+  ],
+  "terrain_preset": "OCTAGON",
+  "num_unit_types": 9,
+  "ally_has_shields": true,
+  "enemy_has_shields": true,
+  "unit_type_ids": {
+    "BANELING": 0,
+    "COLOSSUS": 1,
+    "MARAUDER": 2,
+    "MARINE": 3,
+    "MEDIVAC": 4,
+    "SPINE_CRAWLER": 5,
+    "STALKER": 6,
+    "ZEALOT": 7,
+    "ZERGLING": 8
+  }
+}

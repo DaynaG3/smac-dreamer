@@ -1,0 +1,24 @@
+{
+  "map": "r2_3v2_basic_blind_iid_0075_bio_marauder_zergling",
+  "seed": 2,
+  "battle_won": true,
+  "episode_length": 16,
+  "total_original_return": 20.02250048518181,
+  "total_shaped_reward": 20.95892563741654,
+  "total_enemy_hp_damage": 159.99999904632568,
+  "final_enemy_ehp_frac": 0.0,
+  "final_ally_ehp_frac": 0.6784807443618774,
+  "enemies_alive_at_end": 0,
+  "allies_alive_at_end": 2,
+  "attack_action_count": 27,
+  "move_action_count": 12,
+  "noop_stop_action_count": 9,
+  "per_target_histogram": {
+    "0": 19,
+    "1": 8
+  },
+  "mean_target_focus_score": 0.9743589743589743,
+  "attack_steps": 13,
+  "low_enemy_damage": false,
+  "poor_target_focus": false
+}

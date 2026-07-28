@@ -1,0 +1,24 @@
+{
+  "map": "r2_3v2_basic_blind_iid_0046_terran_marauder_mirror",
+  "seed": 1,
+  "battle_won": true,
+  "episode_length": 34,
+  "total_original_return": 19.99999988079071,
+  "total_shaped_reward": 20.564286165841622,
+  "total_enemy_hp_damage": 250.0,
+  "final_enemy_ehp_frac": 0.0,
+  "final_ally_ehp_frac": 0.2826666533946991,
+  "enemies_alive_at_end": 0,
+  "allies_alive_at_end": 1,
+  "attack_action_count": 20,
+  "move_action_count": 31,
+  "noop_stop_action_count": 51,
+  "per_target_histogram": {
+    "0": 10,
+    "1": 10
+  },
+  "mean_target_focus_score": 0.9393939393939393,
+  "attack_steps": 11,
+  "low_enemy_damage": false,
+  "poor_target_focus": false
+}

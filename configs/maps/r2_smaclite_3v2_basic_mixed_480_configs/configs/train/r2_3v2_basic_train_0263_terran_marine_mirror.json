@@ -1,0 +1,58 @@
+{
+  "name": "r2_3v2_basic_train_0263_terran_marine_mirror",
+  "num_allied_units": 3,
+  "num_enemy_units": 2,
+  "groups": [
+    {
+      "x": 12.672,
+      "y": 16.729,
+      "faction": "ALLY",
+      "units": {
+        "MARINE": 2
+      }
+    },
+    {
+      "x": 11.916,
+      "y": 15.256,
+      "faction": "ALLY",
+      "units": {
+        "MARINE": 1
+      }
+    },
+    {
+      "x": 20.024,
+      "y": 16.454,
+      "faction": "ENEMY",
+      "units": {
+        "MARINE": 1
+      }
+    },
+    {
+      "x": 20.668,
+      "y": 14.929,
+      "faction": "ENEMY",
+      "units": {
+        "MARINE": 1
+      }
+    }
+  ],
+  "attack_point": [
+    12.437,
+    16.221
+  ],
+  "terrain_preset": "SIMPLE",
+  "num_unit_types": 9,
+  "ally_has_shields": false,
+  "enemy_has_shields": false,
+  "unit_type_ids": {
+    "BANELING": 0,
+    "COLOSSUS": 1,
+    "MARAUDER": 2,
+    "MARINE": 3,
+    "MEDIVAC": 4,
+    "SPINE_CRAWLER": 5,
+    "STALKER": 6,
+    "ZEALOT": 7,
+    "ZERGLING": 8
+  }
+}

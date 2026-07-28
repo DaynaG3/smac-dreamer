@@ -1,0 +1,59 @@
+{
+  "name": "r2_3v2_basic_validation_0077_terran_marauder_advantage",
+  "num_allied_units": 3,
+  "num_enemy_units": 2,
+  "groups": [
+    {
+      "x": 12.038,
+      "y": 16.931,
+      "faction": "ALLY",
+      "units": {
+        "MARINE": 1,
+        "MARAUDER": 1
+      }
+    },
+    {
+      "x": 12.249,
+      "y": 14.591,
+      "faction": "ALLY",
+      "units": {
+        "MARAUDER": 1
+      }
+    },
+    {
+      "x": 20.073,
+      "y": 17.654,
+      "faction": "ENEMY",
+      "units": {
+        "MARAUDER": 1
+      }
+    },
+    {
+      "x": 20.283,
+      "y": 15.313,
+      "faction": "ENEMY",
+      "units": {
+        "MARAUDER": 1
+      }
+    }
+  ],
+  "attack_point": [
+    12.062,
+    16.134
+  ],
+  "terrain_preset": "OCTAGON",
+  "num_unit_types": 9,
+  "ally_has_shields": false,
+  "enemy_has_shields": false,
+  "unit_type_ids": {
+    "BANELING": 0,
+    "COLOSSUS": 1,
+    "MARAUDER": 2,
+    "MARINE": 3,
+    "MEDIVAC": 4,
+    "SPINE_CRAWLER": 5,
+    "STALKER": 6,
+    "ZEALOT": 7,
+    "ZERGLING": 8
+  }
+}

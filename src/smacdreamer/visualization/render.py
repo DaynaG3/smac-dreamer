@@ -177,6 +177,7 @@ class InteractiveWindow:
         self.closed = False
 
     def show(self, frame_rgb: np.ndarray) -> None:
+        """Blit one RGB frame to the live window; closes the window on a pygame QUIT event."""
         if self.closed:
             return
         pygame = self._pygame

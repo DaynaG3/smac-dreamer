@@ -95,6 +95,8 @@ class ValidationTrainer(OnlineTrainer):
         )
 
     def eval(self, agent, train_step):
+        """Override OnlineTrainer.eval(): explicit map x seed held-out pass instead of the
+        base class's worker-driven evaluation loop (see module docstring for why)."""
         from smacdreamer.system_metrics import log_system_metrics, rss_bytes
 
         agent.eval()

@@ -1,0 +1,24 @@
+{
+  "map": "r2_3v2_basic_blind_iid_0047_bio_zergling_light",
+  "seed": 1,
+  "battle_won": true,
+  "episode_length": 14,
+  "total_original_return": 20.0601666867733,
+  "total_shaped_reward": 20.748299688100815,
+  "total_enemy_hp_damage": 80.00000023841858,
+  "final_enemy_ehp_frac": 0.0,
+  "final_ally_ehp_frac": 0.36987999081611633,
+  "enemies_alive_at_end": 0,
+  "allies_alive_at_end": 2,
+  "attack_action_count": 19,
+  "move_action_count": 8,
+  "noop_stop_action_count": 15,
+  "per_target_histogram": {
+    "0": 10,
+    "1": 9
+  },
+  "mean_target_focus_score": 0.95,
+  "attack_steps": 10,
+  "low_enemy_damage": false,
+  "poor_target_focus": false
+}

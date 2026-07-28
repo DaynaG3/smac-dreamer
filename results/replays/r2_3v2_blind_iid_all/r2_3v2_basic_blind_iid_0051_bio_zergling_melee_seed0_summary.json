@@ -1,0 +1,24 @@
+{
+  "map": "r2_3v2_basic_blind_iid_0051_bio_zergling_melee",
+  "seed": 0,
+  "battle_won": true,
+  "episode_length": 12,
+  "total_original_return": 20.15232753753662,
+  "total_shaped_reward": 20.94134872034192,
+  "total_enemy_hp_damage": 70.1899995803833,
+  "final_enemy_ehp_frac": 0.0,
+  "final_ally_ehp_frac": 0.487347811460495,
+  "enemies_alive_at_end": 0,
+  "allies_alive_at_end": 2,
+  "attack_action_count": 15,
+  "move_action_count": 13,
+  "noop_stop_action_count": 8,
+  "per_target_histogram": {
+    "0": 8,
+    "1": 7
+  },
+  "mean_target_focus_score": 0.8958333333333333,
+  "attack_steps": 8,
+  "low_enemy_damage": false,
+  "poor_target_focus": false
+}

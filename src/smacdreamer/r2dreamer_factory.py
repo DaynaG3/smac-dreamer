@@ -37,6 +37,10 @@ def _ensure_paths():
         p = str(root / sub)
         if p not in sys.path:
             sys.path.insert(0, p)
+    # Full-observability ablation: apply the SMACLITE_SIGHT_RANGE override (if set) once the
+    # smaclite path is available, before any env is built in this process. No-op when unset.
+    from smacdreamer.sight_range import maybe_override_sight_range
+    maybe_override_sight_range()
 
 
 def make_smaclite_env(scenario, max_episode_steps=200, seed=0, worker_idx=0):

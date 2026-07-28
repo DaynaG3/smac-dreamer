@@ -1,0 +1,58 @@
+{
+  "name": "r2_3v2_basic_train_0023_bio_zergling_melee",
+  "num_allied_units": 3,
+  "num_enemy_units": 2,
+  "groups": [
+    {
+      "x": 7.453,
+      "y": 11.957,
+      "faction": "ALLY",
+      "units": {
+        "MARINE": 1
+      }
+    },
+    {
+      "x": 8.727,
+      "y": 11.999,
+      "faction": "ALLY",
+      "units": {
+        "ZERGLING": 2
+      }
+    },
+    {
+      "x": 7.241,
+      "y": 20.199,
+      "faction": "ENEMY",
+      "units": {
+        "ZERGLING": 1
+      }
+    },
+    {
+      "x": 8.403,
+      "y": 20.237,
+      "faction": "ENEMY",
+      "units": {
+        "ZERGLING": 1
+      }
+    }
+  ],
+  "attack_point": [
+    8.319,
+    11.968
+  ],
+  "terrain_preset": "NARROW",
+  "num_unit_types": 9,
+  "ally_has_shields": false,
+  "enemy_has_shields": false,
+  "unit_type_ids": {
+    "BANELING": 0,
+    "COLOSSUS": 1,
+    "MARAUDER": 2,
+    "MARINE": 3,
+    "MEDIVAC": 4,
+    "SPINE_CRAWLER": 5,
+    "STALKER": 6,
+    "ZEALOT": 7,
+    "ZERGLING": 8
+  }
+}

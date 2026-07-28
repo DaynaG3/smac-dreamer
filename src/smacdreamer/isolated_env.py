@@ -12,6 +12,8 @@ from typing import Any, Callable
 
 @dataclass(frozen=True)
 class EnvFactorySpec:
+    """Picklable pointer to an env-factory callable (``module.name``), resolved lazily inside
+    the child process via ``load()`` — the callable itself is not always picklable directly."""
     module: str
     name: str
 
@@ -25,6 +27,7 @@ DEFAULT_SMACLITE_FACTORY = EnvFactorySpec(
 
 
 class RemoteEnvError(RuntimeError):
+    """Raised in the parent process when the isolated child env process fails or exits."""
     pass
 
 

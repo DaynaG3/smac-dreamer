@@ -1,0 +1,24 @@
+{
+  "map": "r2_3v2_basic_blind_iid_0063_swarm_zergling_mirror",
+  "seed": 2,
+  "battle_won": true,
+  "episode_length": 17,
+  "total_original_return": 20.119568586349487,
+  "total_shaped_reward": 20.960688201710582,
+  "total_enemy_hp_damage": 70.57000195980072,
+  "final_enemy_ehp_frac": 0.0,
+  "final_ally_ehp_frac": 0.5602262020111084,
+  "enemies_alive_at_end": 0,
+  "allies_alive_at_end": 3,
+  "attack_action_count": 24,
+  "move_action_count": 23,
+  "noop_stop_action_count": 4,
+  "per_target_histogram": {
+    "0": 11,
+    "1": 13
+  },
+  "mean_target_focus_score": 1.0,
+  "attack_steps": 9,
+  "low_enemy_damage": false,
+  "poor_target_focus": false
+}

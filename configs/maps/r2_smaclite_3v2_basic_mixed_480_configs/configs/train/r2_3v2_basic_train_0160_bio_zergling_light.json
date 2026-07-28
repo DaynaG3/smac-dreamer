@@ -1,0 +1,44 @@
+{
+  "name": "r2_3v2_basic_train_0160_bio_zergling_light",
+  "num_allied_units": 3,
+  "num_enemy_units": 2,
+  "groups": [
+    {
+      "x": 11.663,
+      "y": 14.975,
+      "faction": "ALLY",
+      "units": {
+        "MARINE": 2,
+        "ZERGLING": 1
+      }
+    },
+    {
+      "x": 19.453,
+      "y": 17.553,
+      "faction": "ENEMY",
+      "units": {
+        "MARINE": 1,
+        "ZERGLING": 1
+      }
+    }
+  ],
+  "attack_point": [
+    11.555,
+    14.842
+  ],
+  "terrain_preset": "SIMPLE",
+  "num_unit_types": 9,
+  "ally_has_shields": false,
+  "enemy_has_shields": false,
+  "unit_type_ids": {
+    "BANELING": 0,
+    "COLOSSUS": 1,
+    "MARAUDER": 2,
+    "MARINE": 3,
+    "MEDIVAC": 4,
+    "SPINE_CRAWLER": 5,
+    "STALKER": 6,
+    "ZEALOT": 7,
+    "ZERGLING": 8
+  }
+}

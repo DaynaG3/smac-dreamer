@@ -1,0 +1,24 @@
+{
+  "map": "r2_3v2_basic_blind_iid_0027_terran_marauder_advantage",
+  "seed": 0,
+  "battle_won": true,
+  "episode_length": 18,
+  "total_original_return": 20.000000476837158,
+  "total_shaped_reward": 20.58697461336851,
+  "total_enemy_hp_damage": 250.0,
+  "final_enemy_ehp_frac": 0.0,
+  "final_ally_ehp_frac": 0.2542372941970825,
+  "enemies_alive_at_end": 0,
+  "allies_alive_at_end": 2,
+  "attack_action_count": 27,
+  "move_action_count": 13,
+  "noop_stop_action_count": 14,
+  "per_target_histogram": {
+    "0": 16,
+    "1": 11
+  },
+  "mean_target_focus_score": 0.9791666666666666,
+  "attack_steps": 16,
+  "low_enemy_damage": false,
+  "poor_target_focus": false
+}
