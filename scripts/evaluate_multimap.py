@@ -148,6 +148,14 @@ def main():
     ))
     _propagate_device(config, device)   # set EVERY device field (buffer/encoder/heads)
 
+    # Rebuild the SAME architecture the checkpoint was trained with. action_masking adds the
+    # predicted avail/alive heads (+ frozen mirrors); omitting it makes load_state_dict fail on
+    # unexpected keys for masked (production) checkpoints. Prefer run_meta, fall back to --config.
+    action_masking = bool(run_meta.get("action_masking", cfg.get("action_masking", False)))
+    config.model.action_masking = action_masking
+    config.model.mask_threshold = float(run_meta.get("mask_threshold", cfg.get("mask_threshold", 0.7)))
+    print(f"Reconstruction: action_masking={action_masking} mask_threshold={config.model.mask_threshold}")
+
     agent = Dreamer(config.model, obs_space, act_space).to(device)
     ckpt = torch.load(args.checkpoint, map_location=device, weights_only=False)
     agent.load_state_dict(ckpt["agent_state_dict"])

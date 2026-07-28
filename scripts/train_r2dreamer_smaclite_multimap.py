@@ -331,6 +331,7 @@ def main():
         "imag_horizon": int(cfg.imag_horizon),
         "max_episode_steps": int(cfg.max_episode_steps), "gamma": float(cfg.gamma),
         "reward_name": reward_name, "padding": discovery["padding"],
+        "action_masking": action_masking, "mask_threshold": float(config.model.mask_threshold),
         "dataset_tag": dataset_tag, "explicit_folders": explicit,
         "validation_seeds": val_seeds,
         "maps_folder": str(maps_cfg.get("train", cfg.get("maps_folder", ""))),
