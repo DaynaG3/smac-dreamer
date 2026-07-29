@@ -1,0 +1,6352 @@
+{
+  "primary_metric": "macro_heldout_win_rate",
+  "primary_value": 0.531111111111111,
+  "selection_note": "Select checkpoints by macro held-out win rate; NEVER by shaped return.",
+  "n_maps": 300,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "episodes_per_map": 3,
+  "n_episodes_total": 900,
+  "macro": {
+    "win_rate": 0.531111111111111,
+    "original_return": 15.052547280366221,
+    "length": 44.74333333333331,
+    "timeout_rate": 0.06777777777777778,
+    "final_ally_ehp_frac": 0.17582995970086704,
+    "final_enemy_ehp_frac": 0.1613072829150285,
+    "win_rate_ci95": [
+      0.47919584247188834,
+      0.5830263797503336
+    ],
+    "win_final_ally_ehp_frac": 0.28332688740631295,
+    "win_alive_fraction": 0.47807857104913976
+  },
+  "micro": {
+    "win_rate": 0.5311111111111111,
+    "original_return": 15.052547280366221,
+    "length": 44.74333333333333,
+    "timeout_rate": 0.06777777777777778,
+    "final_ally_ehp_frac": 0.17582995970086712,
+    "final_enemy_ehp_frac": 0.16130728291502844,
+    "win_final_ally_ehp_frac": 0.3046163438705369,
+    "win_alive_fraction": 0.49295843292853825
+  },
+  "per_map": {
+    "r2g_blind_iid_1401": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.00000011920929,
+      "length": 13.666666666666666,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.4296296338240306,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.4296296338240306,
+      "win_alive_fraction": 0.6666666865348816
+    },
+    "r2g_blind_iid_1402": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 15.419354875882467,
+      "length": 78.0,
+      "timeout_rate": 0.3333333333333333,
+      "final_ally_ehp_frac": 0.3481481571992238,
+      "final_enemy_ehp_frac": 0.011111111690600714,
+      "win_final_ally_ehp_frac": 0.35555556416511536,
+      "win_alive_fraction": 0.6666666865348816
+    },
+    "r2g_blind_iid_1403": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000099341076,
+      "length": 11.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.46666667858759564,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.46666667858759564,
+      "win_alive_fraction": 0.7777777910232544
+    },
+    "r2g_blind_iid_1404": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000178813934,
+      "length": 15.666666666666666,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.2777777910232544,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.2777777910232544,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1405": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000178813934,
+      "length": 15.333333333333334,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.4888888895511627,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.4888888895511627,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1406": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000258286793,
+      "length": 18.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.18888889253139496,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.18888889253139496,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1407": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000576178234,
+      "length": 14.666666666666666,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.29777778188387555,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.29777778188387555,
+      "win_alive_fraction": 0.46666667858759564
+    },
+    "r2g_blind_iid_1408": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.00000062584877,
+      "length": 18.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.24000000456968942,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.24000000456968942,
+      "win_alive_fraction": 0.4000000059604645
+    },
+    "r2g_blind_iid_1409": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.00000054637591,
+      "length": 17.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.248888889948527,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.248888889948527,
+      "win_alive_fraction": 0.5333333512147268
+    },
+    "r2g_blind_iid_1410": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 14.32704390088717,
+      "length": 21.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.006349206591645877,
+      "final_enemy_ehp_frac": 0.025925927174588043,
+      "win_final_ally_ehp_frac": 0.01904761977493763,
+      "win_alive_fraction": 0.2857142984867096
+    },
+    "r2g_blind_iid_1411": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 10.515723357597986,
+      "length": 24.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.1407407447695732,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1412": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999940395355,
+      "length": 20.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.23174603780110678,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.23174603780110678,
+      "win_alive_fraction": 0.4285714328289032
+    },
+    "r2g_blind_iid_1413": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 10.708333333333334,
+      "length": 20.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.17777777463197708,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1414": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.697916666666666,
+      "length": 200.0,
+      "timeout_rate": 1.0,
+      "final_ally_ehp_frac": 0.1111111119389534,
+      "final_enemy_ehp_frac": 0.25833333532015484,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1415": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 17.333333333333332,
+      "length": 21.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.007407407276332378,
+      "final_enemy_ehp_frac": 0.033333333830038704,
+      "win_final_ally_ehp_frac": 0.011111110914498568,
+      "win_alive_fraction": 0.1666666679084301
+    },
+    "r2g_blind_iid_1416": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999940395355,
+      "length": 36.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.42222221692403156,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.42222221692403156,
+      "win_alive_fraction": 0.6666666865348816
+    },
+    "r2g_blind_iid_1417": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999940395355,
+      "length": 30.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.48124998807907104,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.48124998807907104,
+      "win_alive_fraction": 0.6666666865348816
+    },
+    "r2g_blind_iid_1418": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999821186066,
+      "length": 27.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.5416666666666666,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.5416666666666666,
+      "win_alive_fraction": 0.6666666865348816
+    },
+    "r2g_blind_iid_1419": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999940395355,
+      "length": 25.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.524999996026357,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.524999996026357,
+      "win_alive_fraction": 0.9166666666666666
+    },
+    "r2g_blind_iid_1420": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999860922497,
+      "length": 29.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.4723958373069763,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.4723958373069763,
+      "win_alive_fraction": 0.75
+    },
+    "r2g_blind_iid_1421": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999821186066,
+      "length": 27.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.545312503973643,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.545312503973643,
+      "win_alive_fraction": 0.75
+    },
+    "r2g_blind_iid_1422": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999791383743,
+      "length": 32.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.3779166638851166,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.3779166638851166,
+      "win_alive_fraction": 0.6000000238418579
+    },
+    "r2g_blind_iid_1423": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999811251957,
+      "length": 38.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.3425000011920929,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.3425000011920929,
+      "win_alive_fraction": 0.5333333412806193
+    },
+    "r2g_blind_iid_1424": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999801317852,
+      "length": 34.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.40666666626930237,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.40666666626930237,
+      "win_alive_fraction": 0.6000000238418579
+    },
+    "r2g_blind_iid_1425": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.99999989569187,
+      "length": 43.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.2651785761117935,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.2651785761117935,
+      "win_alive_fraction": 0.3333333432674408
+    },
+    "r2g_blind_iid_1426": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.002731998761494,
+      "length": 62.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.22377232213815054,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.22377232213815054,
+      "win_alive_fraction": 0.380952388048172
+    },
+    "r2g_blind_iid_1427": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.99999988079071,
+      "length": 36.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.3098214268684387,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.3098214268684387,
+      "win_alive_fraction": 0.5714285870393118
+    },
+    "r2g_blind_iid_1428": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.153846129775047,
+      "length": 101.33333333333333,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.11695601612639923,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.11695601612639923,
+      "win_alive_fraction": 0.259259266157945
+    },
+    "r2g_blind_iid_1429": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 19.05982906619708,
+      "length": 66.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.15162036816279092,
+      "final_enemy_ehp_frac": 0.02483724057674408,
+      "win_final_ally_ehp_frac": 0.2274305522441864,
+      "win_alive_fraction": 0.3333333432674408
+    },
+    "r2g_blind_iid_1430": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000069538753,
+      "length": 45.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.24586226542790732,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.24586226542790732,
+      "win_alive_fraction": 0.5185185273488363
+    },
+    "r2g_blind_iid_1431": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.190673351287842,
+      "length": 29.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.08888888855775197,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.08888888855775197,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1432": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.16406003634135,
+      "length": 28.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.16000000139077505,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.16000000139077505,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1433": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 14.103652397791544,
+      "length": 27.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.02666666607062022,
+      "final_enemy_ehp_frac": 0.011898809423049292,
+      "win_final_ally_ehp_frac": 0.07999999821186066,
+      "win_alive_fraction": 1.0
+    },
+    "r2g_blind_iid_1434": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 13.15373800198237,
+      "length": 25.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.04888888696829478,
+      "final_enemy_ehp_frac": 0.13555271923542023,
+      "win_final_ally_ehp_frac": 0.14666666090488434,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1435": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 9.936844527721405,
+      "length": 28.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.02666666607062022,
+      "final_enemy_ehp_frac": 0.39586905638376874,
+      "win_final_ally_ehp_frac": 0.07999999821186066,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1436": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.931893269220987,
+      "length": 28.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.16690645863612494,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1437": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 11.78574346502622,
+      "length": 35.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.11876719910651445,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1438": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 2.5663911004861197,
+      "length": 42.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.8012500206629435,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1439": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 6.51185929775238,
+      "length": 28.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.49957406520843506,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1440": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 5.760192304849625,
+      "length": 25.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.5692952473958334,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1441": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 5.756538480520248,
+      "length": 31.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.5680738091468811,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1442": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.130871822436651,
+      "length": 27.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.3291916648546855,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1443": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 14.058333456516266,
+      "length": 32.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.033333333830038704,
+      "final_enemy_ehp_frac": 0.15267262111107507,
+      "win_final_ally_ehp_frac": 0.10000000149011612,
+      "win_alive_fraction": 0.25
+    },
+    "r2g_blind_iid_1444": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 13.226435969273249,
+      "length": 34.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.046666666865348816,
+      "final_enemy_ehp_frac": 0.18994762003421783,
+      "win_final_ally_ehp_frac": 0.14000000059604645,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1445": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 13.20370521148046,
+      "length": 40.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.004444444552063942,
+      "final_enemy_ehp_frac": 0.1945476233959198,
+      "win_final_ally_ehp_frac": 0.013333333656191826,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1446": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 11.051282078027725,
+      "length": 55.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.08583333157002926,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1447": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 8.884615381558737,
+      "length": 200.0,
+      "timeout_rate": 1.0,
+      "final_ally_ehp_frac": 0.32499998807907104,
+      "final_enemy_ehp_frac": 0.4299999972184499,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1448": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999791383743,
+      "length": 53.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.07526041567325592,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.07526041567325592,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1449": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 12.205882658561071,
+      "length": 49.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.12222222362955411,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1450": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 15.352941443522772,
+      "length": 55.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.002170138837148746,
+      "final_enemy_ehp_frac": 0.040000000347693764,
+      "win_final_ally_ehp_frac": 0.0065104165114462376,
+      "win_alive_fraction": 0.3333333432674408
+    },
+    "r2g_blind_iid_1451": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 11.382353246212006,
+      "length": 46.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.1844444473584493,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1452": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 18.11904802918434,
+      "length": 53.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.11679687599341075,
+      "final_enemy_ehp_frac": 0.015000000596046448,
+      "win_final_ally_ehp_frac": 0.17519531399011612,
+      "win_alive_fraction": 0.375
+    },
+    "r2g_blind_iid_1453": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 14.404762307802836,
+      "length": 50.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.01979166641831398,
+      "final_enemy_ehp_frac": 0.16000000139077505,
+      "win_final_ally_ehp_frac": 0.05937499925494194,
+      "win_alive_fraction": 0.25
+    },
+    "r2g_blind_iid_1454": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.0000003973643,
+      "length": 57.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.08124999701976776,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.08124999701976776,
+      "win_alive_fraction": 0.25
+    },
+    "r2g_blind_iid_1455": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 10.899999896685282,
+      "length": 39.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.31111110250155133,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1456": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 11.626666456460953,
+      "length": 49.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.2654999991257985,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1457": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 12.483333180348078,
+      "length": 46.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.22088888784249625,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1458": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 12.551724230249723,
+      "length": 51.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.23388888935248056,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1459": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 12.488505924741427,
+      "length": 64.66666666666667,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.23962963124116263,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1460": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 18.080459932486217,
+      "length": 71.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.09236110995213191,
+      "final_enemy_ehp_frac": 0.045925925175348915,
+      "win_final_ally_ehp_frac": 0.13854166492819786,
+      "win_alive_fraction": 0.2500000074505806
+    },
+    "r2g_blind_iid_1461": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.17906768123309,
+      "length": 20.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.42015503843625385,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.42015503843625385,
+      "win_alive_fraction": 0.8888888955116272
+    },
+    "r2g_blind_iid_1462": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 16.025575786828995,
+      "length": 19.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.1829457382361094,
+      "final_enemy_ehp_frac": 0.04616911709308624,
+      "win_final_ally_ehp_frac": 0.2744186073541641,
+      "win_alive_fraction": 0.6666666865348816
+    },
+    "r2g_blind_iid_1463": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 16.234761993090313,
+      "length": 19.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.03100775182247162,
+      "final_enemy_ehp_frac": 0.01217892145117124,
+      "win_final_ally_ehp_frac": 0.04651162773370743,
+      "win_alive_fraction": 0.3333333432674408
+    },
+    "r2g_blind_iid_1464": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.788839896519978,
+      "length": 23.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.17058823381861052,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.17058823381861052,
+      "win_alive_fraction": 0.4166666666666667
+    },
+    "r2g_blind_iid_1465": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 16.024852986137073,
+      "length": 23.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.2774509787559509,
+      "final_enemy_ehp_frac": 0.10571701327959697,
+      "win_final_ally_ehp_frac": 0.4161764681339264,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1466": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.88011446595192,
+      "length": 26.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.2960784335931142,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.2960784335931142,
+      "win_alive_fraction": 0.4166666666666667
+    },
+    "r2g_blind_iid_1467": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.944954405228298,
+      "length": 25.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.1766233816742897,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.1766233816742897,
+      "win_alive_fraction": 0.3333333383003871
+    },
+    "r2g_blind_iid_1468": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.61872727672259,
+      "length": 25.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.177023154993852,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1469": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 6.14703040321668,
+      "length": 11.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.4646419684092204,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1470": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.524127622445425,
+      "length": 20.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.2639607886473338,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1471": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.30479170878728,
+      "length": 28.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.36124029755592346,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.36124029755592346,
+      "win_alive_fraction": 0.3888888955116272
+    },
+    "r2g_blind_iid_1472": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.6802995800972,
+      "length": 25.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.3038759728272756,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.3038759728272756,
+      "win_alive_fraction": 0.5555555721124014
+    },
+    "r2g_blind_iid_1473": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.57379264632861,
+      "length": 19.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.6666666467984518,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.6666666467984518,
+      "win_alive_fraction": 0.7083333333333334
+    },
+    "r2g_blind_iid_1474": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.40767714381218,
+      "length": 20.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.6744444568951925,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.6744444568951925,
+      "win_alive_fraction": 0.625
+    },
+    "r2g_blind_iid_1475": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 10.12799217303594,
+      "length": 20.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.20739054679870605,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1476": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 19.813490038116772,
+      "length": 107.0,
+      "timeout_rate": 0.3333333333333333,
+      "final_ally_ehp_frac": 0.5645325084527334,
+      "final_enemy_ehp_frac": 0.2922374407450358,
+      "win_final_ally_ehp_frac": 0.6699694991111755,
+      "win_alive_fraction": 0.7000000178813934
+    },
+    "r2g_blind_iid_1477": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 25.70751545826594,
+      "length": 75.66666666666667,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.3016260117292404,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.3016260117292404,
+      "win_alive_fraction": 0.7333333492279053
+    },
+    "r2g_blind_iid_1478": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.621900722384453,
+      "length": 200.0,
+      "timeout_rate": 1.0,
+      "final_ally_ehp_frac": 0.28536585966746014,
+      "final_enemy_ehp_frac": 0.534246563911438,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1479": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 11.792298197746277,
+      "length": 99.33333333333333,
+      "timeout_rate": 0.3333333333333333,
+      "final_ally_ehp_frac": 0.23052958647410074,
+      "final_enemy_ehp_frac": 0.5275914669036865,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1480": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 22.474116444587708,
+      "length": 42.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.28193145990371704,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.28193145990371704,
+      "win_alive_fraction": 0.6666666865348816
+    },
+    "r2g_blind_iid_1481": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 11.48327041665713,
+      "length": 158.33333333333334,
+      "timeout_rate": 0.6666666666666666,
+      "final_ally_ehp_frac": 0.26604361335436505,
+      "final_enemy_ehp_frac": 0.6666666666666666,
+      "win_final_ally_ehp_frac": 0.4803738296031952,
+      "win_alive_fraction": 0.6666666865348816
+    },
+    "r2g_blind_iid_1482": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 18.519326716661453,
+      "length": 168.0,
+      "timeout_rate": 0.6666666666666666,
+      "final_ally_ehp_frac": 0.2347701167066892,
+      "final_enemy_ehp_frac": 0.14003115395704904,
+      "win_final_ally_ehp_frac": 0.2862069010734558,
+      "win_alive_fraction": 0.2857142984867096
+    },
+    "r2g_blind_iid_1483": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 15.606918334960938,
+      "length": 163.0,
+      "timeout_rate": 0.6666666666666666,
+      "final_ally_ehp_frac": 0.27442528928319615,
+      "final_enemy_ehp_frac": 0.29906541109085083,
+      "win_final_ally_ehp_frac": 0.46206897497177124,
+      "win_alive_fraction": 0.5714285969734192
+    },
+    "r2g_blind_iid_1484": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 19.190251673261326,
+      "length": 57.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.31623563170433044,
+      "final_enemy_ehp_frac": 0.1433021823565165,
+      "win_final_ally_ehp_frac": 0.47435344755649567,
+      "win_alive_fraction": 0.5714285969734192
+    },
+    "r2g_blind_iid_1485": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 22.790196386476357,
+      "length": 54.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.3921985824902852,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.3921985824902852,
+      "win_alive_fraction": 0.4583333333333333
+    },
+    "r2g_blind_iid_1486": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 21.994118064641953,
+      "length": 33.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.482653667529424,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.482653667529424,
+      "win_alive_fraction": 0.7916666666666666
+    },
+    "r2g_blind_iid_1487": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 20.920833709339302,
+      "length": 91.33333333333333,
+      "timeout_rate": 0.3333333333333333,
+      "final_ally_ehp_frac": 0.3080378323793411,
+      "final_enemy_ehp_frac": 0.07471264402071635,
+      "win_final_ally_ehp_frac": 0.37695036828517914,
+      "win_alive_fraction": 0.5625
+    },
+    "r2g_blind_iid_1488": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.65397616227468,
+      "length": 103.0,
+      "timeout_rate": 0.3333333333333333,
+      "final_ally_ehp_frac": 0.08666666348775227,
+      "final_enemy_ehp_frac": 0.6375295321146647,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1489": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 21.44458542764187,
+      "length": 42.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.29625000556310016,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.29625000556310016,
+      "win_alive_fraction": 0.3333333432674408
+    },
+    "r2g_blind_iid_1490": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 15.06091354538997,
+      "length": 200.0,
+      "timeout_rate": 1.0,
+      "final_ally_ehp_frac": 0.08888889104127884,
+      "final_enemy_ehp_frac": 0.34278958787520725,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1491": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 15.838095396757126,
+      "length": 36.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.2709677418073018,
+      "final_enemy_ehp_frac": 0.14680851499239603,
+      "win_final_ally_ehp_frac": 0.40645161271095276,
+      "win_alive_fraction": 0.625
+    },
+    "r2g_blind_iid_1492": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.0000003973643,
+      "length": 31.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.47311827540397644,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.47311827540397644,
+      "win_alive_fraction": 0.6666666666666666
+    },
+    "r2g_blind_iid_1493": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000099341076,
+      "length": 27.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.48494624098141986,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.48494624098141986,
+      "win_alive_fraction": 1.0
+    },
+    "r2g_blind_iid_1494": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000139077503,
+      "length": 35.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.3256410260995229,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.3256410260995229,
+      "win_alive_fraction": 0.46666667858759564
+    },
+    "r2g_blind_iid_1495": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 15.4215117196242,
+      "length": 119.33333333333333,
+      "timeout_rate": 0.3333333333333333,
+      "final_ally_ehp_frac": 0.1533119628826777,
+      "final_enemy_ehp_frac": 0.1279569884451727,
+      "win_final_ally_ehp_frac": 0.2548076808452606,
+      "win_alive_fraction": 0.4000000059604645
+    },
+    "r2g_blind_iid_1496": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000059604645,
+      "length": 34.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.38974358638127643,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.38974358638127643,
+      "win_alive_fraction": 0.6000000238418579
+    },
+    "r2g_blind_iid_1497": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000049670536,
+      "length": 40.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.3817204336325328,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.3817204336325328,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1498": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.00000010430813,
+      "length": 50.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.1910394231478373,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.1910394231478373,
+      "win_alive_fraction": 0.3333333383003871
+    },
+    "r2g_blind_iid_1499": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.00242707133293,
+      "length": 49.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.2709677467743556,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.2709677467743556,
+      "win_alive_fraction": 0.4444444477558136
+    },
+    "r2g_blind_iid_1500": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000407298405,
+      "length": 47.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.1388379211227099,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.1388379211227099,
+      "win_alive_fraction": 0.2857142984867096
+    },
+    "r2g_blind_iid_1501": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 13.490196446577707,
+      "length": 56.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.18068996568520865,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1502": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.00910409291585,
+      "length": 52.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.2480122298002243,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.2480122298002243,
+      "win_alive_fraction": 0.4761904974778493
+    },
+    "r2g_blind_iid_1503": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 11.258771901329359,
+      "length": 39.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.3395161380370458,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1504": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 10.807017554839453,
+      "length": 44.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.3725806375344594,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1505": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 16.377193093299866,
+      "length": 108.66666666666667,
+      "timeout_rate": 0.3333333333333333,
+      "final_ally_ehp_frac": 0.10190476228793462,
+      "final_enemy_ehp_frac": 0.1419354851047198,
+      "win_final_ally_ehp_frac": 0.19142857193946838,
+      "win_alive_fraction": 0.3333333432674408
+    },
+    "r2g_blind_iid_1506": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 16.860939035813015,
+      "length": 17.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.06666667014360428,
+      "final_enemy_ehp_frac": 0.00562626247604688,
+      "win_final_ally_ehp_frac": 0.10000000521540642,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1507": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.226811975240707,
+      "length": 20.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.21111111839612326,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.21111111839612326,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1508": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.003095368544262,
+      "length": 29.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.048366013914346695,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.048366013914346695,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1509": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.055483599503834,
+      "length": 14.333333333333334,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.24183007081349692,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.24183007081349692,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1510": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 18.643507798512776,
+      "length": 28.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.14705882469813028,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.14705882469813028,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1511": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 18.491545607646305,
+      "length": 13.666666666666666,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.07908497005701065,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.07908497005701065,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1512": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 17.816270341475803,
+      "length": 19.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.11990049729744594,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.11990049729744594,
+      "win_alive_fraction": 0.4444444576899211
+    },
+    "r2g_blind_iid_1513": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 18.02913933992386,
+      "length": 20.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.2502487500508626,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.2502487500508626,
+      "win_alive_fraction": 0.5555555721124014
+    },
+    "r2g_blind_iid_1514": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 18.17840172847112,
+      "length": 20.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.27860696117083233,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.27860696117083233,
+      "win_alive_fraction": 0.3333333432674408
+    },
+    "r2g_blind_iid_1515": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 17.384528001149494,
+      "length": 6.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.19186046719551086,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.19186046719551086,
+      "win_alive_fraction": 0.4444444576899211
+    },
+    "r2g_blind_iid_1516": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 17.262069563070934,
+      "length": 9.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.37596898277600604,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.37596898277600604,
+      "win_alive_fraction": 0.3333333432674408
+    },
+    "r2g_blind_iid_1517": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 17.712319433689117,
+      "length": 7.666666666666667,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.3461240231990814,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.3461240231990814,
+      "win_alive_fraction": 0.6666666865348816
+    },
+    "r2g_blind_iid_1518": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 17.707833190759022,
+      "length": 7.333333333333333,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.28823528811335564,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.28823528811335564,
+      "win_alive_fraction": 0.8333333333333334
+    },
+    "r2g_blind_iid_1519": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 17.031666735808056,
+      "length": 10.666666666666666,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.03235294297337532,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.03235294297337532,
+      "win_alive_fraction": 0.25
+    },
+    "r2g_blind_iid_1520": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 17.23779155810674,
+      "length": 9.333333333333334,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.42189542452494305,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.42189542452494305,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1521": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.620915373166403,
+      "length": 32.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.19995555778344473,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1522": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.411765038967133,
+      "length": 33.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.21768055856227875,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1523": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 10.039216041564941,
+      "length": 31.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.1654555598894755,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1524": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 10.76943051815033,
+      "length": 43.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.29270971814791363,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1525": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 11.288983345031738,
+      "length": 47.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.25807778040568036,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1526": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 2.341463327407837,
+      "length": 200.0,
+      "timeout_rate": 1.0,
+      "final_ally_ehp_frac": 0.490625003973643,
+      "final_enemy_ehp_frac": 0.9017368157704672,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1527": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.683274318774542,
+      "length": 33.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.4133500059445699,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1528": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 7.421290536721547,
+      "length": 33.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.5533379713694254,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1529": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 6.767109115918477,
+      "length": 93.66666666666667,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.6087472240130106,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1530": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.676493192712465,
+      "length": 45.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.4406413237253825,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1531": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 6.074074139197667,
+      "length": 31.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.6447191039721171,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1532": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 8.922008191545805,
+      "length": 38.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.48128576080004376,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1533": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.370390320817629,
+      "length": 37.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.47517138719558716,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1534": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 1.8285714089870453,
+      "length": 200.0,
+      "timeout_rate": 1.0,
+      "final_ally_ehp_frac": 0.1111111119389534,
+      "final_enemy_ehp_frac": 0.9364880720774332,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1535": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.937966495752335,
+      "length": 34.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.4404633243878682,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1536": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.99999989072482,
+      "length": 23.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.4164102574189504,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.4164102574189504,
+      "win_alive_fraction": 0.6666666865348816
+    },
+    "r2g_blind_iid_1537": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000069538753,
+      "length": 29.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.5958974361419678,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.5958974361419678,
+      "win_alive_fraction": 0.7777777910232544
+    },
+    "r2g_blind_iid_1538": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000099341076,
+      "length": 30.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.627179483572642,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.627179483572642,
+      "win_alive_fraction": 0.6666666865348816
+    },
+    "r2g_blind_iid_1539": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.00000007947286,
+      "length": 22.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.45025641719500226,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.45025641719500226,
+      "win_alive_fraction": 0.7777777910232544
+    },
+    "r2g_blind_iid_1540": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000049670536,
+      "length": 26.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.4158974289894104,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.4158974289894104,
+      "win_alive_fraction": 0.8888888955116272
+    },
+    "r2g_blind_iid_1541": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.00000010927518,
+      "length": 25.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.6241025726000468,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.6241025726000468,
+      "win_alive_fraction": 0.6666666865348816
+    },
+    "r2g_blind_iid_1542": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999801317852,
+      "length": 32.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.46166667342185974,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.46166667342185974,
+      "win_alive_fraction": 0.6666666666666666
+    },
+    "r2g_blind_iid_1543": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999781449635,
+      "length": 26.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.612500011920929,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.612500011920929,
+      "win_alive_fraction": 0.6666666666666666
+    },
+    "r2g_blind_iid_1544": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999970197678,
+      "length": 30.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.4037500023841858,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.4037500023841858,
+      "win_alive_fraction": 0.75
+    },
+    "r2g_blind_iid_1545": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.99999992052714,
+      "length": 26.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.5550724665323893,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.5550724665323893,
+      "win_alive_fraction": 0.800000011920929
+    },
+    "r2g_blind_iid_1546": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000258286793,
+      "length": 38.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.511014481385549,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.511014481385549,
+      "win_alive_fraction": 0.6000000238418579
+    },
+    "r2g_blind_iid_1547": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000029802322,
+      "length": 27.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.5675362348556519,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.5675362348556519,
+      "win_alive_fraction": 0.6666666865348816
+    },
+    "r2g_blind_iid_1548": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999900658924,
+      "length": 40.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.23820512990156809,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.23820512990156809,
+      "win_alive_fraction": 0.3888888955116272
+    },
+    "r2g_blind_iid_1549": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000029802322,
+      "length": 31.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.49666666984558105,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.49666666984558105,
+      "win_alive_fraction": 0.6111111243565878
+    },
+    "r2g_blind_iid_1550": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.0,
+      "length": 38.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.39769230286280316,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.39769230286280316,
+      "win_alive_fraction": 0.4444444477558136
+    },
+    "r2g_blind_iid_1551": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.99999988079071,
+      "length": 16.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.2466666748126348,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.2466666748126348,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1552": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.248227198918661,
+      "length": 22.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.17066666235526404,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1553": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.99999988079071,
+      "length": 19.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.11999999731779099,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.11999999731779099,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1554": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.333333233992258,
+      "length": 80.33333333333333,
+      "timeout_rate": 0.3333333333333333,
+      "final_ally_ehp_frac": 0.019999999552965164,
+      "final_enemy_ehp_frac": 0.34266666571299237,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1555": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 8.972972909609476,
+      "length": 21.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.36266666650772095,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1556": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 14.819819708665213,
+      "length": 29.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.019999999552965164,
+      "final_enemy_ehp_frac": 0.10333333288629849,
+      "win_final_ally_ehp_frac": 0.05999999865889549,
+      "win_alive_fraction": 0.25
+    },
+    "r2g_blind_iid_1557": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 16.316831827163696,
+      "length": 33.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.015619048227866491,
+      "final_enemy_ehp_frac": 0.05688888983180126,
+      "win_final_ally_ehp_frac": 0.04685714468359947,
+      "win_alive_fraction": 0.2857142984867096
+    },
+    "r2g_blind_iid_1558": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.0,
+      "length": 31.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.22780952354272208,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.22780952354272208,
+      "win_alive_fraction": 0.2857142984867096
+    },
+    "r2g_blind_iid_1559": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.0,
+      "length": 25.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.15238094981759787,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.15238094981759787,
+      "win_alive_fraction": 0.3333333482344945
+    },
+    "r2g_blind_iid_1560": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000129143398,
+      "length": 27.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.30044443408648175,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.30044443408648175,
+      "win_alive_fraction": 0.407407412926356
+    },
+    "r2g_blind_iid_1561": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999970197678,
+      "length": 32.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.21511110663414001,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.21511110663414001,
+      "win_alive_fraction": 0.3333333432674408
+    },
+    "r2g_blind_iid_1562": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 13.537118166685104,
+      "length": 200.0,
+      "timeout_rate": 1.0,
+      "final_ally_ehp_frac": 0.04355555524428686,
+      "final_enemy_ehp_frac": 0.16380952298641205,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1563": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.00000007947286,
+      "length": 19.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.5235555569330851,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.5235555569330851,
+      "win_alive_fraction": 0.7037037213643392
+    },
+    "r2g_blind_iid_1564": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.0,
+      "length": 22.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.5081481436888377,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.5081481436888377,
+      "win_alive_fraction": 0.5925926168759664
+    },
+    "r2g_blind_iid_1565": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.0,
+      "length": 36.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.40029628823200863,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.40029628823200863,
+      "win_alive_fraction": 0.51851853231589
+    },
+    "r2g_blind_iid_1566": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 10.512820959091187,
+      "length": 28.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.12222222487131755,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1567": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000417232513,
+      "length": 27.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.15111111352841058,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.15111111352841058,
+      "win_alive_fraction": 1.0
+    },
+    "r2g_blind_iid_1568": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000476837158,
+      "length": 30.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.19777778287728628,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.19777778287728628,
+      "win_alive_fraction": 1.0
+    },
+    "r2g_blind_iid_1569": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 7.857143064339955,
+      "length": 27.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.46666666865348816,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1570": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 10.365079631408056,
+      "length": 49.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.31333333750565845,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1571": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 8.825397044420242,
+      "length": 27.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.4093750019868215,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1572": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 12.551723912358284,
+      "length": 37.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.03365079313516617,
+      "final_enemy_ehp_frac": 0.30222222208976746,
+      "win_final_ally_ehp_frac": 0.1009523794054985,
+      "win_alive_fraction": 0.2857142984867096
+    },
+    "r2g_blind_iid_1573": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 7.9540228843688965,
+      "length": 38.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.5043981472651163,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1574": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 16.703304360310238,
+      "length": 49.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.006984127064545949,
+      "final_enemy_ehp_frac": 0.06125000057121118,
+      "win_final_ally_ehp_frac": 0.020952381193637848,
+      "win_alive_fraction": 0.2857142984867096
+    },
+    "r2g_blind_iid_1575": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.024621506532032,
+      "length": 38.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.1864506204922994,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.1864506204922994,
+      "win_alive_fraction": 0.48148149251937866
+    },
+    "r2g_blind_iid_1576": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 12.547348777453104,
+      "length": 49.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.2589285771052043,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1577": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.181818425655365,
+      "length": 40.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.44579364856084186,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1578": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 14.149425064524015,
+      "length": 39.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.08444444338480632,
+      "final_enemy_ehp_frac": 0.20759259661038718,
+      "win_final_ally_ehp_frac": 0.25333333015441895,
+      "win_alive_fraction": 0.4444444477558136
+    },
+    "r2g_blind_iid_1579": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 4.867097621162732,
+      "length": 200.0,
+      "timeout_rate": 1.0,
+      "final_ally_ehp_frac": 0.1111111119389534,
+      "final_enemy_ehp_frac": 0.8192592660586039,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1580": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.99999970694383,
+      "length": 44.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.19268518686294556,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.19268518686294556,
+      "win_alive_fraction": 0.3703703780968984
+    },
+    "r2g_blind_iid_1581": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 10.215895454088846,
+      "length": 15.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.021527777115503948,
+      "final_enemy_ehp_frac": 0.18613888820012411,
+      "win_final_ally_ehp_frac": 0.06458333134651184,
+      "win_alive_fraction": 0.3333333432674408
+    },
+    "r2g_blind_iid_1582": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 3.960945169130961,
+      "length": 16.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.48403175671895343,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1583": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 4.922885437806447,
+      "length": 11.333333333333334,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.3299761911233266,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1584": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 6.771725575129191,
+      "length": 15.333333333333334,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.3501404821872711,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1585": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 4.932784363627434,
+      "length": 16.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.5235357085863749,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1586": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 12.346862822771072,
+      "length": 24.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.05458571513493856,
+      "final_enemy_ehp_frac": 0.13844285408655801,
+      "win_final_ally_ehp_frac": 0.16375714540481567,
+      "win_alive_fraction": 0.4000000059604645
+    },
+    "r2g_blind_iid_1587": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 6.721737543741862,
+      "length": 14.666666666666666,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.39981945355733234,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1588": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 7.067925522724788,
+      "length": 17.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.3622500052054723,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1589": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 16.479645480712254,
+      "length": 19.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.06652210745960474,
+      "final_enemy_ehp_frac": 0.07406745851039886,
+      "win_final_ally_ehp_frac": 0.09978316118940711,
+      "win_alive_fraction": 0.285714291036129
+    },
+    "r2g_blind_iid_1590": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 8.770275086164474,
+      "length": 17.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.2840816428263982,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1591": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 6.910792892177899,
+      "length": 18.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.41536733508110046,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1592": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.27639144162337,
+      "length": 23.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.19127645591894785,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.19127645591894785,
+      "win_alive_fraction": 0.407407412926356
+    },
+    "r2g_blind_iid_1593": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 17.124840309222538,
+      "length": 22.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.14371031522750854,
+      "final_enemy_ehp_frac": 0.024865078429381054,
+      "win_final_ally_ehp_frac": 0.21556547284126282,
+      "win_alive_fraction": 0.3888889029622078
+    },
+    "r2g_blind_iid_1594": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 10.82593967517217,
+      "length": 34.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.03209788352251053,
+      "final_enemy_ehp_frac": 0.3029404779275258,
+      "win_final_ally_ehp_frac": 0.09629365056753159,
+      "win_alive_fraction": 0.1111111119389534
+    },
+    "r2g_blind_iid_1595": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.267145444949467,
+      "length": 18.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.20163094997406006,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.20163094997406006,
+      "win_alive_fraction": 0.5555555721124014
+    },
+    "r2g_blind_iid_1596": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 3.9802849690119424,
+      "length": 10.666666666666666,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.5447619160016378,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1597": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 5.684780538082123,
+      "length": 24.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.3919345239798228,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1598": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 5.029034992059072,
+      "length": 16.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.4728422562281291,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1599": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 5.963297883669536,
+      "length": 13.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.47530754407246906,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1600": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 5.663067440191905,
+      "length": 15.333333333333334,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.49359723925590515,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1601": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 4.9988298416137695,
+      "length": 12.333333333333334,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.5587658683458964,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1602": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 7.384190971652667,
+      "length": 16.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.3989642858505249,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1603": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 8.190809135635694,
+      "length": 34.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.3247874180475871,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1604": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 7.603576108813286,
+      "length": 20.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.3845680256684621,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1605": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 11.781707967321077,
+      "length": 25.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.12506084640820822,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1606": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.30855383972327,
+      "length": 23.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.2407407412926356,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.2407407412926356,
+      "win_alive_fraction": 0.4444444477558136
+    },
+    "r2g_blind_iid_1607": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 10.03129475315412,
+      "length": 18.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.2579656143983205,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1608": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.26429499189059,
+      "length": 18.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.2916666666666667,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.2916666666666667,
+      "win_alive_fraction": 0.375
+    },
+    "r2g_blind_iid_1609": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.26600015660127,
+      "length": 23.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.24537037312984467,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.24537037312984467,
+      "win_alive_fraction": 0.375
+    },
+    "r2g_blind_iid_1610": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.3334745268027,
+      "length": 23.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.14351852238178253,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.14351852238178253,
+      "win_alive_fraction": 0.20833333333333334
+    },
+    "r2g_blind_iid_1611": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 12.98245612780253,
+      "length": 133.0,
+      "timeout_rate": 0.3333333333333333,
+      "final_ally_ehp_frac": 0.09257812549670537,
+      "final_enemy_ehp_frac": 0.10370370248953502,
+      "win_final_ally_ehp_frac": 0.03359375149011612,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1612": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 6.69473671913147,
+      "length": 37.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.3377777834733327,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1613": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 11.214035073916117,
+      "length": 130.66666666666666,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.02486979216337204,
+      "final_enemy_ehp_frac": 0.2459259331226349,
+      "win_final_ally_ehp_frac": 0.07460937649011612,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1614": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 7.566951662302017,
+      "length": 46.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.3925926089286804,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1615": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 8.011396139860153,
+      "length": 83.33333333333333,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.3513227601846059,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1616": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.925926049550375,
+      "length": 63.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.2158730203906695,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1617": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 15.021582712729773,
+      "length": 176.66666666666666,
+      "timeout_rate": 0.3333333333333333,
+      "final_ally_ehp_frac": 0.06419270733992259,
+      "final_enemy_ehp_frac": 0.05679012214144071,
+      "win_final_ally_ehp_frac": 0.1044921875,
+      "win_alive_fraction": 0.25
+    },
+    "r2g_blind_iid_1618": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 12.29736210902532,
+      "length": 46.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.10946502288182576,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1619": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 6.810551544030507,
+      "length": 20.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.47325103481610614,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1620": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 17.479166666666668,
+      "length": 38.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.038541665921608605,
+      "final_enemy_ehp_frac": 0.029629630347092945,
+      "win_final_ally_ehp_frac": 0.05781249888241291,
+      "win_alive_fraction": 0.25
+    },
+    "r2g_blind_iid_1621": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 14.489583333333334,
+      "length": 84.33333333333333,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.018164062251647312,
+      "final_enemy_ehp_frac": 0.0824074074625969,
+      "win_final_ally_ehp_frac": 0.05449218675494194,
+      "win_alive_fraction": 0.25
+    },
+    "r2g_blind_iid_1622": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.0,
+      "length": 42.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.15390624850988388,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.15390624850988388,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1623": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.0,
+      "length": 28.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.3983333309491475,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.3983333309491475,
+      "win_alive_fraction": 0.5333333512147268
+    },
+    "r2g_blind_iid_1624": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.0,
+      "length": 29.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.3312500019868215,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.3312500019868215,
+      "win_alive_fraction": 0.46666667858759564
+    },
+    "r2g_blind_iid_1625": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.0,
+      "length": 39.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.2274479220310847,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.2274479220310847,
+      "win_alive_fraction": 0.4000000059604645
+    },
+    "r2g_blind_iid_1626": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 6.153846283753713,
+      "length": 27.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.4888888895511627,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1627": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 6.794871946175893,
+      "length": 38.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.4444444477558136,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1628": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 6.128205269575119,
+      "length": 34.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.4799999992052714,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1629": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 7.476190507411957,
+      "length": 30.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.49333332975705463,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1630": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.04067465166251,
+      "length": 58.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.3880000114440918,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.3880000114440918,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1631": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 8.56349212427934,
+      "length": 32.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.43388888239860535,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1632": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 11.971264267961184,
+      "length": 54.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.27296296258767444,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1633": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 10.890804529190063,
+      "length": 44.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.3351851900418599,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1634": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.000000014901161,
+      "length": 37.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.44592592120170593,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1635": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 14.550505220890045,
+      "length": 63.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.15063492208719254,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1636": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000188748043,
+      "length": 59.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.12325926125049591,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.12325926125049591,
+      "win_alive_fraction": 0.14814814925193787
+    },
+    "r2g_blind_iid_1637": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 18.12689407169819,
+      "length": 49.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.06933333352208138,
+      "final_enemy_ehp_frac": 0.05051587522029877,
+      "win_final_ally_ehp_frac": 0.10400000028312206,
+      "win_alive_fraction": 0.2222222276031971
+    },
+    "r2g_blind_iid_1638": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 17.04597699145476,
+      "length": 96.66666666666667,
+      "timeout_rate": 0.3333333333333333,
+      "final_ally_ehp_frac": 0.15170369918147722,
+      "final_enemy_ehp_frac": 0.04962962865829468,
+      "win_final_ally_ehp_frac": 0.43111109733581543,
+      "win_alive_fraction": 0.5555555820465088
+    },
+    "r2g_blind_iid_1639": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 14.910201032956442,
+      "length": 151.66666666666666,
+      "timeout_rate": 0.6666666666666666,
+      "final_ally_ehp_frac": 0.08977777945498626,
+      "final_enemy_ehp_frac": 0.2740277747313182,
+      "win_final_ally_ehp_frac": 0.24622222781181335,
+      "win_alive_fraction": 0.3333333432674408
+    },
+    "r2g_blind_iid_1640": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.99999998509884,
+      "length": 49.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.21718518435955048,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.21718518435955048,
+      "win_alive_fraction": 0.3333333432674408
+    },
+    "r2g_blind_iid_1641": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 13.992509538928667,
+      "length": 12.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.14583333333333334,
+      "final_enemy_ehp_frac": 0.26511627435684204,
+      "win_final_ally_ehp_frac": 0.21875,
+      "win_alive_fraction": 0.20000000298023224
+    },
+    "r2g_blind_iid_1642": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000208616257,
+      "length": 23.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.07291666666666667,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.07291666666666667,
+      "win_alive_fraction": 0.06666666766007741
+    },
+    "r2g_blind_iid_1643": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.00000001490116,
+      "length": 9.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.18779166042804718,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.18779166042804718,
+      "win_alive_fraction": 0.26666667064030963
+    },
+    "r2g_blind_iid_1644": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999523162842,
+      "length": 13.666666666666666,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.5931440790494283,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.5931440790494283,
+      "win_alive_fraction": 0.6666666865348816
+    },
+    "r2g_blind_iid_1645": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999831120174,
+      "length": 18.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.38336806495984393,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.38336806495984393,
+      "win_alive_fraction": 0.5238095422585806
+    },
+    "r2g_blind_iid_1646": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999597668648,
+      "length": 21.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.37898438175519306,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.37898438175519306,
+      "win_alive_fraction": 0.4761904875437419
+    },
+    "r2g_blind_iid_1647": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000069538753,
+      "length": 9.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.5039002696673075,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.5039002696673075,
+      "win_alive_fraction": 0.5185185372829437
+    },
+    "r2g_blind_iid_1648": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 12.990476623177528,
+      "length": 31.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.01112021878361702,
+      "final_enemy_ehp_frac": 0.12655367453893027,
+      "win_final_ally_ehp_frac": 0.03336065635085106,
+      "win_alive_fraction": 0.2222222238779068
+    },
+    "r2g_blind_iid_1649": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.00000026325385,
+      "length": 18.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.46585655212402344,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.46585655212402344,
+      "win_alive_fraction": 0.48148149251937866
+    },
+    "r2g_blind_iid_1650": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999885757763,
+      "length": 8.666666666666666,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.42729519804318744,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.42729519804318744,
+      "win_alive_fraction": 0.48148149251937866
+    },
+    "r2g_blind_iid_1651": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000004967053,
+      "length": 13.333333333333334,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.3473644057909648,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.3473644057909648,
+      "win_alive_fraction": 0.407407412926356
+    },
+    "r2g_blind_iid_1652": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999632438023,
+      "length": 15.333333333333334,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.4368573526541392,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.4368573526541392,
+      "win_alive_fraction": 0.5555555820465088
+    },
+    "r2g_blind_iid_1653": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999687075615,
+      "length": 10.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.6609763900438944,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.6609763900438944,
+      "win_alive_fraction": 0.6666666865348816
+    },
+    "r2g_blind_iid_1654": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999567866325,
+      "length": 19.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.20744722088178,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.20744722088178,
+      "win_alive_fraction": 0.29629630347092945
+    },
+    "r2g_blind_iid_1655": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.00000010927518,
+      "length": 7.333333333333333,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.5651013851165771,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.5651013851165771,
+      "win_alive_fraction": 0.5925926168759664
+    },
+    "r2g_blind_iid_1656": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 8.647342984875044,
+      "length": 82.0,
+      "timeout_rate": 0.3333333333333333,
+      "final_ally_ehp_frac": 0.031372549633185066,
+      "final_enemy_ehp_frac": 0.4159420331319173,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1657": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 8.270531406005224,
+      "length": 24.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.402989129225413,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1658": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.314009661475817,
+      "length": 35.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.33043478429317474,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1659": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 17.77777789036433,
+      "length": 39.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.08361581712961197,
+      "final_enemy_ehp_frac": 0.04232804477214813,
+      "win_final_ally_ehp_frac": 0.12542372569441795,
+      "win_alive_fraction": 0.1666666716337204
+    },
+    "r2g_blind_iid_1660": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.0000001018246,
+      "length": 39.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.1412429412206014,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.1412429412206014,
+      "win_alive_fraction": 0.22222222884496054
+    },
+    "r2g_blind_iid_1661": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000161429245,
+      "length": 35.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.1621468886733055,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.1621468886733055,
+      "win_alive_fraction": 0.3333333432674408
+    },
+    "r2g_blind_iid_1662": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000022351742,
+      "length": 36.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.32598425447940826,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.32598425447940826,
+      "win_alive_fraction": 0.3333333432674408
+    },
+    "r2g_blind_iid_1663": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.231800956030686,
+      "length": 50.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.22152231385310492,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.22152231385310492,
+      "win_alive_fraction": 0.3333333383003871
+    },
+    "r2g_blind_iid_1664": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.99999997516473,
+      "length": 34.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.3475065628687541,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.3475065628687541,
+      "win_alive_fraction": 0.4285714328289032
+    },
+    "r2g_blind_iid_1665": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.00000011920929,
+      "length": 27.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.3142118901014328,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.3142118901014328,
+      "win_alive_fraction": 0.48148150245348614
+    },
+    "r2g_blind_iid_1666": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000054637592,
+      "length": 31.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.37829456726710003,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.37829456726710003,
+      "win_alive_fraction": 0.25925926367441815
+    },
+    "r2g_blind_iid_1667": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.00000014404456,
+      "length": 26.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.44599483410517377,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.44599483410517377,
+      "win_alive_fraction": 0.5185185273488363
+    },
+    "r2g_blind_iid_1668": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000377496082,
+      "length": 27.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.4777011473973592,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.4777011473973592,
+      "win_alive_fraction": 0.6666666865348816
+    },
+    "r2g_blind_iid_1669": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.000000581145287,
+      "length": 33.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.35356321930885315,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.35356321930885315,
+      "win_alive_fraction": 0.3333333432674408
+    },
+    "r2g_blind_iid_1670": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 11.301961049437523,
+      "length": 200.0,
+      "timeout_rate": 1.0,
+      "final_ally_ehp_frac": 0.2160919594268004,
+      "final_enemy_ehp_frac": 0.38306010762850445,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1671": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 11.520525336265564,
+      "length": 28.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.28551724553108215,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1672": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.372742176055908,
+      "length": 23.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.39448275168736774,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1673": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 12.873563319444656,
+      "length": 28.333333333333332,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.039917695025602974,
+      "final_enemy_ehp_frac": 0.26436781883239746,
+      "win_final_ally_ehp_frac": 0.11975308507680893,
+      "win_alive_fraction": 0.25
+    },
+    "r2g_blind_iid_1674": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 12.611111015081406,
+      "length": 38.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.19803921381632486,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1675": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 5.99999996026357,
+      "length": 200.0,
+      "timeout_rate": 1.0,
+      "final_ally_ehp_frac": 0.43209877610206604,
+      "final_enemy_ehp_frac": 0.6058823664983114,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1676": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.812500089406967,
+      "length": 27.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.33676469326019287,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1677": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 15.72727264960607,
+      "length": 31.666666666666668,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.08477365970611572,
+      "final_enemy_ehp_frac": 0.06888889024655025,
+      "win_final_ally_ehp_frac": 0.25432097911834717,
+      "win_alive_fraction": 0.5
+    },
+    "r2g_blind_iid_1678": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999930461247,
+      "length": 37.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.287242795030276,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.287242795030276,
+      "win_alive_fraction": 0.4166666666666667
+    },
+    "r2g_blind_iid_1679": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.99999999006589,
+      "length": 32.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.15679012487332025,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.15679012487332025,
+      "win_alive_fraction": 0.25
+    },
+    "r2g_blind_iid_1680": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 2,
+      "win_rate": 0.6666666666666666,
+      "win_rate_ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "original_return": 17.853832463423412,
+      "length": 45.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.13367346922556558,
+      "final_enemy_ehp_frac": 0.047028422355651855,
+      "win_final_ally_ehp_frac": 0.2005102038383484,
+      "win_alive_fraction": 0.6000000238418579
+    },
+    "r2g_blind_iid_1681": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 15.950089047352472,
+      "length": 91.33333333333333,
+      "timeout_rate": 0.3333333333333333,
+      "final_ally_ehp_frac": 0.11938775579134624,
+      "final_enemy_ehp_frac": 0.0713178279499213,
+      "win_final_ally_ehp_frac": 0.19489796459674835,
+      "win_alive_fraction": 0.4000000059604645
+    },
+    "r2g_blind_iid_1682": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 13.055258442958197,
+      "length": 163.66666666666666,
+      "timeout_rate": 0.6666666666666666,
+      "final_ally_ehp_frac": 0.10884353518486023,
+      "final_enemy_ehp_frac": 0.16744186729192734,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1683": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 19.999999930461247,
+      "length": 42.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.23880208345750967,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.23880208345750967,
+      "win_alive_fraction": 0.2857142935196559
+    },
+    "r2g_blind_iid_1684": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 1,
+      "win_rate": 0.3333333333333333,
+      "win_rate_ci95": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "original_return": 15.684728900591532,
+      "length": 44.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.024739583333333332,
+      "final_enemy_ehp_frac": 0.09057471404472987,
+      "win_final_ally_ehp_frac": 0.07421875,
+      "win_alive_fraction": 0.2857142984867096
+    },
+    "r2g_blind_iid_1685": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.00000000993411,
+      "length": 33.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.2739583303531011,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.2739583303531011,
+      "win_alive_fraction": 0.3333333432674408
+    },
+    "r2g_blind_iid_1686": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 11.289535135030746,
+      "length": 36.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.19174691662192345,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1687": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 8.27798467874527,
+      "length": 93.66666666666667,
+      "timeout_rate": 0.3333333333333333,
+      "final_ally_ehp_frac": 0.07570621371269226,
+      "final_enemy_ehp_frac": 0.45235390464464825,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1688": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 12.793772965669632,
+      "length": 42.333333333333336,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.0700298361480236,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1689": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 11.432635267575582,
+      "length": 42.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.2923936148484548,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1690": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 7.703900530934334,
+      "length": 94.33333333333333,
+      "timeout_rate": 0.3333333333333333,
+      "final_ally_ehp_frac": 0.029411765436331432,
+      "final_enemy_ehp_frac": 0.5614592134952545,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1691": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 10.649799312154451,
+      "length": 27.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.3350827395915985,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1692": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 9.341700623432795,
+      "length": 27.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.3932263155778249,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1693": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 13.223253880937895,
+      "length": 44.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.09701754276951154,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1694": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 8.522210945685705,
+      "length": 200.0,
+      "timeout_rate": 1.0,
+      "final_ally_ehp_frac": 0.37142857909202576,
+      "final_enemy_ehp_frac": 0.5251131554444631,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1695": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.21422530710697,
+      "length": 36.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.09656862697253625,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.09656862697253625,
+      "win_alive_fraction": 0.20833333333333334
+    },
+    "r2g_blind_iid_1696": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.16244998574257,
+      "length": 42.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.3436274528503418,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.3436274528503418,
+      "win_alive_fraction": 0.2916666666666667
+    },
+    "r2g_blind_iid_1697": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 11.623491803805033,
+      "length": 30.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.0,
+      "final_enemy_ehp_frac": 0.28157376249631244,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1698": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.200961875418823,
+      "length": 40.666666666666664,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.2429487146437168,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.2429487146437168,
+      "win_alive_fraction": 0.375
+    },
+    "r2g_blind_iid_1699": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 0,
+      "win_rate": 0.0,
+      "win_rate_ci95": [
+        0.0,
+        0.5615060804490177
+      ],
+      "original_return": 8.422104780872663,
+      "length": 200.0,
+      "timeout_rate": 1.0,
+      "final_ally_ehp_frac": 0.10576923191547394,
+      "final_enemy_ehp_frac": 0.52175572514534,
+      "win_final_ally_ehp_frac": 0.0,
+      "win_alive_fraction": 0.0
+    },
+    "r2g_blind_iid_1700": {
+      "family": "uncategorised",
+      "n_episodes": 3,
+      "n_wins": 3,
+      "win_rate": 1.0,
+      "win_rate_ci95": [
+        0.43849391955098227,
+        1.0
+      ],
+      "original_return": 20.158739673594635,
+      "length": 32.0,
+      "timeout_rate": 0.0,
+      "final_ally_ehp_frac": 0.5211538672447205,
+      "final_enemy_ehp_frac": 0.0,
+      "win_final_ally_ehp_frac": 0.5211538672447205,
+      "win_alive_fraction": 0.625
+    }
+  },
+  "validation_children": [
+    {
+      "map": "r2g_blind_iid_1401",
+      "pid": 8957
+    },
+    {
+      "map": "r2g_blind_iid_1402",
+      "pid": 9218
+    },
+    {
+      "map": "r2g_blind_iid_1403",
+      "pid": 9346
+    },
+    {
+      "map": "r2g_blind_iid_1404",
+      "pid": 9474
+    },
+    {
+      "map": "r2g_blind_iid_1405",
+      "pid": 9602
+    },
+    {
+      "map": "r2g_blind_iid_1406",
+      "pid": 9730
+    },
+    {
+      "map": "r2g_blind_iid_1407",
+      "pid": 9858
+    },
+    {
+      "map": "r2g_blind_iid_1408",
+      "pid": 9986
+    },
+    {
+      "map": "r2g_blind_iid_1409",
+      "pid": 10114
+    },
+    {
+      "map": "r2g_blind_iid_1410",
+      "pid": 10242
+    },
+    {
+      "map": "r2g_blind_iid_1411",
+      "pid": 10370
+    },
+    {
+      "map": "r2g_blind_iid_1412",
+      "pid": 10498
+    },
+    {
+      "map": "r2g_blind_iid_1413",
+      "pid": 10626
+    },
+    {
+      "map": "r2g_blind_iid_1414",
+      "pid": 10754
+    },
+    {
+      "map": "r2g_blind_iid_1415",
+      "pid": 10882
+    },
+    {
+      "map": "r2g_blind_iid_1416",
+      "pid": 11010
+    },
+    {
+      "map": "r2g_blind_iid_1417",
+      "pid": 11138
+    },
+    {
+      "map": "r2g_blind_iid_1418",
+      "pid": 11266
+    },
+    {
+      "map": "r2g_blind_iid_1419",
+      "pid": 11394
+    },
+    {
+      "map": "r2g_blind_iid_1420",
+      "pid": 11522
+    },
+    {
+      "map": "r2g_blind_iid_1421",
+      "pid": 11650
+    },
+    {
+      "map": "r2g_blind_iid_1422",
+      "pid": 11778
+    },
+    {
+      "map": "r2g_blind_iid_1423",
+      "pid": 11906
+    },
+    {
+      "map": "r2g_blind_iid_1424",
+      "pid": 12034
+    },
+    {
+      "map": "r2g_blind_iid_1425",
+      "pid": 12162
+    },
+    {
+      "map": "r2g_blind_iid_1426",
+      "pid": 12290
+    },
+    {
+      "map": "r2g_blind_iid_1427",
+      "pid": 12418
+    },
+    {
+      "map": "r2g_blind_iid_1428",
+      "pid": 12546
+    },
+    {
+      "map": "r2g_blind_iid_1429",
+      "pid": 12674
+    },
+    {
+      "map": "r2g_blind_iid_1430",
+      "pid": 12802
+    },
+    {
+      "map": "r2g_blind_iid_1431",
+      "pid": 12930
+    },
+    {
+      "map": "r2g_blind_iid_1432",
+      "pid": 13058
+    },
+    {
+      "map": "r2g_blind_iid_1433",
+      "pid": 13186
+    },
+    {
+      "map": "r2g_blind_iid_1434",
+      "pid": 13314
+    },
+    {
+      "map": "r2g_blind_iid_1435",
+      "pid": 13442
+    },
+    {
+      "map": "r2g_blind_iid_1436",
+      "pid": 13570
+    },
+    {
+      "map": "r2g_blind_iid_1437",
+      "pid": 13698
+    },
+    {
+      "map": "r2g_blind_iid_1438",
+      "pid": 13826
+    },
+    {
+      "map": "r2g_blind_iid_1439",
+      "pid": 13954
+    },
+    {
+      "map": "r2g_blind_iid_1440",
+      "pid": 14082
+    },
+    {
+      "map": "r2g_blind_iid_1441",
+      "pid": 14210
+    },
+    {
+      "map": "r2g_blind_iid_1442",
+      "pid": 14338
+    },
+    {
+      "map": "r2g_blind_iid_1443",
+      "pid": 14466
+    },
+    {
+      "map": "r2g_blind_iid_1444",
+      "pid": 14594
+    },
+    {
+      "map": "r2g_blind_iid_1445",
+      "pid": 14722
+    },
+    {
+      "map": "r2g_blind_iid_1446",
+      "pid": 14850
+    },
+    {
+      "map": "r2g_blind_iid_1447",
+      "pid": 14978
+    },
+    {
+      "map": "r2g_blind_iid_1448",
+      "pid": 15106
+    },
+    {
+      "map": "r2g_blind_iid_1449",
+      "pid": 15234
+    },
+    {
+      "map": "r2g_blind_iid_1450",
+      "pid": 15362
+    },
+    {
+      "map": "r2g_blind_iid_1451",
+      "pid": 15490
+    },
+    {
+      "map": "r2g_blind_iid_1452",
+      "pid": 15618
+    },
+    {
+      "map": "r2g_blind_iid_1453",
+      "pid": 15746
+    },
+    {
+      "map": "r2g_blind_iid_1454",
+      "pid": 15874
+    },
+    {
+      "map": "r2g_blind_iid_1455",
+      "pid": 16002
+    },
+    {
+      "map": "r2g_blind_iid_1456",
+      "pid": 16130
+    },
+    {
+      "map": "r2g_blind_iid_1457",
+      "pid": 16258
+    },
+    {
+      "map": "r2g_blind_iid_1458",
+      "pid": 16386
+    },
+    {
+      "map": "r2g_blind_iid_1459",
+      "pid": 16514
+    },
+    {
+      "map": "r2g_blind_iid_1460",
+      "pid": 16642
+    },
+    {
+      "map": "r2g_blind_iid_1461",
+      "pid": 16770
+    },
+    {
+      "map": "r2g_blind_iid_1462",
+      "pid": 16898
+    },
+    {
+      "map": "r2g_blind_iid_1463",
+      "pid": 17026
+    },
+    {
+      "map": "r2g_blind_iid_1464",
+      "pid": 17154
+    },
+    {
+      "map": "r2g_blind_iid_1465",
+      "pid": 17282
+    },
+    {
+      "map": "r2g_blind_iid_1466",
+      "pid": 17410
+    },
+    {
+      "map": "r2g_blind_iid_1467",
+      "pid": 17538
+    },
+    {
+      "map": "r2g_blind_iid_1468",
+      "pid": 17666
+    },
+    {
+      "map": "r2g_blind_iid_1469",
+      "pid": 17794
+    },
+    {
+      "map": "r2g_blind_iid_1470",
+      "pid": 17922
+    },
+    {
+      "map": "r2g_blind_iid_1471",
+      "pid": 18050
+    },
+    {
+      "map": "r2g_blind_iid_1472",
+      "pid": 18178
+    },
+    {
+      "map": "r2g_blind_iid_1473",
+      "pid": 18306
+    },
+    {
+      "map": "r2g_blind_iid_1474",
+      "pid": 18434
+    },
+    {
+      "map": "r2g_blind_iid_1475",
+      "pid": 18562
+    },
+    {
+      "map": "r2g_blind_iid_1476",
+      "pid": 18690
+    },
+    {
+      "map": "r2g_blind_iid_1477",
+      "pid": 18818
+    },
+    {
+      "map": "r2g_blind_iid_1478",
+      "pid": 18946
+    },
+    {
+      "map": "r2g_blind_iid_1479",
+      "pid": 19074
+    },
+    {
+      "map": "r2g_blind_iid_1480",
+      "pid": 19202
+    },
+    {
+      "map": "r2g_blind_iid_1481",
+      "pid": 19330
+    },
+    {
+      "map": "r2g_blind_iid_1482",
+      "pid": 19458
+    },
+    {
+      "map": "r2g_blind_iid_1483",
+      "pid": 19586
+    },
+    {
+      "map": "r2g_blind_iid_1484",
+      "pid": 19714
+    },
+    {
+      "map": "r2g_blind_iid_1485",
+      "pid": 19842
+    },
+    {
+      "map": "r2g_blind_iid_1486",
+      "pid": 19970
+    },
+    {
+      "map": "r2g_blind_iid_1487",
+      "pid": 20098
+    },
+    {
+      "map": "r2g_blind_iid_1488",
+      "pid": 20226
+    },
+    {
+      "map": "r2g_blind_iid_1489",
+      "pid": 20354
+    },
+    {
+      "map": "r2g_blind_iid_1490",
+      "pid": 20482
+    },
+    {
+      "map": "r2g_blind_iid_1491",
+      "pid": 20610
+    },
+    {
+      "map": "r2g_blind_iid_1492",
+      "pid": 20738
+    },
+    {
+      "map": "r2g_blind_iid_1493",
+      "pid": 20866
+    },
+    {
+      "map": "r2g_blind_iid_1494",
+      "pid": 20994
+    },
+    {
+      "map": "r2g_blind_iid_1495",
+      "pid": 21122
+    },
+    {
+      "map": "r2g_blind_iid_1496",
+      "pid": 21250
+    },
+    {
+      "map": "r2g_blind_iid_1497",
+      "pid": 21378
+    },
+    {
+      "map": "r2g_blind_iid_1498",
+      "pid": 21506
+    },
+    {
+      "map": "r2g_blind_iid_1499",
+      "pid": 21634
+    },
+    {
+      "map": "r2g_blind_iid_1500",
+      "pid": 21762
+    },
+    {
+      "map": "r2g_blind_iid_1501",
+      "pid": 21890
+    },
+    {
+      "map": "r2g_blind_iid_1502",
+      "pid": 22018
+    },
+    {
+      "map": "r2g_blind_iid_1503",
+      "pid": 22146
+    },
+    {
+      "map": "r2g_blind_iid_1504",
+      "pid": 22274
+    },
+    {
+      "map": "r2g_blind_iid_1505",
+      "pid": 22402
+    },
+    {
+      "map": "r2g_blind_iid_1506",
+      "pid": 22530
+    },
+    {
+      "map": "r2g_blind_iid_1507",
+      "pid": 22658
+    },
+    {
+      "map": "r2g_blind_iid_1508",
+      "pid": 22786
+    },
+    {
+      "map": "r2g_blind_iid_1509",
+      "pid": 22914
+    },
+    {
+      "map": "r2g_blind_iid_1510",
+      "pid": 23042
+    },
+    {
+      "map": "r2g_blind_iid_1511",
+      "pid": 23170
+    },
+    {
+      "map": "r2g_blind_iid_1512",
+      "pid": 23298
+    },
+    {
+      "map": "r2g_blind_iid_1513",
+      "pid": 23426
+    },
+    {
+      "map": "r2g_blind_iid_1514",
+      "pid": 23554
+    },
+    {
+      "map": "r2g_blind_iid_1515",
+      "pid": 23682
+    },
+    {
+      "map": "r2g_blind_iid_1516",
+      "pid": 23810
+    },
+    {
+      "map": "r2g_blind_iid_1517",
+      "pid": 23938
+    },
+    {
+      "map": "r2g_blind_iid_1518",
+      "pid": 24066
+    },
+    {
+      "map": "r2g_blind_iid_1519",
+      "pid": 24194
+    },
+    {
+      "map": "r2g_blind_iid_1520",
+      "pid": 24322
+    },
+    {
+      "map": "r2g_blind_iid_1521",
+      "pid": 24450
+    },
+    {
+      "map": "r2g_blind_iid_1522",
+      "pid": 24578
+    },
+    {
+      "map": "r2g_blind_iid_1523",
+      "pid": 24706
+    },
+    {
+      "map": "r2g_blind_iid_1524",
+      "pid": 24834
+    },
+    {
+      "map": "r2g_blind_iid_1525",
+      "pid": 24962
+    },
+    {
+      "map": "r2g_blind_iid_1526",
+      "pid": 25090
+    },
+    {
+      "map": "r2g_blind_iid_1527",
+      "pid": 25218
+    },
+    {
+      "map": "r2g_blind_iid_1528",
+      "pid": 25346
+    },
+    {
+      "map": "r2g_blind_iid_1529",
+      "pid": 25474
+    },
+    {
+      "map": "r2g_blind_iid_1530",
+      "pid": 25602
+    },
+    {
+      "map": "r2g_blind_iid_1531",
+      "pid": 25730
+    },
+    {
+      "map": "r2g_blind_iid_1532",
+      "pid": 25858
+    },
+    {
+      "map": "r2g_blind_iid_1533",
+      "pid": 25986
+    },
+    {
+      "map": "r2g_blind_iid_1534",
+      "pid": 26114
+    },
+    {
+      "map": "r2g_blind_iid_1535",
+      "pid": 26242
+    },
+    {
+      "map": "r2g_blind_iid_1536",
+      "pid": 26370
+    },
+    {
+      "map": "r2g_blind_iid_1537",
+      "pid": 26498
+    },
+    {
+      "map": "r2g_blind_iid_1538",
+      "pid": 26626
+    },
+    {
+      "map": "r2g_blind_iid_1539",
+      "pid": 26754
+    },
+    {
+      "map": "r2g_blind_iid_1540",
+      "pid": 26882
+    },
+    {
+      "map": "r2g_blind_iid_1541",
+      "pid": 27010
+    },
+    {
+      "map": "r2g_blind_iid_1542",
+      "pid": 27138
+    },
+    {
+      "map": "r2g_blind_iid_1543",
+      "pid": 27266
+    },
+    {
+      "map": "r2g_blind_iid_1544",
+      "pid": 27394
+    },
+    {
+      "map": "r2g_blind_iid_1545",
+      "pid": 27522
+    },
+    {
+      "map": "r2g_blind_iid_1546",
+      "pid": 27650
+    },
+    {
+      "map": "r2g_blind_iid_1547",
+      "pid": 27778
+    },
+    {
+      "map": "r2g_blind_iid_1548",
+      "pid": 27906
+    },
+    {
+      "map": "r2g_blind_iid_1549",
+      "pid": 28034
+    },
+    {
+      "map": "r2g_blind_iid_1550",
+      "pid": 28162
+    },
+    {
+      "map": "r2g_blind_iid_1551",
+      "pid": 28290
+    },
+    {
+      "map": "r2g_blind_iid_1552",
+      "pid": 28418
+    },
+    {
+      "map": "r2g_blind_iid_1553",
+      "pid": 28546
+    },
+    {
+      "map": "r2g_blind_iid_1554",
+      "pid": 28674
+    },
+    {
+      "map": "r2g_blind_iid_1555",
+      "pid": 28802
+    },
+    {
+      "map": "r2g_blind_iid_1556",
+      "pid": 28930
+    },
+    {
+      "map": "r2g_blind_iid_1557",
+      "pid": 29058
+    },
+    {
+      "map": "r2g_blind_iid_1558",
+      "pid": 29186
+    },
+    {
+      "map": "r2g_blind_iid_1559",
+      "pid": 29314
+    },
+    {
+      "map": "r2g_blind_iid_1560",
+      "pid": 29442
+    },
+    {
+      "map": "r2g_blind_iid_1561",
+      "pid": 29570
+    },
+    {
+      "map": "r2g_blind_iid_1562",
+      "pid": 29698
+    },
+    {
+      "map": "r2g_blind_iid_1563",
+      "pid": 29826
+    },
+    {
+      "map": "r2g_blind_iid_1564",
+      "pid": 29954
+    },
+    {
+      "map": "r2g_blind_iid_1565",
+      "pid": 30082
+    },
+    {
+      "map": "r2g_blind_iid_1566",
+      "pid": 30210
+    },
+    {
+      "map": "r2g_blind_iid_1567",
+      "pid": 30338
+    },
+    {
+      "map": "r2g_blind_iid_1568",
+      "pid": 30466
+    },
+    {
+      "map": "r2g_blind_iid_1569",
+      "pid": 30594
+    },
+    {
+      "map": "r2g_blind_iid_1570",
+      "pid": 30722
+    },
+    {
+      "map": "r2g_blind_iid_1571",
+      "pid": 30850
+    },
+    {
+      "map": "r2g_blind_iid_1572",
+      "pid": 30978
+    },
+    {
+      "map": "r2g_blind_iid_1573",
+      "pid": 31106
+    },
+    {
+      "map": "r2g_blind_iid_1574",
+      "pid": 31234
+    },
+    {
+      "map": "r2g_blind_iid_1575",
+      "pid": 31362
+    },
+    {
+      "map": "r2g_blind_iid_1576",
+      "pid": 31490
+    },
+    {
+      "map": "r2g_blind_iid_1577",
+      "pid": 31618
+    },
+    {
+      "map": "r2g_blind_iid_1578",
+      "pid": 31746
+    },
+    {
+      "map": "r2g_blind_iid_1579",
+      "pid": 31874
+    },
+    {
+      "map": "r2g_blind_iid_1580",
+      "pid": 32002
+    },
+    {
+      "map": "r2g_blind_iid_1581",
+      "pid": 32130
+    },
+    {
+      "map": "r2g_blind_iid_1582",
+      "pid": 32258
+    },
+    {
+      "map": "r2g_blind_iid_1583",
+      "pid": 32386
+    },
+    {
+      "map": "r2g_blind_iid_1584",
+      "pid": 32514
+    },
+    {
+      "map": "r2g_blind_iid_1585",
+      "pid": 32642
+    },
+    {
+      "map": "r2g_blind_iid_1586",
+      "pid": 32770
+    },
+    {
+      "map": "r2g_blind_iid_1587",
+      "pid": 32898
+    },
+    {
+      "map": "r2g_blind_iid_1588",
+      "pid": 33026
+    },
+    {
+      "map": "r2g_blind_iid_1589",
+      "pid": 33154
+    },
+    {
+      "map": "r2g_blind_iid_1590",
+      "pid": 33282
+    },
+    {
+      "map": "r2g_blind_iid_1591",
+      "pid": 33410
+    },
+    {
+      "map": "r2g_blind_iid_1592",
+      "pid": 33538
+    },
+    {
+      "map": "r2g_blind_iid_1593",
+      "pid": 33666
+    },
+    {
+      "map": "r2g_blind_iid_1594",
+      "pid": 33794
+    },
+    {
+      "map": "r2g_blind_iid_1595",
+      "pid": 33922
+    },
+    {
+      "map": "r2g_blind_iid_1596",
+      "pid": 34050
+    },
+    {
+      "map": "r2g_blind_iid_1597",
+      "pid": 34178
+    },
+    {
+      "map": "r2g_blind_iid_1598",
+      "pid": 34306
+    },
+    {
+      "map": "r2g_blind_iid_1599",
+      "pid": 34434
+    },
+    {
+      "map": "r2g_blind_iid_1600",
+      "pid": 34562
+    },
+    {
+      "map": "r2g_blind_iid_1601",
+      "pid": 34690
+    },
+    {
+      "map": "r2g_blind_iid_1602",
+      "pid": 34818
+    },
+    {
+      "map": "r2g_blind_iid_1603",
+      "pid": 34946
+    },
+    {
+      "map": "r2g_blind_iid_1604",
+      "pid": 35074
+    },
+    {
+      "map": "r2g_blind_iid_1605",
+      "pid": 35202
+    },
+    {
+      "map": "r2g_blind_iid_1606",
+      "pid": 35330
+    },
+    {
+      "map": "r2g_blind_iid_1607",
+      "pid": 35458
+    },
+    {
+      "map": "r2g_blind_iid_1608",
+      "pid": 35586
+    },
+    {
+      "map": "r2g_blind_iid_1609",
+      "pid": 35714
+    },
+    {
+      "map": "r2g_blind_iid_1610",
+      "pid": 35842
+    },
+    {
+      "map": "r2g_blind_iid_1611",
+      "pid": 35970
+    },
+    {
+      "map": "r2g_blind_iid_1612",
+      "pid": 36098
+    },
+    {
+      "map": "r2g_blind_iid_1613",
+      "pid": 36226
+    },
+    {
+      "map": "r2g_blind_iid_1614",
+      "pid": 36354
+    },
+    {
+      "map": "r2g_blind_iid_1615",
+      "pid": 36482
+    },
+    {
+      "map": "r2g_blind_iid_1616",
+      "pid": 36610
+    },
+    {
+      "map": "r2g_blind_iid_1617",
+      "pid": 36738
+    },
+    {
+      "map": "r2g_blind_iid_1618",
+      "pid": 36866
+    },
+    {
+      "map": "r2g_blind_iid_1619",
+      "pid": 36994
+    },
+    {
+      "map": "r2g_blind_iid_1620",
+      "pid": 37122
+    },
+    {
+      "map": "r2g_blind_iid_1621",
+      "pid": 37250
+    },
+    {
+      "map": "r2g_blind_iid_1622",
+      "pid": 37378
+    },
+    {
+      "map": "r2g_blind_iid_1623",
+      "pid": 37506
+    },
+    {
+      "map": "r2g_blind_iid_1624",
+      "pid": 37634
+    },
+    {
+      "map": "r2g_blind_iid_1625",
+      "pid": 37762
+    },
+    {
+      "map": "r2g_blind_iid_1626",
+      "pid": 37890
+    },
+    {
+      "map": "r2g_blind_iid_1627",
+      "pid": 38018
+    },
+    {
+      "map": "r2g_blind_iid_1628",
+      "pid": 38146
+    },
+    {
+      "map": "r2g_blind_iid_1629",
+      "pid": 38274
+    },
+    {
+      "map": "r2g_blind_iid_1630",
+      "pid": 38402
+    },
+    {
+      "map": "r2g_blind_iid_1631",
+      "pid": 38530
+    },
+    {
+      "map": "r2g_blind_iid_1632",
+      "pid": 38658
+    },
+    {
+      "map": "r2g_blind_iid_1633",
+      "pid": 38786
+    },
+    {
+      "map": "r2g_blind_iid_1634",
+      "pid": 38914
+    },
+    {
+      "map": "r2g_blind_iid_1635",
+      "pid": 39042
+    },
+    {
+      "map": "r2g_blind_iid_1636",
+      "pid": 39170
+    },
+    {
+      "map": "r2g_blind_iid_1637",
+      "pid": 39298
+    },
+    {
+      "map": "r2g_blind_iid_1638",
+      "pid": 39426
+    },
+    {
+      "map": "r2g_blind_iid_1639",
+      "pid": 39554
+    },
+    {
+      "map": "r2g_blind_iid_1640",
+      "pid": 39682
+    },
+    {
+      "map": "r2g_blind_iid_1641",
+      "pid": 39810
+    },
+    {
+      "map": "r2g_blind_iid_1642",
+      "pid": 39938
+    },
+    {
+      "map": "r2g_blind_iid_1643",
+      "pid": 40066
+    },
+    {
+      "map": "r2g_blind_iid_1644",
+      "pid": 40194
+    },
+    {
+      "map": "r2g_blind_iid_1645",
+      "pid": 40322
+    },
+    {
+      "map": "r2g_blind_iid_1646",
+      "pid": 40450
+    },
+    {
+      "map": "r2g_blind_iid_1647",
+      "pid": 40578
+    },
+    {
+      "map": "r2g_blind_iid_1648",
+      "pid": 40706
+    },
+    {
+      "map": "r2g_blind_iid_1649",
+      "pid": 40834
+    },
+    {
+      "map": "r2g_blind_iid_1650",
+      "pid": 40962
+    },
+    {
+      "map": "r2g_blind_iid_1651",
+      "pid": 41090
+    },
+    {
+      "map": "r2g_blind_iid_1652",
+      "pid": 41218
+    },
+    {
+      "map": "r2g_blind_iid_1653",
+      "pid": 41346
+    },
+    {
+      "map": "r2g_blind_iid_1654",
+      "pid": 41474
+    },
+    {
+      "map": "r2g_blind_iid_1655",
+      "pid": 41602
+    },
+    {
+      "map": "r2g_blind_iid_1656",
+      "pid": 41730
+    },
+    {
+      "map": "r2g_blind_iid_1657",
+      "pid": 41858
+    },
+    {
+      "map": "r2g_blind_iid_1658",
+      "pid": 41986
+    },
+    {
+      "map": "r2g_blind_iid_1659",
+      "pid": 42114
+    },
+    {
+      "map": "r2g_blind_iid_1660",
+      "pid": 42242
+    },
+    {
+      "map": "r2g_blind_iid_1661",
+      "pid": 42370
+    },
+    {
+      "map": "r2g_blind_iid_1662",
+      "pid": 42498
+    },
+    {
+      "map": "r2g_blind_iid_1663",
+      "pid": 42626
+    },
+    {
+      "map": "r2g_blind_iid_1664",
+      "pid": 42754
+    },
+    {
+      "map": "r2g_blind_iid_1665",
+      "pid": 42882
+    },
+    {
+      "map": "r2g_blind_iid_1666",
+      "pid": 43010
+    },
+    {
+      "map": "r2g_blind_iid_1667",
+      "pid": 43138
+    },
+    {
+      "map": "r2g_blind_iid_1668",
+      "pid": 43266
+    },
+    {
+      "map": "r2g_blind_iid_1669",
+      "pid": 43394
+    },
+    {
+      "map": "r2g_blind_iid_1670",
+      "pid": 43522
+    },
+    {
+      "map": "r2g_blind_iid_1671",
+      "pid": 43650
+    },
+    {
+      "map": "r2g_blind_iid_1672",
+      "pid": 43778
+    },
+    {
+      "map": "r2g_blind_iid_1673",
+      "pid": 43906
+    },
+    {
+      "map": "r2g_blind_iid_1674",
+      "pid": 44034
+    },
+    {
+      "map": "r2g_blind_iid_1675",
+      "pid": 44162
+    },
+    {
+      "map": "r2g_blind_iid_1676",
+      "pid": 44290
+    },
+    {
+      "map": "r2g_blind_iid_1677",
+      "pid": 44418
+    },
+    {
+      "map": "r2g_blind_iid_1678",
+      "pid": 44546
+    },
+    {
+      "map": "r2g_blind_iid_1679",
+      "pid": 44674
+    },
+    {
+      "map": "r2g_blind_iid_1680",
+      "pid": 44802
+    },
+    {
+      "map": "r2g_blind_iid_1681",
+      "pid": 44930
+    },
+    {
+      "map": "r2g_blind_iid_1682",
+      "pid": 45058
+    },
+    {
+      "map": "r2g_blind_iid_1683",
+      "pid": 45186
+    },
+    {
+      "map": "r2g_blind_iid_1684",
+      "pid": 45314
+    },
+    {
+      "map": "r2g_blind_iid_1685",
+      "pid": 45442
+    },
+    {
+      "map": "r2g_blind_iid_1686",
+      "pid": 45570
+    },
+    {
+      "map": "r2g_blind_iid_1687",
+      "pid": 45698
+    },
+    {
+      "map": "r2g_blind_iid_1688",
+      "pid": 45826
+    },
+    {
+      "map": "r2g_blind_iid_1689",
+      "pid": 45954
+    },
+    {
+      "map": "r2g_blind_iid_1690",
+      "pid": 46082
+    },
+    {
+      "map": "r2g_blind_iid_1691",
+      "pid": 46210
+    },
+    {
+      "map": "r2g_blind_iid_1692",
+      "pid": 46338
+    },
+    {
+      "map": "r2g_blind_iid_1693",
+      "pid": 46466
+    },
+    {
+      "map": "r2g_blind_iid_1694",
+      "pid": 46594
+    },
+    {
+      "map": "r2g_blind_iid_1695",
+      "pid": 46722
+    },
+    {
+      "map": "r2g_blind_iid_1696",
+      "pid": 46850
+    },
+    {
+      "map": "r2g_blind_iid_1697",
+      "pid": 46978
+    },
+    {
+      "map": "r2g_blind_iid_1698",
+      "pid": 47106
+    },
+    {
+      "map": "r2g_blind_iid_1699",
+      "pid": 47234
+    },
+    {
+      "map": "r2g_blind_iid_1700",
+      "pid": 47362
+    }
+  ],
+  "obs_mode": "structured",
+  "sight_range": null,
+  "per_family": {
+    "uncategorised": {
+      "n_maps": 300,
+      "macro_win_rate": 0.531111111111111
+    }
+  },
+  "checkpoint": "logs/r2dreamer/r2_2100_finish_trade_v3_from_best52/best_val_macro_winrate.pt",
+  "split_name": "blind_iid",
+  "eval_tag": "configs_blind_iid"
+}
